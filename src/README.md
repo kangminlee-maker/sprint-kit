@@ -2,10 +2,10 @@
 
 Planned module boundaries:
 
-- `kernel/` event store, reducers, state machine
-- `commands/` `/sprint-kit`, `/jp1`, `/jp2`
-- `renderers/` `case.md`, JP packets, concrete surface views
-- `compilers/` compile / crystallize flow
+- `kernel/` event store, reducers, state machine, constraint pool, stale detection
+- `commands/` `/start`, `/align`, `/draft` entrypoints
+- `renderers/` `scope.md`, Align Packet, Draft Packet, surface views
+- `compilers/` compile, Build Spec generation
 - `validators/` apply and validation runners
 
 The first implementation goal is one end-to-end usable slice, not a broad framework.

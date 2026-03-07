@@ -25,12 +25,11 @@ The system's job is to make it more correct by revealing what is invisible.
 
 | Role | Who | Responsibility |
 |------|-----|----------------|
-| **Product Owner** | Product expert (non-developer) | Provides intent, reviews DR/TR Packets, makes constraint decisions, approves direction and target |
-| **Builder** | Developer or AI agent | Implements from Build Spec. Escalates uncovered edge cases back to TR |
+| **Product Owner** | Domain expert (non-developer) | Provides intent, confirms scope at Align, defines to-be at Draft, makes constraint decisions |
+| **Builder** | Developer or AI agent | Implements from Build Spec. Escalates uncovered edge cases |
 | **System** | Sprint Kit runtime | Scans sources, discovers constraints, generates surfaces, compiles, validates |
 
 In v1, one person may hold multiple roles.
-Product Owner and Builder may be the same person.
 
 ## 3 Perspectives
 
@@ -46,11 +45,6 @@ Each reveals different information. Each hides different things.
 These are not theoretical constructs.
 They are practical search directions: "where to look for constraints the human hasn't seen yet."
 
-A constraint found in Code perspective (e.g. "existing API breaks if this field changes")
-enables the human to make a better decision than they would from Experience perspective alone.
-Whether the human accepts the constraint, overrides it, or changes direction —
-the decision is better because the constraint was visible.
-
 ## Source Access
 
 The system scans external sources to build its understanding of current reality.
@@ -65,68 +59,98 @@ Four access methods are supported:
 
 Access method does NOT determine perspective.
 The same source can contain information relevant to multiple perspectives.
-
 The user declares WHERE data is. The system scans content and classifies findings by perspective.
 
-```yaml
-# scopes/{scope-id}/inputs/sources.yaml
-
-sources:
-  - type: local
-    path: /path/to/backend-repo
-  - type: local
-    path: /path/to/client-repo
-  - type: github
-    url: https://github.com/org/domain-ontology
-  - type: github
-    url: https://github.com/org/terms-and-policies
-  - type: figma
-    url: https://figma.com/design/xxxxx
-  - type: figma
-    url: https://figma.com/board/yyyyy
-  - type: obsidian
-    path: /path/to/vault
-```
-
-After scanning, the system presents classified findings.
-The user reviews scan results to confirm no sources are missing.
-Scan results are embedded in the DR Packet (no separate confirmation step).
-
-## User-Facing Entrypoints
+## Entrypoints
 
 Three commands:
 
 - `/start` — begin a new scope
-- `/dr` — Direction Resolution
-- `/tr` — Target Resolution
+- `/align` — Align (Gate 1)
+- `/draft` — Draft (work zone + Gate 2)
 
 ## Core Flow
+
+```text
+Brief → Align → Draft → Compile
+          ↑          ↑
+        Gate 1     Gate 2
+```
+
+### /start (Brief)
 
 ```text
 /start {description or inputs}
   -> frame intent
   -> scan sources from 3 perspectives
-  -> build Reality Snapshot + initial Constraint Pool
-  -> propose direction
-  -> surface direction-level constraints
-  -> render DR Packet (scan results embedded)
+  -> build Reality Snapshot
+  -> render Align Packet (scan results embedded)
+```
 
-/dr
-  -> human reviews direction + constraints
-  -> direction verdict (approve / revise / reject / redirect)
-  -> [on approve] lock direction. begin target design
-  -> design target surface
-     experience scope: generate stateful mockup (React + MSW)
-     interface scope: generate contract diff
-  -> deep constraint discovery from all 3 perspectives
-  -> render TR Packet
+### /align (Gate 1 — Align)
 
-/tr
-  -> human reviews target + all constraints
-  -> decide on each constraint (inject / defer / override / clarify / modify-direction)
-  -> target verdict (approve / revise / reject / redirect-to-dr)
-  -> [on approve] lock target + all constraint decisions
-  -> compile: translate target into delta (no new product decisions)
+Align confronts the user's intent with reality and locks the scope.
+
+```text
+/align
+  -> human reviews: To-be (intent) → As-is (reality) → Tension (collision points)
+  -> verdict: approve / revise / reject / redirect
+  -> [on approve] lock intent, direction, scope boundaries
+```
+
+**Align Packet structure:**
+
+1. **To-be** — what the user asked for. System's interpretation of the intent. Proposed direction. Scope in/out (each requires user agreement).
+2. **As-is** — current reality from 3 perspectives. Experience: what users see today. Policy: current rules. System: what the system can and can't do (technical facts translated to business impact, detail collapsed).
+3. **Tension** — where intent and reality collide. Direction-level constraints with business impact. Scale indicator (how large is this change).
+
+For `interface` scopes, Align also locks policy decisions:
+public/internal scope, breaking change tolerance, versioning policy.
+
+### /draft (Work Zone + Gate 2 — Draft)
+
+Draft has two phases: surface iteration (work zone) and final confirmation (Gate 2).
+
+**Phase 1: Surface Iteration (work zone)**
+
+```text
+experience scope:
+  -> system generates initial stateful mockup (React + MSW)
+  -> user interacts with mockup
+  -> user gives feedback → system updates mockup
+  -> lightweight constraint hints surfaced during iteration
+  -> repeat until user confirms: "this is what I want"
+
+interface scope:
+  -> policy decisions already locked at Align
+  -> system prepares technical implementation context
+  -> full brownfield scan results provided
+  -> guardrails (constraints developers must follow) defined
+```
+
+The mockup is not a preview for approval.
+It is the user's tool for defining to-be in Experience language.
+
+**Phase 2: Final Confirmation (Gate 2)**
+
+```text
+  -> deep constraint discovery from all 3 perspectives against confirmed surface
+  -> render Draft Packet (confirmed surface + all constraints)
+  -> human reviews all constraints
+  -> decide on each: inject / defer / override / clarify / modify-direction
+  -> verdict: approve / revise / reject / redirect-to-align
+  -> [on approve] lock surface + all constraint decisions
+```
+
+Constraints should NOT appear for the first time at Gate 2.
+Lightweight hints during Phase 1 ensure that Gate 2 is a final check, not a surprise.
+If a major undiscovered constraint appears at Gate 2, it is a process failure.
+
+### Compile
+
+```text
+  -> translate confirmed to-be into code delta (no new product decisions)
+  -> produce Build Spec + delta-set.json + validation-plan.md
   -> apply
   -> validate
 ```
@@ -143,7 +167,7 @@ Discover → Present → Decide → Inject → Verify
 ```
 
 Each constraint receives a unique ID (`CST-001`, `CST-002`, ...) at discovery time.
-This ID flows through all artifacts: DR Packet → TR Packet → Build Spec → delta-set.json → validation-plan.md.
+This ID flows through all artifacts: Align Packet → Draft Packet → Build Spec → delta-set.json → validation-plan.md.
 
 | Phase | Who | What happens |
 |-------|-----|--------------|
@@ -161,7 +185,7 @@ This ID flows through all artifacts: DR Packet → TR Packet → Build Spec → 
 | **defer** | Not handling in current scope (judgment complete — choosing not to act) | Explicitly excluded. Recorded for future reference |
 | **override** | Ignore this constraint (with risk acknowledgment) | Risk recorded. Proceeds without applying |
 | **clarify** | Cannot decide yet — need more information | Blocks compile until resolved. System prompts for resolution if stalled |
-| **modify-direction** | This constraint changes the direction itself | Redirect to DR |
+| **modify-direction** | This constraint changes the direction itself | Redirect to Align |
 
 `defer` = "I understand but won't address it now" (judgment complete).
 `clarify` = "I don't have enough information to judge" (judgment pending).
@@ -170,64 +194,66 @@ This ID flows through all artifacts: DR Packet → TR Packet → Build Spec → 
 
 | Stage | Discovery scope | Depth |
 |-------|----------------|-------|
-| Grounding | All 3 perspectives | Direction-level. Broad scan for major conflicts |
-| After DR approval | All 3 perspectives | Target-level. Deep scan against concrete surface |
-
-Detailed discovery rules, perspective-specific search patterns,
-and business impact translation rules are defined in `docs/constraint-discovery.md`.
+| Grounding (before Align) | All 3 perspectives | Direction-level. Broad scan for major conflicts |
+| Draft Phase 1 (mockup iteration) | Relevant perspectives | Lightweight hints. Surface immediately when discovered |
+| Draft Phase 2 (after surface confirmed) | All 3 perspectives | Target-level. Deep scan against confirmed surface |
 
 ## Surface Types
 
-The judgment artifact at TR depends on scope type:
-
 | Scope type | Surface | Format | Judgment method |
 |------------|---------|--------|-----------------|
-| `experience` | Stateful Mockup | React + MSW app in `surface/preview/`. Run with `npm run dev` | Human clicks through scenarios, experiences the change directly |
-| `interface` | Contract Diff | API contract before/after comparison | Human reads the diff and decides |
+| `experience` | Stateful Mockup | React + MSW app in `surface/preview/`. Run with `npm run dev` | Human clicks through scenarios, defines to-be by interacting |
+| `interface` | Contract Diff | API contract before/after comparison | Policy decisions at Align. Technical implementation delegated with guardrails |
 
 For `experience` scopes, the stateful mockup is mandatory.
-Text-only preview is insufficient for experience judgment.
-The human must interact with the mockup to discover experience-level constraints.
+The human must interact with the mockup to define what they want.
+The confirmed mockup IS the Experience to-be — the input to compile.
 
-The mockup also serves as the Experience perspective's "to-be" state —
-the input to translation during compile.
+For `interface` scopes, the system provides:
+- All brownfield scan results (nothing withheld)
+- Guardrails (constraints developers must follow)
+- Policy decisions already locked at Align
+Technical implementation decisions are delegated to Builder.
 
 ## Feedback Model
 
-### At DR (Direction Resolution)
+### At Align (Gate 1)
 
 | Action | Meaning | System response |
 |--------|---------|-----------------|
-| **Approve** | Direction + constraint awareness confirmed | Lock direction. Start target design |
-| **Revise** + feedback | Direction needs adjustment | Classify feedback → targeted fix or regeneration → re-render DR Packet |
+| **Approve** | Scope + direction confirmed | Lock intent, direction, scope boundaries |
+| **Revise** + feedback | Scope needs adjustment | Classify → targeted fix or regeneration → re-render Align Packet |
 | **Reject** | Wrong direction entirely | Scope becomes `rejected` or `deferred` |
 | **Redirect** | Input is insufficient | Return to grounding |
 
-### At TR (Target Resolution)
+### During Draft Phase 1 (mockup iteration)
+
+No formal gate. User gives feedback freely. System updates surface.
+Lightweight constraint hints are surfaced as discovered.
+
+### At Draft Gate 2 (final confirmation)
 
 | Action | Meaning | System response |
 |--------|---------|-----------------|
-| **Approve** + constraint decisions | Target + all constraint decisions confirmed | Lock target. Compile (no new product decisions) |
-| **Revise** + feedback | Target or constraint handling needs adjustment | Classify feedback by scope (see below) |
+| **Approve** + constraint decisions | Surface + all constraint decisions confirmed | Lock target. Compile |
+| **Revise** + feedback | Surface or constraint handling needs adjustment | Classify feedback by scope (see below) |
 | **Reject** | This target is wrong | Scope becomes `rejected` or `deferred` |
-| **Redirect to DR** | Direction itself needs re-examination (including any scope change) | Return to DR with context preserved |
+| **Redirect to Align** | Direction itself needs re-examination (including any scope change) | Return to Align with context preserved |
 | **Redirect to Grounding** | Reality information is stale or insufficient | Return to grounding |
 
-All scope changes (expansion AND reduction) require Redirect to DR.
-Direction immutability is strict — scope boundaries are part of the locked direction.
+All scope changes (expansion AND reduction) require Redirect to Align.
 
 ### Revise Feedback Classification
 
-The system classifies revise feedback to determine the minimum rework scope.
 Classification is confidence-based: high confidence → immediate execution,
 low confidence (boundary cases) → ask human before processing.
 
 | Feedback scope | Example | System response |
 |----------------|---------|-----------------|
-| **Surface-only** | "Move confirm button higher", "Show block date on result screen" | Update mockup/contract only. TR Packet unchanged. Human re-checks |
-| **Constraint decision** | "Change block limit from 5 to 10" | Update Decision-Required Items in TR Packet |
-| **Target change** | "Add an undo flow after blocking" | Regenerate surface + re-run constraint discovery |
-| **Direction change** | "Switch from blocking to preference-based matching" | Redirect to DR |
+| **Surface-only** | "Move confirm button higher" | Update mockup only. Constraint decisions unchanged |
+| **Constraint decision** | "Change block limit from 5 to 10" | Update constraint decision |
+| **Target change** | "Add an undo flow" | Regenerate surface + re-run constraint discovery |
+| **Direction change** | "Switch from blocking to preferences" | Redirect to Align |
 
 Surface-only fixes apply targeted changes (not full regeneration) in v1.
 
@@ -235,9 +261,12 @@ Surface-only fixes apply targeted changes (not full regeneration) in v1.
 
 | Revise count | System action |
 |--------------|---------------|
-| **3 times** | Pattern summary — categorize feedback history, suggest whether direction or target is the issue |
-| **5 times** | Diagnosis report — identify oscillation patterns, present 3 choices: (1) manual write (2) scope reduce via DR (3) direction redirect |
+| **3 times** | Pattern summary — categorize feedback, suggest whether direction or surface is the issue |
+| **5 times** | Diagnosis report — identify patterns, present 3 choices: (1) manual write (2) scope reduce via Align (3) redirect to Align |
 | **7 times** | Hard block — must choose one of the 3 options before continuing |
+
+During Draft Phase 1 (mockup iteration), 3+ iterations without convergence
+triggers a suggestion to return to Align and re-examine scope.
 
 ## Storage Model
 
@@ -248,14 +277,9 @@ Sprint Kit uses a hybrid event-sourced storage model.
 | Layer | Contents | Role |
 |-------|----------|------|
 | **Event Layer** | `events.ndjson` (append-only) | Source of truth for state transitions, verdicts, constraint decisions |
-| **Artifact Layer** | `surface/`, `build/` | Source of truth for generated files (mockups, specs). Events record artifact path + content-hash but not file contents |
+| **Artifact Layer** | `surface/`, `build/` | Source of truth for generated files. Events record artifact path + content-hash but not file contents |
 
-Events record THAT an artifact was generated and its integrity (content-hash).
-Artifacts contain the actual content that events cannot reproduce.
-
-### Materialized Views
-
-`scope.md` and `state/` files are derived from events — never edited directly.
+### Directory Structure
 
 ```text
 scopes/{scope-id}/
@@ -271,8 +295,8 @@ scopes/{scope-id}/
     preview/                   #   experience: React + MSW app
     contract-diff/             #   interface: API diff
   build/                       ← artifact layer
-    dr-packet.md
-    tr-packet.md
+    align-packet.md
+    draft-packet.md
     build-spec.md
     delta-set.json
     validation-plan.md
@@ -294,104 +318,89 @@ Rules:
 | **Intent** | Why | Why this scope exists. Problem, beneficiary, success conditions | `commands/` |
 | **Reality Snapshot** | What is | Current system state from all 3 perspectives. Auto-classified scan results | `kernel/` |
 | **Constraint Pool** | What constrains | All discovered constraints with IDs, organized by perspective and severity | `kernel/` |
-| **Verdict Log** | What was decided | Human decisions at DR and TR, including per-constraint decisions | `kernel/` |
-| **Delta Set** | What changes | The diff between current state and target state | `compilers/` |
+| **Verdict Log** | What was decided | Human decisions at Align and Draft, including per-constraint decisions | `kernel/` |
+| **Delta Set** | What changes | The diff between current state and confirmed target state | `compilers/` |
 | **Build Spec** | How to build | Complete implementation specification. No ambiguity remains | `compilers/` |
 
-Note: `Scope` is the container for the other 6 objects.
-They are not peers — Scope is a higher-level category.
-
-Each constraint in the Constraint Pool has a unique `constraint_id` (e.g. `CST-001`).
+Each constraint has a unique `constraint_id` (e.g. `CST-001`).
 This ID is the traceability key across all artifacts.
 
 ## Compile Boundary
 
-Compile translates the approved target into Build Spec.
+Compile translates the confirmed target into Build Spec.
 
 **Compile MUST NOT make new product decisions.**
 
 If compile encounters an ambiguity that requires a product decision,
-it means TR did not surface all constraints.
-Compile must block and redirect to TR with the newly discovered constraint.
+it means Draft did not surface all constraints.
+Compile must block and redirect to Draft with the newly discovered constraint.
 
 ### Compile Defense (two layers)
 
 | Layer | Mechanism | What it catches |
 |-------|-----------|----------------|
-| **Checklist** | Every TR constraint decision must be referenced in Build Spec. Missing reference = compile failure | Omissions |
-| **Audit pass** | Separate verification pass compares Build Spec content against TR decisions. Flags unreferenced or contradicted decisions | Distortions |
+| **Checklist** | Every Draft constraint decision must be referenced in Build Spec. Missing reference = compile failure | Omissions |
+| **Audit pass** | Separate verification compares Build Spec against Draft decisions. Flags unreferenced or contradicted decisions | Distortions |
 
 When compile discovers a new constraint: `compile.constraint_gap_found` event is recorded,
-scope transitions from `target_locked` → `target_proposed`, and the new constraint enters TR.
+scope transitions backward, and the new constraint enters Draft for decision.
 
-### Compile I/O
+### Compile Output
 
-Compile inputs and outputs are defined in `docs/build-spec.md`.
+Build Spec includes ALL brownfield scan results — nothing is withheld.
+For interface scopes, this means the full technical context is provided to Builder
+along with guardrails (constraints that must be followed) and policy decisions (already locked at Align).
 
 ## Immutability Boundaries
 
-Each gate locks a specific scope of decisions:
-
 | Gate | What becomes immutable | What remains mutable |
 |------|----------------------|---------------------|
-| **DR approval** | Direction, scope boundaries, in/out decisions | Target details, constraint decisions, surface design |
-| **TR approval** | Target, all constraint decisions, surface | Implementation order, code-level structure |
+| **Align (Gate 1)** | Intent, direction, scope boundaries, in/out decisions. For interface scopes: also policy decisions (public/internal, breaking change, versioning) | Surface details, constraint decisions |
+| **Draft Gate 2** | Confirmed surface, all constraint decisions | Implementation order, code-level structure |
 
-All scope changes (expansion and reduction) require DR redirect.
-
-After DR approval, the system detects if subsequent TR work
-drifts from the approved direction. If drift is detected,
-the system flags it and asks: "This changes the approved direction. Redirect to DR?"
-
-After TR approval, compile must not alter any decided constraint.
-If a new constraint is discovered during compile,
-compile blocks and returns to TR.
+All scope changes (expansion and reduction) require redirect to Align.
 
 ### Stale Override
 
 Immutability holds while the Reality Snapshot is valid.
 
-When Reality Snapshot becomes stale, the decisions based on that snapshot
-may no longer be sound. The system does not change decisions automatically —
+When Reality Snapshot becomes stale, the system does not change decisions automatically —
 it unlocks the gate so the human can re-decide with fresh information.
-
-This is not an exception to immutability.
-It is a protection mechanism for the premise on which immutability rests.
 
 ## State Machine
 
 Forward transitions:
 
 ```text
-draft → grounded → direction_proposed → direction_locked → target_proposed → target_locked → compiled → applied → validated → closed
+draft → grounded → align_proposed → align_locked → surface_iterating → surface_confirmed → constraints_resolved → target_locked → compiled → applied → validated → closed
 ```
 
-Self-transitions (revise loops):
+Self-transitions:
 
 ```text
-direction_proposed → direction_proposed  (direction.revised, revision counter incremented)
-target_proposed → target_proposed        (target.revised, revision counter incremented)
+align_proposed → align_proposed    (align.revised, revision counter incremented)
+surface_iterating → surface_iterating  (surface.revision_applied)
+constraints_resolved → constraints_resolved  (constraint decision revised)
 ```
 
 Backward transitions:
 
 ```text
-direction_proposed → grounded            (redirect to grounding)
-direction_locked → direction_proposed    (stale snapshot detected)
-target_proposed → direction_proposed     (redirect to DR, including scope changes)
-target_proposed → grounded               (redirect to grounding)
-target_locked → target_proposed          (new constraint found during compile)
-compiled → target_proposed               (apply failure due to target issue)
-applied → target_proposed                (validation failure due to target issue)
-applied → grounded                       (validation failure due to stale reality)
-compiled → grounded                      (stale snapshot detected after compile)
+align_proposed → grounded              (redirect to grounding)
+align_locked → align_proposed          (stale snapshot detected)
+surface_iterating → align_proposed     (redirect to Align — scope change needed)
+surface_confirmed → surface_iterating  (constraint found that requires surface change)
+constraints_resolved → surface_iterating  (constraint decision requires surface change)
+constraints_resolved → align_proposed  (redirect to Align)
+target_locked → constraints_resolved   (new constraint found during compile)
+compiled → constraints_resolved        (apply failure due to target issue)
+applied → constraints_resolved         (validation failure due to target issue)
+applied → grounded                     (validation failure due to stale reality)
+compiled → grounded                    (stale snapshot detected after compile)
 ```
 
 Terminal states: `deferred`, `rejected`
 Any state except `closed` can transition to `deferred` or `rejected`.
-
-State names use `_locked` instead of `_approved`
-to emphasize that decisions become immutable at that point.
 
 Complete State × Event matrix is defined in `docs/event-state-contract.md`.
 
@@ -399,29 +408,23 @@ Complete State × Event matrix is defined in `docs/event-state-contract.md`.
 
 | Rule | Enforced at | Enforcement type |
 |------|-------------|-----------------|
-| No DR before grounded | `draft → direction_proposed` transition | State guard |
-| No TR before direction locked | `direction_locked → target_proposed` transition | State guard |
-| No TR without concrete surface | `target_proposed` state entry | Content validator |
-| No compile with unresolved constraints | `target_locked → compiled` transition | Constraint pool validator |
-| No compile with `clarify` constraints | `target_locked → compiled` transition | Constraint pool validator |
-| No compile with stale snapshot | `target_locked → compiled` transition | Snapshot freshness validator |
+| No Align before grounded | `draft → align_proposed` | State guard |
+| No Draft before Align locked | `align_locked → surface_iterating` | State guard |
+| No surface confirmation without concrete surface | `surface_iterating → surface_confirmed` | Content validator |
+| No constraint resolution with `clarify` items | `constraints_resolved → target_locked` | Constraint pool validator |
+| No compile with stale snapshot | `target_locked → compiled` | Snapshot freshness validator |
 | No compile if new product decision needed | Compile execution | Compile boundary audit |
-| No close before validation passes | `applied → validated` transition | Validation result check |
-
-Each rule specifies WHERE it is enforced and HOW (state guard vs content validator).
-Enforcement details are defined in `docs/event-state-contract.md`.
+| No close before validation passes | `applied → validated` | Validation result check |
 
 ## Stale Propagation
 
-When a Reality Snapshot becomes stale (source system changed after scan):
-
-| Current state | Effect | System action |
-|---------------|--------|---------------|
-| `grounded` or `direction_proposed` | Direction may be based on outdated reality | Re-scan sources. Flag changes. Re-render DR Packet |
-| `direction_locked` | Locked direction may conflict with new reality | Unlock direction → `direction_proposed`. Require re-DR |
-| `target_proposed` | Surface may be based on outdated reality | Re-scan. Re-run constraint discovery. Re-render TR Packet |
-| `target_locked` | Locked decisions may conflict with new reality | Block compile. Redirect to TR with new constraints |
-| `compiled` or later | Build Spec may be outdated | Block apply. Redirect to TR |
+| Current state | System action |
+|---------------|---------------|
+| `grounded` or `align_proposed` | Re-scan. Flag changes. Re-render Align Packet |
+| `align_locked` | Unlock → `align_proposed`. Require re-Align |
+| `surface_iterating` or `surface_confirmed` | Re-scan. Re-run constraint discovery. Notify user |
+| `target_locked` | Block compile. Redirect to Draft |
+| `compiled` or later | Block apply. Redirect to Draft |
 
 ### Stale Detection Timing
 
@@ -430,48 +433,42 @@ When a Reality Snapshot becomes stale (source system changed after scan):
 | **Gate transitions** (mandatory) | All sources | Stale → transition blocked |
 | **Command start** (lightweight) | Local sources only | Stale → warning displayed |
 
-Stale detection: compare source content hashes at scan time vs current.
-
 ## Module Structure
-
-Implementation modules are defined in `src/`:
 
 | Module | Responsibility | Owns |
 |--------|---------------|------|
 | `kernel/` | Event store, reducers, state machine, constraint pool, stale detection | Reality Snapshot, Constraint Pool, Verdict Log |
-| `commands/` | `/start`, `/dr`, `/tr` entrypoints | Scope, Intent |
-| `renderers/` | `scope.md`, DR Packet, TR Packet, concrete surface views | — |
-| `compilers/` | Compile, crystallize, Build Spec generation | Delta Set, Build Spec |
+| `commands/` | `/start`, `/align`, `/draft` entrypoints | Scope, Intent |
+| `renderers/` | `scope.md`, Align Packet, Draft Packet, surface views | — |
+| `compilers/` | Compile, Build Spec generation | Delta Set, Build Spec |
 | `validators/` | Apply and validation runners | — |
-
-Each contract document specifies its owner module.
 
 ## Terminology Mapping
 
-Terms changed from the previous design iteration:
-
 | Previous | Current | Reason |
 |----------|---------|--------|
-| Judgment Point 1 (JP1) | DR (Direction Resolution) | Reflects that constraints are resolved, not just judged |
-| Judgment Point 2 (JP2) | TR (Target Resolution) | Same |
-| Execution Pack | Build Spec | "Build" is what developers do with it |
-| Change Case | Scope | "Change" excludes new development |
-| Gap Register | Constraint Pool | Active discovery, not passive registration |
-| `cases/{id}/` | `scopes/{id}/` | Follows naming change |
-| `case.md` | `scope.md` | Follows naming change |
-| `_approved` states | `_locked` states | Emphasizes immutability |
-| hidden requirement | constraint | Broader — includes Code and Policy perspective findings |
-| judgment-to-delta | constraint-aware translation | System improves judgment, not just executes it |
+| Judgment Point 1 (JP1) | **Align** | Confronts intent with reality. Locks scope |
+| Judgment Point 2 (JP2) | **Draft** | Defines to-be through surface iteration + resolves constraints |
+| Direction Resolution (DR) | **Align** | "Align" = align intent with reality |
+| Target Resolution (TR) | **Draft** | Work zone + final gate |
+| Intent Resolution (IR) | **Align** | Simplified |
+| JP1/DR/IR Packet | **Align Packet** | Follows stage name |
+| JP2/TR Packet | **Draft Packet** | Follows stage name |
+| Execution Pack | **Build Spec** | What developers build from |
+| Change Case | **Scope** | Includes new development, not just changes |
+| Gap Register | **Constraint Pool** | Active discovery, not passive registration |
+| hidden requirement | **constraint** | Broader — includes all perspective findings |
+| judgment-to-delta | **constraint-aware translation** | System improves judgment, not just executes it |
 
 ## v1 Scope
 
 In scope:
 
 - `experience` scopes (stateful mockup surface)
-- `interface` scopes (contract diff surface)
-- 3-perspective constraint discovery
+- `interface` scopes (technical delegation with guardrails + full brownfield info)
+- 3-perspective constraint discovery (lightweight during iteration, deep after confirmation)
 - `clarify` option for constraint decisions
-- surface-only apply-fix (targeted mockup/contract update without full regeneration)
+- surface-only apply-fix (targeted update without full regeneration)
 - single planner, single executor
 - deterministic validator
 - source access: `--add-dir`, GitHub tarball, Figma MCP, Obsidian vault
