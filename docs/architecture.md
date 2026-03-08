@@ -185,10 +185,14 @@ This ID flows through all artifacts: Align Packet → Draft Packet → Build Spe
 | **defer** | Not handling in current scope (judgment complete — choosing not to act) | Explicitly excluded. Recorded for future reference |
 | **override** | Ignore this constraint (with risk acknowledgment) | Risk recorded. Proceeds without applying |
 | **clarify** | Cannot decide yet — need more information | Blocks compile until resolved. System prompts for resolution if stalled |
-| **modify-direction** | This constraint changes the direction itself | Redirect to Align |
+| **modify-direction** | This constraint changes the direction itself | Decision recorded, then redirect to Align |
 
 `defer` = "I understand but won't address it now" (judgment complete).
 `clarify` = "I don't have enough information to judge" (judgment pending).
+
+Note: `constraint.invalidated`는 사용자 결정이 아닌 시스템 이벤트입니다.
+re-discovery에서 방향 변경으로 더 이상 관련 없는 constraint를 시스템이 자동으로 제외합니다.
+상세는 `docs/constraint-discovery.md`의 Invalidation 섹션 참조.
 
 ### Discovery Timing
 
@@ -391,6 +395,7 @@ align_proposed → grounded              (redirect to grounding)
 align_locked → align_proposed          (stale snapshot detected)
 surface_iterating → align_proposed     (redirect to Align — scope change needed)
 surface_confirmed → surface_iterating  (constraint found that requires surface change)
+surface_confirmed → align_proposed     (modify-direction constraint decision)
 constraints_resolved → surface_iterating  (constraint decision requires surface change)
 constraints_resolved → align_proposed  (redirect to Align)
 target_locked → constraints_resolved   (new constraint found during compile)
