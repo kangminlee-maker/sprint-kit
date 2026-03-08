@@ -207,6 +207,14 @@ describe("draft-packet — Section 3 PO/Builder detail", () => {
     expect(md).toContain("Builder 결정 예정");
   });
 
+  it("renders Builder without guardrail — '제품 관점 제약 조건 없음'", () => {
+    const entry = makeEntry("CST-001", { decision_owner: "builder" });
+    const state = makeState({ constraint_pool: makePoolWith(entry) });
+    const md = renderDraftPacket(state, makeContent({ constraint_details: [builderDet("CST-001")] }));
+    expect(md).toContain("제품 관점 제약 조건 없음");
+    expect(md).not.toContain("위 guardrail 확인 후 승인");
+  });
+
   it("renders Builder guardrail when present", () => {
     const entry = makeEntry("CST-001", { decision_owner: "builder" });
     const state = makeState({ constraint_pool: makePoolWith(entry) });

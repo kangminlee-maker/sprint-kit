@@ -38,9 +38,19 @@ appendScopeEvent(paths, {
 });
 ```
 
+**Surface 생성 후 사용자에게 제시:**
+생성된 surface를 사용자에게 보여주고, 피드백을 요청합니다.
+- experience scope: "`cd surface/preview && npm run dev`로 mockup을 확인하세요"
+- interface scope: "`surface/contract-diff/`의 API 명세를 확인하세요"
+- "수정이 필요하면 피드백을 주세요. 이 모습이 맞으면 '확정합니다'라고 말씀해 주세요."
+
 ### surface_iterating → 피드백 반영
 
 사용자 피드백을 받아 surface를 수정합니다.
+
+**사용자 입력 형식:**
+- 수정 피드백: 자유 텍스트 (예: "차단 버튼 위치를 오른쪽으로 변경해 주세요")
+- 확정 선언: "확정합니다" 또는 "이것이 내가 원하는 모습입니다"
 
 **피드백 분류:**
 1. `surface_only` — surface 수정만으로 해결
@@ -48,15 +58,26 @@ appendScopeEvent(paths, {
 3. `target_change` — 확정된 범위 내에서 to-be 변경
 4. `direction_change` — 방향 자체 변경 (Align으로 redirect)
 
+**이벤트 기록 순서:**
+
+사용자가 수정 피드백을 주면:
+
 ```typescript
-// 피드백 분류 기록
+// 1. 사용자 피드백 원문 기록
+appendScopeEvent(paths, {
+  type: "surface.revision_requested",
+  actor: "user",
+  payload: { feedback_text: "사용자 피드백 원문" },
+});
+
+// 2. 피드백 분류 기록
 appendScopeEvent(paths, {
   type: "feedback.classified",
   actor: "system",
   payload: { classification, confidence, confirmed_by: "auto" },
 });
 
-// surface 수정 반영
+// 3. surface 수정 반영
 appendScopeEvent(paths, {
   type: "surface.revision_applied",
   actor: "system",
@@ -178,7 +199,15 @@ appendScopeEvent(paths, {
 
 ### Constraint 결정 수집
 
-사용자가 Draft Packet의 각 constraint에 대해 결정합니다.
+Draft Packet을 사용자에게 보여주고, 각 constraint에 대한 결정을 요청합니다.
+
+**사용자 입력 형식:**
+각 CST-ID에 대해 결정을 선택합니다:
+- `CST-001: inject (선택한 옵션명)`
+- `CST-002: clarify (법무팀 확인 필요)`
+- `CST-004: defer (현재 위치 유지)`
+
+Builder 결정 항목은 PO가 guardrail을 확인하고 "승인"으로 응답합니다.
 
 **결정 종류:** inject / defer / override / clarify / modify-direction
 
@@ -198,8 +227,42 @@ appendScopeEvent(paths, {
 
 **필수 규칙:**
 - `severity: required` + `decision: override` → `rationale` 필수 (비어 있으면 gate-guard가 거부)
-- `decision: clarify` → `constraint.clarify_requested` 이벤트 기록. 해소 전까지 target 잠금 불가
 - `decision: modify-direction` → `constraint.decision_recorded` 기록 후 즉시 `redirect.to_align` 발행. 나머지 미결정 중단
+
+### clarify 결정 시 처리
+
+`clarify`를 선택하면 해소 전까지 target 잠금이 불가합니다.
+
+```typescript
+// 1. clarify 요청 기록
+appendScopeEvent(paths, {
+  type: "constraint.clarify_requested",
+  actor: "user",
+  payload: {
+    constraint_id: "CST-002",
+    question: "확인해야 할 질문",
+    asked_to: "확인 대상 (예: 법무팀)",
+  },
+});
+```
+
+사용자가 외부에서 정보를 확보한 뒤 `/draft`를 다시 실행하면:
+
+```typescript
+// 2. clarify 해소 + 최종 결정 기록
+appendScopeEvent(paths, {
+  type: "constraint.clarify_resolved",
+  actor: "user",
+  payload: {
+    constraint_id: "CST-002",
+    resolution: "확인 결과 요약",
+    decision: "inject",           // inject / defer / override / modify-direction
+    selected_option: "선택한 옵션",
+    decision_owner: "product_owner",
+    rationale: "결정 이유",
+  },
+});
+```
 
 ### constraints_resolved → Target Lock
 
@@ -217,6 +280,13 @@ appendScopeEvent(paths, {
   },
 });
 ```
+
+`state.surface_hash`는 가장 최근 `surface.confirmed` 이벤트의 `final_content_hash`에서 reducer가 계산한 값입니다.
+
+### target.locked 이후
+
+target이 잠기면 compile 단계로 진행합니다 (Phase 5).
+사용자에게 안내: "모든 결정이 완료되었습니다. compile을 시작합니다."
 
 ## 렌더링 규칙
 

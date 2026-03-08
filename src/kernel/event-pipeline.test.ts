@@ -249,6 +249,31 @@ describe("event-pipeline — materialized views", () => {
   });
 });
 
+// ─── Pipeline: state returned for caller rendering ───
+
+describe("event-pipeline — state for caller rendering", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("returns updatedState so caller can render scope.md", async () => {
+    const result = appendScopeEvent(paths, input("scope.created", {
+      title: "Test Scope", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.state).toBeDefined();
+      expect(result.state.title).toBe("Test Scope");
+      expect(result.state.current_state).toBe("draft");
+
+      // Caller can render scope.md using returned state
+      const { renderScopeMd } = await import("../renderers/scope-md.js");
+      const md = renderScopeMd(result.state);
+      expect(md).toContain("# Scope: Test Scope");
+    }
+  });
+});
+
 // ─── Pipeline: golden data replay ───
 
 describe("event-pipeline — golden data replay", () => {

@@ -35,6 +35,32 @@ const state = reduce(readEvents(paths.events));
 - 로컬 소스(`--add-dir`): 파일 해시를 `state`의 `grounding.completed` 시점 해시와 비교
 - 불일치 발견 시: 사용자에게 경고. "소스가 변경되었습니다. 재스캔하시겠습니까?"
 
+**stale 복구 절차 (사용자가 재스캔에 동의한 경우):**
+
+```typescript
+// 1. snapshot.marked_stale 기록 (align_proposed 상태에서 자기전이)
+appendScopeEvent(paths, {
+  type: "snapshot.marked_stale",
+  actor: "system",
+  payload: {
+    stale_sources: [{ path, old_hash, new_hash }],
+  },
+});
+
+// 2. 소스 재스캔 수행 (3-Perspective 체크리스트 재실행)
+
+// 3. grounding.completed 기록은 불가 (align_proposed 상태에서 허용되지 않음)
+// → redirect.to_grounding으로 grounded 상태로 복귀한 뒤 재스캔합니다
+appendScopeEvent(paths, {
+  type: "redirect.to_grounding",
+  actor: "system",
+  payload: { from_state: "align_proposed", reason: "소스 변경 감지로 재스캔 필요" },
+});
+
+// 4. grounded 상태에서 grounding.started → grounding.completed → 새 constraint 발견 → align.proposed 재발행
+// → /start 프로토콜의 Step 2~6을 재실행합니다
+```
+
 ### 3. Verdict 처리
 
 #### approve

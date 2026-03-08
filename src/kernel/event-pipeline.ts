@@ -1,9 +1,8 @@
 import { writeFileSync } from "node:fs";
-import type { Event, EventType, State, Actor } from "./types.js";
+import type { Event, EventType, State, Actor, ScopeState } from "./types.js";
 import { readEvents, appendEvent, nextRevision } from "./event-store.js";
 import { reduce } from "./reducer.js";
 import { validateEvent, type GateResult } from "./gate-guard.js";
-import { renderScopeMd } from "../renderers/scope-md.js";
 import type { ScopePaths } from "./scope-manager.js";
 
 // ─── Input type (caller provides only what they control) ───
@@ -17,7 +16,7 @@ export interface EventInput {
 // ─── Result type ───
 
 export type PipelineResult =
-  | { success: true; event: Event; next_state: State }
+  | { success: true; event: Event; next_state: State; state: ScopeState }
   | { success: false; reason: string };
 
 // ─── Main pipeline ───
@@ -28,13 +27,13 @@ export type PipelineResult =
  * 2. Validate the new event (gate-guard)
  * 3. Generate envelope (event_id, scope_id, ts, revision, state_before, state_after)
  * 4. Append to event store
- * 5. Re-reduce → write materialized views
+ * 5. Re-reduce → write kernel materialized views (constraint-pool.json, verdict-log.json)
+ *
+ * Returns the updated ScopeState so the caller can render scope.md
+ * or other view-layer outputs without kernel depending on renderers.
  *
  * This is the ONLY path for recording events. No other code should
  * call event-store.appendEvent directly.
- *
- * The caller provides only { type, actor, payload }.
- * The pipeline generates all envelope fields.
  */
 export function appendScopeEvent(
   paths: ScopePaths,
@@ -72,7 +71,7 @@ export function appendScopeEvent(
 
   appendEvent(paths.events, eventToAppend);
 
-  // ── Step 5: Re-reduce and write materialized views ──
+  // ── Step 5: Re-reduce and write kernel materialized views ──
   const updatedEvents = readEvents(paths.events);
   const updatedState = reduce(updatedEvents);
 
@@ -88,11 +87,10 @@ export function appendScopeEvent(
     "utf-8",
   );
 
-  writeFileSync(paths.scopeMd, renderScopeMd(updatedState), "utf-8");
-
   return {
     success: true,
     event: eventToAppend,
     next_state: gate.next_state,
+    state: updatedState,
   };
 }
