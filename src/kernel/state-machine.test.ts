@@ -360,6 +360,12 @@ describe("state-machine — transition events exhaustive", () => {
       next: "validated",
       kind: "forward",
     },
+    {
+      state: "applied",
+      event: "snapshot.marked_stale",
+      next: "applied",
+      kind: "self",
+    },
 
     // validated
     {
@@ -477,6 +483,94 @@ describe("state-machine — resolveTransition", () => {
   it("denies invalid transition", () => {
     const r = resolveTransition("draft", "align.locked");
     expect(r.allowed).toBe(false);
+  });
+});
+
+// ─── Additional edge cases ───
+
+describe("state-machine — terminal states edge cases", () => {
+  it("allowedTransitionEvents returns empty array for all terminal states", () => {
+    for (const terminal of ["closed", "deferred", "rejected"] as State[]) {
+      const events = allowedTransitionEvents(terminal);
+      expect(events).toEqual([]);
+    }
+  });
+});
+
+describe("state-machine — resolveTransition conditional targets", () => {
+  it("surface_confirmed + constraint.decision_recorded has conditional target constraints_resolved", () => {
+    const result = resolveTransition("surface_confirmed", "constraint.decision_recorded");
+    expect(result.allowed).toBe(true);
+    if (result.allowed) {
+      expect(result.next_state).toBe("surface_confirmed");
+      expect(result.conditional_targets).toContain("constraints_resolved");
+    }
+  });
+
+  it("surface_confirmed + constraint.clarify_resolved has conditional target constraints_resolved", () => {
+    const result = resolveTransition("surface_confirmed", "constraint.clarify_resolved");
+    expect(result.allowed).toBe(true);
+    if (result.allowed) {
+      expect(result.next_state).toBe("surface_confirmed");
+      expect(result.conditional_targets).toContain("constraints_resolved");
+    }
+  });
+
+  it("surface_confirmed + constraint.invalidated has conditional target constraints_resolved", () => {
+    const result = resolveTransition("surface_confirmed", "constraint.invalidated");
+    expect(result.allowed).toBe(true);
+    if (result.allowed) {
+      expect(result.next_state).toBe("surface_confirmed");
+      expect(result.conditional_targets).toContain("constraints_resolved");
+    }
+  });
+
+  it("applied + validation.completed has conditional targets constraints_resolved and grounded", () => {
+    const result = resolveTransition("applied", "validation.completed");
+    expect(result.allowed).toBe(true);
+    if (result.allowed) {
+      expect(result.next_state).toBe("validated");
+      expect(result.conditional_targets).toContain("constraints_resolved");
+      expect(result.conditional_targets).toContain("grounded");
+    }
+  });
+
+  it("transitions without conditional return no conditional_targets", () => {
+    const result = resolveTransition("draft", "grounding.completed");
+    expect(result.allowed).toBe(true);
+    if (result.allowed) {
+      expect(result.conditional_targets).toBeUndefined();
+    }
+  });
+});
+
+describe("state-machine — observational events exhaustive non-terminal verification", () => {
+  const nonTerminalStates = STATES.filter((s) => !TERMINAL_STATES.has(s));
+
+  it("every observational event is allowed from every non-terminal state", () => {
+    for (const state of nonTerminalStates) {
+      for (const obsEvent of OBSERVATIONAL_EVENT_TYPES) {
+        const result = resolveTransition(state, obsEvent);
+        expect(
+          result.allowed,
+          `${state} + ${obsEvent} should be allowed`,
+        ).toBe(true);
+        if (result.allowed) {
+          expect(result.next_state).toBe(state);
+          expect(result.kind).toBe("self");
+        }
+      }
+    }
+  });
+
+  it("every observational event is denied from every terminal state", () => {
+    const terminalStates = STATES.filter((s) => TERMINAL_STATES.has(s));
+    for (const state of terminalStates) {
+      for (const obsEvent of OBSERVATIONAL_EVENT_TYPES) {
+        const result = resolveTransition(state, obsEvent);
+        expect(result.allowed).toBe(false);
+      }
+    }
   });
 });
 

@@ -20,6 +20,7 @@ function makeState(overrides: Partial<ScopeState> = {}): ScopeState {
     convergence_blocked: false,
     revision_count_align: 0,
     revision_count_surface: 0,
+    retry_count_compile: 0,
     verdict_log: [],
     feedback_history: [],
     latest_revision: 0,
@@ -334,6 +335,56 @@ describe("gate-guard — Rule 4: convergence blocking", () => {
   });
 });
 
+// ─── Rule 5: Compile retry limit ───
+
+describe("gate-guard — Rule 5: compile retry limit", () => {
+  it("allows compile.started when retry_count_compile < 3", () => {
+    const state = makeState({
+      current_state: "target_locked",
+      retry_count_compile: 2,
+    });
+    const event = makeEvent("compile.started", {
+      snapshot_revision: 1, surface_hash: "h",
+    });
+    expect(validateEvent(state, event).allowed).toBe(true);
+  });
+
+  it("denies compile.started when retry_count_compile >= 3", () => {
+    const state = makeState({
+      current_state: "target_locked",
+      retry_count_compile: 3,
+    });
+    const event = makeEvent("compile.started", {
+      snapshot_revision: 1, surface_hash: "h",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) expect(result.reason).toContain("Compile retry limit");
+  });
+
+  it("allows compile.completed even when retry_count_compile >= 3", () => {
+    const state = makeState({
+      current_state: "target_locked",
+      retry_count_compile: 3,
+    });
+    const event = makeEvent("compile.completed", {
+      build_spec_path: "p", build_spec_hash: "h",
+      delta_set_path: "p", delta_set_hash: "h",
+      validation_plan_path: "p", validation_plan_hash: "h",
+    });
+    expect(validateEvent(state, event).allowed).toBe(true);
+  });
+
+  it("allows scope.deferred when compile retry limit exceeded", () => {
+    const state = makeState({
+      current_state: "target_locked",
+      retry_count_compile: 3,
+    });
+    const event = makeEvent("scope.deferred", { reason: "r", resume_condition: "c" });
+    expect(validateEvent(state, event).allowed).toBe(true);
+  });
+});
+
 // ─── Conditional targets: surface_confirmed → constraints_resolved ───
 
 describe("gate-guard — conditional targets: constraints_resolved", () => {
@@ -399,7 +450,7 @@ describe("gate-guard — conditional targets: validation.completed", () => {
   it("pass → validated", () => {
     const state = makeState({ current_state: "applied" });
     const event = makeEvent("validation.completed", {
-      result: "pass", pass_count: 5, fail_count: 0, details: "all pass",
+      result: "pass", pass_count: 5, fail_count: 0, items: [],
     });
     const result = validateEvent(state, event);
     expect(result.allowed).toBe(true);
@@ -409,7 +460,7 @@ describe("gate-guard — conditional targets: validation.completed", () => {
   it("fail + not stale → constraints_resolved", () => {
     const state = makeState({ current_state: "applied", stale: false });
     const event = makeEvent("validation.completed", {
-      result: "fail", pass_count: 3, fail_count: 2, details: "target issue",
+      result: "fail", pass_count: 3, fail_count: 2, items: [],
     });
     const result = validateEvent(state, event);
     expect(result.allowed).toBe(true);
@@ -419,7 +470,17 @@ describe("gate-guard — conditional targets: validation.completed", () => {
   it("fail + stale → grounded", () => {
     const state = makeState({ current_state: "applied", stale: true });
     const event = makeEvent("validation.completed", {
-      result: "fail", pass_count: 3, fail_count: 2, details: "stale sources",
+      result: "fail", pass_count: 3, fail_count: 2, items: [],
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+    if (result.allowed) expect(result.next_state).toBe("grounded");
+  });
+
+  it("transitions to grounded when pass but stale", () => {
+    const state = makeState({ current_state: "applied", stale: true });
+    const event = makeEvent("validation.completed", {
+      result: "pass", pass_count: 5, fail_count: 0, items: [],
     });
     const result = validateEvent(state, event);
     expect(result.allowed).toBe(true);
@@ -496,6 +557,162 @@ describe("gate-guard — terminal state rejection", () => {
     const event = makeEvent("convergence.action_taken", {
       state: "rejected", chosen_action: "x", reason: "r",
     });
+    expect(validateEvent(state, event).allowed).toBe(false);
+  });
+});
+
+describe("gate-guard — additional edge cases", () => {
+  it("constraint.discovered bypasses referential integrity", () => {
+    const state = makeState({ current_state: "surface_confirmed" });
+    const event = makeEvent("constraint.discovered", {
+      constraint_id: "CST-NEW", perspective: "code", summary: "s",
+      severity: "required", discovery_stage: "draft_phase2",
+      decision_owner: "builder", impact_if_ignored: "i", source_refs: [],
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+
+  it("constraint.invalidated for non-existent ID denied", () => {
+    const state = makeState({ current_state: "surface_confirmed" });
+    const event = makeEvent("constraint.invalidated", {
+      constraint_id: "CST-GHOST", reason: "no longer relevant",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) expect(result.reason).toContain("not found");
+  });
+
+  it("compile.constraint_gap_found not blocked by retry limit", () => {
+    const state = makeState({
+      current_state: "target_locked",
+      retry_count_compile: 3,
+    });
+    const event = makeEvent("compile.constraint_gap_found", {
+      new_constraint_id: "CST-010", perspective: "code", summary: "s",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+
+  it("scope.created denied when events exist (latest_revision > 0)", () => {
+    const state = makeState({ current_state: "draft", latest_revision: 5 });
+    const event = makeEvent("scope.created", {
+      title: "t", description: "d", entry_mode: "experience",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+  });
+
+  it("convergence.action_taken allowed even when convergence_blocked", () => {
+    const state = makeState({
+      current_state: "surface_iterating",
+      convergence_blocked: true,
+    });
+    const event = makeEvent("convergence.action_taken", {
+      state: "surface_iterating", chosen_action: "redirect", reason: "r",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+});
+
+// ─── Rule 3: recommended constraint + override without rationale ───
+
+describe("gate-guard — Rule 3: recommended + override", () => {
+  it("allows override on recommended constraint without rationale", () => {
+    const state = makeStateWithConstraints([
+      { id: "CST-001", severity: "recommended", status: "undecided" },
+    ]);
+    const event = makeEvent("constraint.decision_recorded", {
+      constraint_id: "CST-001", decision: "override", selected_option: "opt",
+      decision_owner: "product_owner", rationale: "",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+
+  it("allows override on recommended constraint with undefined rationale", () => {
+    const state = makeStateWithConstraints([
+      { id: "CST-001", severity: "recommended", status: "undecided" },
+    ]);
+    const event = makeEvent("constraint.decision_recorded", {
+      constraint_id: "CST-001", decision: "override", selected_option: "opt",
+      decision_owner: "product_owner",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+});
+
+// ─── Conditional target: surface_confirmed → constraints_resolved via last decide ───
+
+describe("gate-guard — conditional target: last undecided constraint", () => {
+  it("surface_confirmed → constraints_resolved when deciding the last undecided constraint", () => {
+    const state = makeStateWithConstraints([
+      { id: "CST-001", severity: "required", status: "decided" },
+      { id: "CST-002", severity: "recommended", status: "decided" },
+      { id: "CST-003", severity: "recommended", status: "undecided" },
+    ]);
+    const event = makeEvent("constraint.decision_recorded", {
+      constraint_id: "CST-003", decision: "inject", selected_option: "opt",
+      decision_owner: "product_owner", rationale: "r",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+    if (result.allowed) expect(result.next_state).toBe("constraints_resolved");
+  });
+
+  it("stays surface_confirmed when there are still undecided after decide", () => {
+    const state = makeStateWithConstraints([
+      { id: "CST-001", severity: "required", status: "decided" },
+      { id: "CST-002", severity: "recommended", status: "undecided" },
+      { id: "CST-003", severity: "recommended", status: "undecided" },
+    ]);
+    const event = makeEvent("constraint.decision_recorded", {
+      constraint_id: "CST-002", decision: "inject", selected_option: "opt",
+      decision_owner: "product_owner", rationale: "r",
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+    if (result.allowed) expect(result.next_state).toBe("surface_confirmed");
+  });
+});
+
+// ─── scope.deferred exhaustive: allowed from every non-terminal state ───
+
+describe("gate-guard — scope.deferred exhaustive non-terminal", () => {
+  const nonTerminalStates = [
+    "draft", "grounded", "align_proposed", "align_locked",
+    "surface_iterating", "surface_confirmed", "constraints_resolved",
+    "target_locked", "compiled", "applied", "validated",
+  ] as const;
+
+  for (const s of nonTerminalStates) {
+    it(`scope.deferred allowed from ${s}`, () => {
+      const state = makeState({ current_state: s });
+      const event = makeEvent("scope.deferred", { reason: "r", resume_condition: "c" });
+      const result = validateEvent(state, event);
+      expect(result.allowed).toBe(true);
+      if (result.allowed) expect(result.next_state).toBe("deferred");
+    });
+  }
+
+  it("scope.deferred denied from deferred (terminal)", () => {
+    const state = makeState({ current_state: "deferred" });
+    const event = makeEvent("scope.deferred", { reason: "r", resume_condition: "c" });
+    expect(validateEvent(state, event).allowed).toBe(false);
+  });
+
+  it("scope.deferred denied from rejected (terminal)", () => {
+    const state = makeState({ current_state: "rejected" });
+    const event = makeEvent("scope.deferred", { reason: "r", resume_condition: "c" });
+    expect(validateEvent(state, event).allowed).toBe(false);
+  });
+
+  it("scope.deferred denied from closed (terminal)", () => {
+    const state = makeState({ current_state: "closed" });
+    const event = makeEvent("scope.deferred", { reason: "r", resume_condition: "c" });
     expect(validateEvent(state, event).allowed).toBe(false);
   });
 });

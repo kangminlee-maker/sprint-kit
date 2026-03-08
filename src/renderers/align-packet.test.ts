@@ -310,6 +310,54 @@ describe("align-packet — Section 4 Decision", () => {
   });
 });
 
+// ─── Edge cases: empty collections ───
+
+describe("align-packet — empty collections edge cases", () => {
+  it("renders with empty scenarios (no blockquotes)", () => {
+    const md = renderAlignPacket(makeState(), makeContent({ scenarios: [] }));
+    expect(md).toContain("**시나리오:**");
+    expect(md).not.toContain("> ");
+  });
+
+  it("renders with empty proposed_scope.in and out (tables with headers only)", () => {
+    const md = renderAlignPacket(makeState(), makeContent({
+      proposed_scope: { in: [], out: [] },
+    }));
+    expect(md).toContain("| 포함 | 동의하시나요? |");
+    expect(md).toContain("| 제외 | 동의하시나요? |");
+    // No data rows
+    const lines = md.split("\n");
+    const inHeaderIdx = lines.findIndex(l => l.includes("| 포함 | 동의하시나요? |"));
+    const separatorIdx = inHeaderIdx + 1;
+    const nextLine = lines[separatorIdx + 1];
+    // Next line should be empty or the exclusion table
+    expect(nextLine === "" || nextLine.includes("| 제외")).toBe(true);
+  });
+
+  it("interface_extras is ignored when entry_mode is experience", () => {
+    const md = renderAlignPacket(
+      makeState({ entry_mode: "experience" }),
+      makeContent({
+        interface_extras: { api_scope: "public", breaking_change: "forbidden", version_policy: "extend" },
+      }),
+    );
+    expect(md).not.toContain("API 공개 범위");
+    expect(md).not.toContain("Interface scope 추가 항목");
+  });
+
+  it("renders with empty tensions array", () => {
+    const md = renderAlignPacket(makeState(), makeContent({ tensions: [] }));
+    expect(md).toContain("발견된 충돌이 없습니다");
+    expect(md).not.toContain("| CST-ID |");
+  });
+
+  it("renders with empty decision_questions", () => {
+    const md = renderAlignPacket(makeState(), makeContent({ decision_questions: [] }));
+    expect(md).toContain("### 4. 지금 결정할 것");
+    expect(md).toContain("**Approve**");
+  });
+});
+
 // ─── Validation ───
 
 describe("align-packet — validation", () => {

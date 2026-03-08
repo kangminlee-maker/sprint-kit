@@ -34,7 +34,7 @@ function makeState(pool: ConstraintPool): ScopeState {
     scope_id: "SC-TEST", title: "T", description: "d", entry_mode: "experience",
     current_state: "target_locked", constraint_pool: pool,
     stale: false, compile_ready: true, convergence_blocked: false,
-    revision_count_align: 0, revision_count_surface: 0,
+    revision_count_align: 0, revision_count_surface: 0, retry_count_compile: 0,
     verdict_log: [], feedback_history: [], latest_revision: 0,
   };
 }
@@ -202,6 +202,27 @@ describe("compile-defense — Layer 2 defer", () => {
       expect(result.violations.some((v) => v.rule === "L2-defer-interfere")).toBe(true);
     }
   });
+
+  it("fails when defer source_ref matches one of multiple CHGs with same file_path", () => {
+    const pool = makePool(makeEntry("CST-001", {
+      decision: "defer",
+      source_refs: [{ source: "src/shared.ts", detail: "d" }],
+    }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "defer" }],
+      [],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/other.ts", description: "d", related_impl: [], related_cst: [] },
+      { change_id: "CHG-002", action: "modify", file_path: "src/shared.ts", description: "d", related_impl: [], related_cst: [] },
+    ]);
+    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "defer" }];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      expect(result.violations.some((v) => v.rule === "L2-defer-interfere" && v.detail.includes("src/shared.ts"))).toBe(true);
+    }
+  });
 });
 
 // ─── Layer 2: override ───
@@ -262,6 +283,92 @@ describe("compile-defense — Layer 2 traceability", () => {
   });
 });
 
+// ─── Layer 2: unexpected decision ───
+
+describe("compile-defense — Layer 2 unexpected decision", () => {
+  it("fails when decision is clarify", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "clarify" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "clarify" }],
+      [],
+    );
+    const ds = makeDeltaSet([]);
+    const vp: ValidationPlanEntry[] = [];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      expect(result.violations.some((v) => v.rule === "L2-decision-unexpected" && v.detail.includes("clarify"))).toBe(true);
+    }
+  });
+
+  it("fails when decision is modify-direction", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "modify-direction" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "modify-direction" }],
+      [],
+    );
+    const ds = makeDeltaSet([]);
+    const vp: ValidationPlanEntry[] = [];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      expect(result.violations.some((v) => v.rule === "L2-decision-unexpected" && v.detail.includes("modify-direction"))).toBe(true);
+    }
+  });
+});
+
+// ─── Layer 2: CHG→IMPL reverse traceability ───
+
+describe("compile-defense — Layer 2 CHG→IMPL reverse", () => {
+  it("fails when CHG references non-existent IMPL", () => {
+    const pool = makePool(makeEntry("CST-001"));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-999"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject" }];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      expect(result.violations.some((v) => v.rule === "L2-chg-orphan-impl" && v.detail.includes("IMPL-999"))).toBe(true);
+    }
+  });
+
+  it("allows CHG with empty related_impl (defer/override context)", () => {
+    const pool = makePool(makeEntry("CST-001", {
+      decision: "defer",
+      source_refs: [{ source: "src/untouched.ts", detail: "d" }],
+    }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "defer" }],
+      [],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/other.ts", description: "d", related_impl: [], related_cst: [] },
+    ]);
+    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "defer" }];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+  });
+
+  it("passes when all CHG.related_impl reference valid IMPLs", () => {
+    const pool = makePool(makeEntry("CST-001"));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject" }];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+  });
+});
+
 // ─── Golden data ───
 
 describe("compile-defense — golden data", () => {
@@ -307,5 +414,92 @@ describe("compile-defense — golden data", () => {
 
     const result = compileDefense(state, buildSpec, deltaSet, valPlan);
     expect(result.passed).toBe(true);
+  });
+});
+
+// ─── Additional Edge Cases ───
+
+describe("compile-defense — additional edge cases", () => {
+  it("multiple violations from different rules simultaneously", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [], // no IMPL
+    );
+    const ds = makeDeltaSet([]); // no CHG
+    const vp: ValidationPlanEntry[] = []; // no VAL
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      expect(result.violations.some((v) => v.rule === "L2-inject-impl")).toBe(true);
+      expect(result.violations.some((v) => v.rule === "L2-inject-chg")).toBe(true);
+      expect(result.violations.some((v) => v.rule === "L2-inject-val")).toBe(true);
+    }
+  });
+
+  it("L1 + L2 violations simultaneously", () => {
+    const pool = makePool(
+      makeEntry("CST-001"), // missing from Section 3
+      makeEntry("CST-002", { decision: "inject" }),
+    );
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-002", decision: "inject" }], // CST-001 missing
+      [{ impl_id: "IMPL-001", related_cst: ["CST-002"] }],
+    );
+    const ds = makeDeltaSet([]); // no CHG for CST-002
+    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-002", decision_type: "inject" }];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      expect(result.violations.some((v) => v.rule === "L1-checklist")).toBe(true);
+      expect(result.violations.some((v) => v.rule === "L2-inject-chg")).toBe(true);
+    }
+  });
+
+  it("empty pool passes defense", () => {
+    const pool = makePool();
+    const bs = makeBuildSpec([], []);
+    const ds = makeDeltaSet([]);
+    const vp: ValidationPlanEntry[] = [];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+  });
+
+  it("CHG with multiple related_impl one valid one invalid", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001", "IMPL-999"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject" }];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      const orphanViolations = result.violations.filter((v) => v.rule === "L2-chg-orphan-impl");
+      expect(orphanViolations).toHaveLength(1);
+      expect(orphanViolations[0].detail).toContain("IMPL-999");
+    }
+  });
+
+  it("multiple IMPLs without CHGs", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [
+        { impl_id: "IMPL-001", related_cst: ["CST-001"] },
+        { impl_id: "IMPL-002", related_cst: ["CST-001"] },
+      ],
+    );
+    const ds = makeDeltaSet([]); // no changes at all
+    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject" }];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      const implNoChg = result.violations.filter((v) => v.rule === "L2-impl-no-chg");
+      expect(implNoChg).toHaveLength(2);
+    }
   });
 });

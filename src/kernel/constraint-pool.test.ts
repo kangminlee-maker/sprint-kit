@@ -503,6 +503,195 @@ describe("constraint-pool — defense (skip invalid input)", () => {
   });
 });
 
+describe("constraint-pool — edge cases", () => {
+  it("clarify → resolved → clarify again (re-clarify cycle)", () => {
+    const events = [
+      discovered("CST-001", 1),
+      clarifyRequested("CST-001", 2),
+      clarifyResolved("CST-001", 3, { decision: "inject" }),
+      clarifyRequested("CST-001", 4),
+    ];
+    const pool = buildConstraintPool(events);
+    const entry = findConstraint(pool, "CST-001")!;
+
+    expect(entry.status).toBe("clarify_pending");
+    expect(isConstraintsResolved(pool)).toBe(false);
+  });
+
+  it("invalidated → decision_recorded: decision overwrites (last-write-wins)", () => {
+    const events = [
+      discovered("CST-001", 1),
+      invalidated("CST-001", 2),
+      decisionRecorded("CST-001", 3, { decision: "defer" }),
+    ];
+    const pool = buildConstraintPool(events);
+    const entry = findConstraint(pool, "CST-001")!;
+
+    expect(entry.status).toBe("decided");
+    expect(entry.decision).toBe("defer");
+  });
+
+  it("discovered with empty source_refs", () => {
+    const emptyRefsEvent: Event = {
+      event_id: "evt_1",
+      scope_id: "SC-TEST",
+      type: "constraint.discovered",
+      ts: "2026-01-01T00:00:01Z",
+      revision: 1,
+      actor: "system",
+      state_before: "surface_confirmed",
+      state_after: "surface_confirmed",
+      payload: {
+        constraint_id: "CST-001",
+        perspective: "code",
+        summary: "test constraint",
+        severity: "recommended",
+        discovery_stage: "draft_phase2",
+        decision_owner: "product_owner",
+        impact_if_ignored: "test impact",
+        source_refs: [],
+      },
+    } as Event;
+    const pool = buildConstraintPool([emptyRefsEvent]);
+    const entry = findConstraint(pool, "CST-001")!;
+
+    expect(entry).toBeDefined();
+    expect(entry.source_refs).toEqual([]);
+  });
+
+  it("clarify_resolved for unknown constraint_id skipped", () => {
+    const events = [clarifyResolved("CST-UNKNOWN", 1)];
+    const pool = buildConstraintPool(events);
+
+    expect(pool.constraints).toHaveLength(0);
+  });
+
+  it("many constraints (10) summary invariants", () => {
+    const severities: Array<"required" | "recommended"> = [
+      "required", "recommended", "required", "recommended", "required",
+      "recommended", "required", "recommended", "required", "recommended",
+    ];
+    const events: Event[] = severities.map((sev, i) =>
+      discovered(`CST-${String(i + 1).padStart(3, "0")}`, i + 1, { severity: sev }),
+    );
+    // Decide some, clarify some, invalidate some
+    events.push(decisionRecorded("CST-001", 11));
+    events.push(decisionRecorded("CST-002", 12));
+    events.push(decisionRecorded("CST-003", 13));
+    events.push(clarifyRequested("CST-004", 14));
+    events.push(clarifyRequested("CST-005", 15));
+    events.push(invalidated("CST-006", 16));
+    events.push(invalidated("CST-007", 17));
+    // CST-008, CST-009, CST-010 remain undecided
+
+    const pool = buildConstraintPool(events);
+
+    assertSummaryInvariants(pool);
+    expect(pool.summary.total).toBe(10);
+    expect(pool.summary.decided).toBe(3);
+    expect(pool.summary.clarify_pending).toBe(2);
+    expect(pool.summary.invalidated).toBe(2);
+    expect(pool.summary.undecided).toBe(3);
+    expect(
+      pool.summary.decided +
+        pool.summary.clarify_pending +
+        pool.summary.invalidated +
+        pool.summary.undecided,
+    ).toBe(pool.summary.total);
+  });
+});
+
+describe("constraint-pool — decision change (re-decision)", () => {
+  it("decision_recorded twice changes decision value", () => {
+    const events = [
+      discovered("CST-001", 1),
+      decisionRecorded("CST-001", 2, { decision: "inject", selected_option: "option A", rationale: "first reason" }),
+      decisionRecorded("CST-001", 3, { decision: "defer", selected_option: "option B", rationale: "changed mind" }),
+    ];
+    const pool = buildConstraintPool(events);
+    const entry = findConstraint(pool, "CST-001")!;
+
+    expect(entry.status).toBe("decided");
+    expect(entry.decision).toBe("defer");
+    expect(entry.selected_option).toBe("option B");
+    expect(entry.rationale).toBe("changed mind");
+    expect(entry.decided_at).toBe(3);
+  });
+});
+
+describe("constraint-pool — invalidation persistence", () => {
+  it("invalidated → decided → invalidated: invalidation_reason from latest invalidation", () => {
+    const events = [
+      discovered("CST-001", 1),
+      invalidated("CST-001", 2), // first invalidation (reason: "no longer relevant")
+      decisionRecorded("CST-001", 3, { decision: "inject" }), // reactivated
+      invalidated("CST-001", 4), // second invalidation (reason: "no longer relevant")
+    ];
+    const pool = buildConstraintPool(events);
+    const entry = findConstraint(pool, "CST-001")!;
+
+    expect(entry.status).toBe("invalidated");
+    expect(entry.invalidation_reason).toBe("no longer relevant");
+    // The decision fields from step 3 should still be present (not cleared by invalidation)
+    expect(entry.decision).toBe("inject");
+  });
+});
+
+describe("constraint-pool — complex scenario summary accuracy", () => {
+  it("complex mixed scenario: 3 required + 4 recommended, various statuses", () => {
+    const events: Event[] = [
+      // 3 required
+      discovered("CST-R1", 1, { severity: "required", decision_owner: "product_owner" }),
+      discovered("CST-R2", 2, { severity: "required", decision_owner: "product_owner" }),
+      discovered("CST-R3", 3, { severity: "required", decision_owner: "builder" }),
+      // 4 recommended
+      discovered("CST-C1", 4, { severity: "recommended", decision_owner: "product_owner" }),
+      discovered("CST-C2", 5, { severity: "recommended", decision_owner: "builder" }),
+      discovered("CST-C3", 6, { severity: "recommended", decision_owner: "product_owner" }),
+      discovered("CST-C4", 7, { severity: "recommended", decision_owner: "builder" }),
+      // Decide some
+      decisionRecorded("CST-R1", 8, { decision: "inject" }),
+      decisionRecorded("CST-C1", 9, { decision: "defer" }),
+      // Clarify one
+      clarifyRequested("CST-R2", 10),
+      // Invalidate one
+      invalidated("CST-C2", 11),
+      // CST-R3, CST-C3, CST-C4 remain undecided
+    ];
+    const pool = buildConstraintPool(events);
+    assertSummaryInvariants(pool);
+
+    expect(pool.summary.total).toBe(7);
+    expect(pool.summary.required).toBe(3);
+    expect(pool.summary.recommended).toBe(4);
+    expect(pool.summary.decided).toBe(2);
+    expect(pool.summary.clarify_pending).toBe(1);
+    expect(pool.summary.invalidated).toBe(1);
+    expect(pool.summary.undecided).toBe(3);
+    expect(isConstraintsResolved(pool)).toBe(false);
+  });
+
+  it("all constraints resolved through mix of decided + invalidated", () => {
+    const events: Event[] = [
+      discovered("CST-001", 1, { severity: "required" }),
+      discovered("CST-002", 2, { severity: "recommended" }),
+      discovered("CST-003", 3, { severity: "required" }),
+      decisionRecorded("CST-001", 4),
+      invalidated("CST-002", 5),
+      clarifyRequested("CST-003", 6),
+      clarifyResolved("CST-003", 7),
+    ];
+    const pool = buildConstraintPool(events);
+    assertSummaryInvariants(pool);
+
+    expect(pool.summary.decided).toBe(2);
+    expect(pool.summary.invalidated).toBe(1);
+    expect(pool.summary.undecided).toBe(0);
+    expect(pool.summary.clarify_pending).toBe(0);
+    expect(isConstraintsResolved(pool)).toBe(true);
+  });
+});
+
 describe("constraint-pool — summary invariants", () => {
   it("invariants hold for mixed status pool", () => {
     const events = [

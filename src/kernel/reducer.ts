@@ -46,6 +46,8 @@ export function reduce(events: Event[]): ScopeState {
 
   let revision_count_align = 0;
   let revision_count_surface = 0;
+  let retry_count_compile = 0;
+  let validation_plan_hash: string | undefined;
 
   const verdict_log: VerdictLogEntry[] = [];
   const feedback_history: FeedbackClassifiedPayload[] = [];
@@ -137,6 +139,18 @@ export function reduce(events: Event[]): ScopeState {
         break;
       }
 
+      // ── Compile retry tracking ──
+      case "compile.constraint_gap_found":
+        retry_count_compile++;
+        break;
+
+      case "compile.completed": {
+        const cp = evt.payload as import("./types.js").CompileCompletedPayload;
+        retry_count_compile = 0;
+        validation_plan_hash = cp.validation_plan_hash;
+        break;
+      }
+
       // ── Convergence ──
       case "convergence.blocked":
         lastBlockedRev = evt.revision;
@@ -183,6 +197,8 @@ export function reduce(events: Event[]): ScopeState {
     convergence_blocked,
     revision_count_align,
     revision_count_surface,
+    retry_count_compile,
+    validation_plan_hash,
     verdict_log,
     feedback_history,
     latest_revision,

@@ -39,6 +39,14 @@ export interface ValidationPlanEntry {
   decision_type: "inject" | "defer" | "override";
 }
 
+/** Extended entry with rendering/execution fields. compile-defense ignores these. */
+export interface ValidationPlanItem extends ValidationPlanEntry {
+  target: string;
+  method: string;
+  pass_criteria: string;
+  fail_action: string;
+}
+
 export interface DefenseViolation {
   rule: string;
   detail: string;
@@ -126,11 +134,20 @@ function checkLayer2(
       case "override":
         checkOverrideNonReflected(c, deltaSet, changeFilePaths, violations);
         break;
+      default:
+        violations.push({
+          rule: "L2-decision-unexpected",
+          detail: `${c.constraint_id} has unexpected decision "${decision}" at compile time`,
+        });
+        break;
     }
   }
 
   // Traceability chain: every IMPL has at least one CHG
   checkImplHasChanges(buildSpec, deltaSet, violations);
+
+  // Reverse traceability: every CHG.related_impl references a valid IMPL
+  checkChangesReferenceValidImpls(buildSpec, deltaSet, implIds, violations);
 }
 
 /** inject → must have IMPL, CHG referencing this CST, and VAL item */
@@ -203,6 +220,28 @@ function checkOverrideNonReflected(
         rule: "L2-override-reflected",
         detail: `${c.constraint_id} (override) is reflected in delta-set change ${change.change_id}`,
       });
+    }
+  }
+}
+
+/** Every CHG with non-empty related_impl must reference valid IMPLs in Section 4 */
+function checkChangesReferenceValidImpls(
+  buildSpec: BuildSpecData,
+  deltaSet: DeltaSet,
+  implIds: Set<string>,
+  violations: DefenseViolation[],
+): void {
+  for (const change of deltaSet.changes) {
+    // CHG with empty related_impl is allowed (e.g. defer/override context changes)
+    if (change.related_impl.length === 0) continue;
+
+    for (const implId of change.related_impl) {
+      if (!implIds.has(implId)) {
+        violations.push({
+          rule: "L2-chg-orphan-impl",
+          detail: `${change.change_id} references ${implId} which does not exist in Section 4`,
+        });
+      }
     }
   }
 }

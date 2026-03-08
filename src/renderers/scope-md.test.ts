@@ -183,6 +183,63 @@ describe("scope-md — constraint summary", () => {
   });
 });
 
+// ─── Edge cases: convergence_blocked override, stale with undefined, empty verdict_log ───
+
+describe("scope-md — edge cases", () => {
+  it("convergence_blocked overrides next action message", () => {
+    const md = renderScopeMd(makeState({
+      current_state: "surface_iterating",
+      convergence_blocked: true,
+    }));
+    expect(md).toContain("수렴 차단 상태입니다");
+    expect(md).toContain("convergence.action_taken");
+  });
+
+  it("stale with undefined stale_sources shows '알 수 없음'", () => {
+    const md = renderScopeMd(makeState({
+      stale: true,
+      stale_sources: undefined,
+      stale_since: undefined,
+    }));
+    expect(md).toContain("알 수 없음");
+    expect(md).toContain("?");
+  });
+
+  it("empty verdict_log omits 최근 결정 section", () => {
+    const md = renderScopeMd(makeState({ verdict_log: [] }));
+    expect(md).not.toContain("## 최근 결정");
+  });
+
+  it("verdict_log with clarify_resolved renders correctly", () => {
+    const md = renderScopeMd(makeState({
+      verdict_log: [
+        { type: "constraint.clarify_resolved", revision: 15, ts: "2026-01-01T00:00:15Z", constraint_id: "CST-002", decision: "inject", decision_owner: "product_owner" },
+      ],
+    }));
+    expect(md).toContain("## 최근 결정");
+    expect(md).toContain("CST-002 clarify 해소");
+    expect(md).toContain("inject");
+  });
+
+  it("constraint summary omits undecided/clarify/invalidated lines when zero", () => {
+    const pool = emptyPool();
+    pool.summary = { total: 3, required: 2, recommended: 1, decided: 3, clarify_pending: 0, invalidated: 0, undecided: 0 };
+    const md = renderScopeMd(makeState({ constraint_pool: pool }));
+    expect(md).toContain("전체: 3건");
+    expect(md).toContain("결정 완료: 3건");
+    expect(md).not.toContain("미결정:");
+    expect(md).not.toContain("clarify 대기:");
+    expect(md).not.toContain("제외됨:");
+  });
+
+  it("all terminal states show '이 scope는 종료되었습니다'", () => {
+    for (const terminal of ["closed", "deferred", "rejected"] as const) {
+      const md = renderScopeMd(makeState({ current_state: terminal }));
+      expect(md).toContain("종료");
+    }
+  });
+});
+
 // ─── Verdict log ───
 
 describe("scope-md — verdict log", () => {

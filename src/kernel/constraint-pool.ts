@@ -65,6 +65,7 @@ export function buildConstraintPool(events: Event[]): ConstraintPool {
         entry.status = "decided";
         entry.decision = p.decision;
         entry.selected_option = p.selected_option;
+        entry.rationale = p.rationale;
         entry.decision_owner = p.decision_owner;
         entry.decided_at = evt.revision;
         break;
@@ -85,6 +86,7 @@ export function buildConstraintPool(events: Event[]): ConstraintPool {
         entry.status = "decided";
         entry.decision = p.decision;
         entry.selected_option = p.selected_option;
+        entry.rationale = p.rationale;
         entry.decision_owner = p.decision_owner;
         entry.decided_at = evt.revision;
         break;

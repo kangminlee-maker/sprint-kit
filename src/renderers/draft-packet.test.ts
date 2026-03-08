@@ -303,6 +303,49 @@ describe("draft-packet — Section 6 decision", () => {
   });
 });
 
+// ─── Edge cases: empty and undefined fields ───
+
+describe("draft-packet — empty/undefined edge cases", () => {
+  it("renders with empty scenario_guide (no table)", () => {
+    const md = renderDraftPacket(makeState(), makeContent({ scenario_guide: [] }));
+    expect(md).toContain("### 1. 확정된 Surface");
+    expect(md).not.toContain("| 시나리오 | 시작 |");
+  });
+
+  it("renders '없음' when guardrails is empty", () => {
+    const md = renderDraftPacket(makeState(), makeContent({ guardrails: [] }));
+    expect(md).toContain("없음");
+  });
+
+  it("omits run_command when undefined", () => {
+    const md = renderDraftPacket(makeState(), makeContent({
+      run_command: undefined,
+    }));
+    expect(md).not.toContain("**실행 방법**");
+  });
+
+  it("omits mockup_revisions when undefined", () => {
+    const md = renderDraftPacket(makeState(), makeContent({
+      mockup_revisions: undefined,
+    }));
+    expect(md).not.toContain("mockup 반복");
+  });
+
+  it("renders run_command when provided", () => {
+    const md = renderDraftPacket(makeState(), makeContent({
+      run_command: "npm run dev",
+    }));
+    expect(md).toContain("`npm run dev`");
+  });
+
+  it("renders mockup_revisions when provided", () => {
+    const md = renderDraftPacket(makeState(), makeContent({
+      mockup_revisions: 5,
+    }));
+    expect(md).toContain("5회 수정 후 사용자 확정");
+  });
+});
+
 // ─── Validation ───
 
 describe("draft-packet — validation", () => {

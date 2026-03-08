@@ -274,6 +274,146 @@ describe("event-pipeline — state for caller rendering", () => {
   });
 });
 
+// ─── Pipeline: rejection recovery ───
+
+describe("event-pipeline — rejection recovery", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("rejects invalid event then accepts valid event", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    // Invalid: align.locked not allowed from draft
+    const rejected = appendScopeEvent(paths, input("align.locked", {
+      locked_direction: "d",
+      locked_scope_boundaries: { in: [], out: [] },
+      locked_in_out: true,
+    }, "user"));
+    expect(rejected.success).toBe(false);
+
+    // Valid: grounding.started is allowed from draft
+    const accepted = appendScopeEvent(paths, input("grounding.started", {
+      sources: [{ type: "add-dir", path_or_url: "/test" }],
+    }));
+    expect(accepted.success).toBe(true);
+    if (accepted.success) {
+      expect(accepted.event.revision).toBe(2);
+      expect(accepted.next_state).toBe("draft");
+    }
+  });
+});
+
+// ─── Pipeline: terminal state rejection ───
+
+describe("event-pipeline — terminal state rejection", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("rejects events after scope.deferred (terminal state)", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    appendScopeEvent(paths, input("scope.deferred", {
+      reason: "postponed", resume_condition: "next quarter",
+    }, "user"));
+
+    const result = appendScopeEvent(paths, input("grounding.started", {
+      sources: [{ type: "add-dir", path_or_url: "/test" }],
+    }));
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.reason).toContain("Transition denied");
+  });
+
+  it("rejects events after scope.rejected (terminal state)", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    appendScopeEvent(paths, input("scope.rejected", {
+      reason: "not feasible", rejection_basis: "cost",
+    }, "user"));
+
+    const result = appendScopeEvent(paths, input("grounding.started", {
+      sources: [{ type: "add-dir", path_or_url: "/test" }],
+    }));
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.reason).toContain("Transition denied");
+  });
+});
+
+// ─── Pipeline: constraint lifecycle with materialized views ───
+
+describe("event-pipeline — constraint lifecycle materialized views", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("discovered → decided: constraint-pool.json has decided constraint", () => {
+    appendScopeEvent(paths, input("scope.created", { title: "T", description: "d", entry_mode: "experience" }, "user"));
+    appendScopeEvent(paths, input("grounding.completed", { snapshot_revision: 1, source_hashes: {}, perspective_summary: { experience: 0, code: 0, policy: 0 } }));
+    appendScopeEvent(paths, input("align.proposed", { packet_path: "p", packet_hash: "h", snapshot_revision: 1 }));
+    appendScopeEvent(paths, input("align.locked", { locked_direction: "dir", locked_scope_boundaries: { in: [], out: [] }, locked_in_out: true }, "user"));
+    appendScopeEvent(paths, input("surface.generated", { surface_type: "experience", surface_path: "s", content_hash: "h", based_on_snapshot: 1 }));
+    appendScopeEvent(paths, input("surface.confirmed", { final_surface_path: "s", final_content_hash: "h", total_revisions: 0 }, "user"));
+
+    appendScopeEvent(paths, input("constraint.discovered", {
+      constraint_id: "CST-001", perspective: "code", summary: "test",
+      severity: "required", discovery_stage: "draft_phase2",
+      decision_owner: "builder", impact_if_ignored: "bad", source_refs: [],
+    }));
+
+    appendScopeEvent(paths, input("constraint.decision_recorded", {
+      constraint_id: "CST-001", decision: "inject", selected_option: "opt",
+      decision_owner: "builder", rationale: "needed",
+    }, "agent"));
+
+    const pool = JSON.parse(readFileSync(paths.constraintPool, "utf-8")) as ConstraintPool;
+    expect(pool.summary.total).toBe(1);
+    expect(pool.summary.decided).toBe(1);
+    expect(pool.summary.undecided).toBe(0);
+    expect(pool.constraints[0].status).toBe("decided");
+    expect(pool.constraints[0].decision).toBe("inject");
+  });
+});
+
+// ─── Pipeline: verdict-log clarify_resolved ───
+
+describe("event-pipeline — verdict-log clarify_resolved", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("verdict-log includes clarify_resolved entries", () => {
+    appendScopeEvent(paths, input("scope.created", { title: "T", description: "d", entry_mode: "experience" }, "user"));
+    appendScopeEvent(paths, input("grounding.completed", { snapshot_revision: 1, source_hashes: {}, perspective_summary: { experience: 0, code: 0, policy: 0 } }));
+    appendScopeEvent(paths, input("align.proposed", { packet_path: "p", packet_hash: "h", snapshot_revision: 1 }));
+    appendScopeEvent(paths, input("align.locked", { locked_direction: "dir", locked_scope_boundaries: { in: [], out: [] }, locked_in_out: true }, "user"));
+    appendScopeEvent(paths, input("surface.generated", { surface_type: "experience", surface_path: "s", content_hash: "h", based_on_snapshot: 1 }));
+    appendScopeEvent(paths, input("surface.confirmed", { final_surface_path: "s", final_content_hash: "h", total_revisions: 0 }, "user"));
+
+    appendScopeEvent(paths, input("constraint.discovered", {
+      constraint_id: "CST-001", perspective: "code", summary: "test",
+      severity: "required", discovery_stage: "draft_phase2",
+      decision_owner: "product_owner", impact_if_ignored: "bad", source_refs: [],
+    }));
+
+    appendScopeEvent(paths, input("constraint.clarify_requested", {
+      constraint_id: "CST-001", question: "clarify this?", asked_to: "team",
+    }, "agent"));
+
+    appendScopeEvent(paths, input("constraint.clarify_resolved", {
+      constraint_id: "CST-001", resolution: "resolved", decision: "inject",
+      selected_option: "opt", decision_owner: "product_owner", rationale: "clear now",
+    }, "user"));
+
+    const log = JSON.parse(readFileSync(paths.verdictLog, "utf-8")) as VerdictLogEntry[];
+    const clarifyEntries = log.filter(e => e.type === "constraint.clarify_resolved");
+    expect(clarifyEntries.length).toBeGreaterThanOrEqual(1);
+    expect(clarifyEntries[0].type).toBe("constraint.clarify_resolved");
+  });
+});
+
 // ─── Pipeline: golden data replay ───
 
 describe("event-pipeline — golden data replay", () => {

@@ -153,6 +153,7 @@ const MATRIX: Partial<
       kind: "forward",
       conditional: ["constraints_resolved", "grounded"],
     },
+    "snapshot.marked_stale": { next: "applied", kind: "self" },
   },
 
   // ── validated ──

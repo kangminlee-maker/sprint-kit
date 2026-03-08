@@ -339,11 +339,18 @@ export interface ValidationStartedPayload {
   validation_plan_hash: string;
 }
 
+export interface ValidationItemResult {
+  val_id: string;
+  related_cst: string;
+  result: ValidationResult;
+  detail: string;
+}
+
 export interface ValidationCompletedPayload {
   result: ValidationResult;
   pass_count: number;
   fail_count: number;
-  details: string;
+  items: ValidationItemResult[];
 }
 
 // Observational payloads
@@ -467,6 +474,7 @@ export interface ConstraintEntry {
   invalidation_reason?: string;
   decision?: ConstraintDecision;
   selected_option?: string;
+  rationale?: string;
   discovered_at: number; // revision
   decided_at?: number; // revision
 }
@@ -529,6 +537,8 @@ export interface ScopeState {
   convergence_blocked: boolean;
   revision_count_align: number;
   revision_count_surface: number;
+  retry_count_compile: number;
+  validation_plan_hash?: string;
   verdict_log: VerdictLogEntry[];
   feedback_history: FeedbackClassifiedPayload[];
   latest_revision: number;

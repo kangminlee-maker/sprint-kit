@@ -503,6 +503,110 @@ describe("reducer — latest_revision", () => {
   });
 });
 
+// ─── retry_count_compile ───
+
+describe("reducer — retry_count_compile", () => {
+  beforeEach(resetRev);
+
+  it("starts at 0", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+    ];
+    expect(reduce(events).retry_count_compile).toBe(0);
+  });
+
+  it("increments on compile.constraint_gap_found", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("compile.constraint_gap_found", "target_locked", "constraints_resolved", {
+        new_constraint_id: "CST-010", perspective: "code", summary: "s",
+      }),
+    ];
+    expect(reduce(events).retry_count_compile).toBe(1);
+  });
+
+  it("resets on compile.completed", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("compile.constraint_gap_found", "target_locked", "constraints_resolved", {
+        new_constraint_id: "CST-010", perspective: "code", summary: "s",
+      }),
+      evt("compile.completed", "target_locked", "compiled", {
+        build_spec_path: "p", build_spec_hash: "h",
+        delta_set_path: "p", delta_set_hash: "h",
+        validation_plan_path: "p", validation_plan_hash: "h",
+      }),
+    ];
+    expect(reduce(events).retry_count_compile).toBe(0);
+  });
+
+  it("counts multiple gap_found events", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("compile.constraint_gap_found", "target_locked", "constraints_resolved", {
+        new_constraint_id: "CST-010", perspective: "code", summary: "s",
+      }),
+      evt("compile.constraint_gap_found", "target_locked", "constraints_resolved", {
+        new_constraint_id: "CST-011", perspective: "code", summary: "s",
+      }),
+      evt("compile.constraint_gap_found", "target_locked", "constraints_resolved", {
+        new_constraint_id: "CST-012", perspective: "code", summary: "s",
+      }),
+    ];
+    expect(reduce(events).retry_count_compile).toBe(3);
+  });
+});
+
+// ─── additional edge cases ───
+
+describe("reducer — additional edge cases", () => {
+  beforeEach(resetRev);
+
+  it("validation_plan_hash set from compile.completed", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("compile.completed", "target_locked", "compiled", {
+        build_spec_path: "p", build_spec_hash: "h",
+        delta_set_path: "p", delta_set_hash: "h",
+        validation_plan_path: "p", validation_plan_hash: "vph",
+      }),
+    ];
+    const state = reduce(events);
+    expect(state.validation_plan_hash).toBe("vph");
+  });
+
+  it("validation_plan_hash undefined before compile.completed", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+    ];
+    const state = reduce(events);
+    expect(state.validation_plan_hash).toBeUndefined();
+  });
+
+  it("entry_mode interface from scope.created", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "interface" }),
+    ];
+    const state = reduce(events);
+    expect(state.entry_mode).toBe("interface");
+  });
+
+  it("observational events only affect latest_revision", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("convergence.warning", "draft", "draft", {
+        state: "draft", revision_count: 1, pattern_summary: "p",
+      }),
+      evt("convergence.diagnosis", "draft", "draft", {
+        state: "draft", revision_count: 2, diagnosis: "d", options: [],
+      }),
+    ];
+    const state = reduce(events);
+    expect(state.latest_revision).toBe(3);
+    expect(state.convergence_blocked).toBe(false);
+  });
+});
+
 // ─── determinism ───
 
 describe("reducer — determinism", () => {

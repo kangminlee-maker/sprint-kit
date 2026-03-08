@@ -160,8 +160,8 @@ delta-set의 `build_spec_hash`는 생성 시점의 snapshot입니다.
 ```json
 {
   "scope_id": "SC-2026-001",
-  "surface_hash": "sha256:...",
-  "build_spec_hash": "sha256:...",
+  "surface_hash": "a1b2c3d4e5f6...",
+  "build_spec_hash": "f6e5d4c3b2a1...",
   "changes": [
     {
       "change_id": "CHG-001",

@@ -41,11 +41,12 @@ const CONVERGENCE_BLOCKED_EVENTS = new Set<string>([
 /**
  * Validate an event before appending to the event store.
  *
- * Checks 4 rules in order:
+ * Checks 5 rules in order:
  * 1. State transition authorization (state machine matrix)
  * 2. Referential integrity (constraint_id existence)
  * 3. Required override validation (rationale required)
  * 4. Convergence blocking (revise blocked after convergence.blocked)
+ * 5. Compile retry limit (compile.started blocked after 3 gap_found cycles)
  *
  * On success, returns the determined next_state (resolving conditional targets).
  * On failure, returns the reason for rejection.
@@ -122,6 +123,17 @@ export function validateEvent(
     };
   }
 
+  // ── Rule 5: Compile retry limit ──
+  if (
+    eventType === "compile.started" &&
+    state.retry_count_compile >= 3
+  ) {
+    return {
+      allowed: false,
+      reason: `Compile retry limit exceeded (${state.retry_count_compile} gap_found cycles). Consider scope.deferred or redirect.to_align.`,
+    };
+  }
+
   // ── Resolve next state (handle conditional targets) ──
   const next_state = resolveNextState(outcome, state, newEvent);
 
@@ -171,12 +183,12 @@ function resolveNextState(
     eventType === "validation.completed"
   ) {
     const p = event.payload as ValidationCompletedPayload;
-    if (p.result === "pass") {
-      return "validated";
-    }
-    // fail + stale → grounded
+    // stale → grounded (regardless of pass/fail)
     if (state.stale) {
       return "grounded";
+    }
+    if (p.result === "pass") {
+      return "validated";
     }
     // fail + target issue → constraints_resolved
     return "constraints_resolved";
