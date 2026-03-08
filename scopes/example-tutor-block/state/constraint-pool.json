@@ -1,0 +1,117 @@
+{
+  "constraints": [
+    {
+      "constraint_id": "CST-001",
+      "perspective": "code",
+      "summary": "매칭 시스템에 튜터 제외 기능 없음",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "status": "decided",
+      "decision": "inject",
+      "selected_option": "매칭 시스템에 제외 기능 추가",
+      "discovered_at": 4,
+      "decided_at": 19
+    },
+    {
+      "constraint_id": "CST-002",
+      "perspective": "policy",
+      "summary": "이용약관 공정 매칭 조항과 충돌 가능",
+      "severity": "recommended",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "status": "decided",
+      "decision": "inject",
+      "selected_option": "예외 조항 추가",
+      "discovered_at": 5,
+      "decided_at": 20
+    },
+    {
+      "constraint_id": "CST-003",
+      "perspective": "experience",
+      "summary": "튜터 프로필 화면에 차단 버튼 공간 부족",
+      "severity": "recommended",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "status": "decided",
+      "decision": "inject",
+      "selected_option": "간격 확보",
+      "discovered_at": 6,
+      "decided_at": 21
+    },
+    {
+      "constraint_id": "CST-004",
+      "perspective": "experience",
+      "summary": "차단 관리 메뉴 위치",
+      "severity": "recommended",
+      "discovery_stage": "draft_phase2",
+      "decision_owner": "product_owner",
+      "status": "decided",
+      "decision": "defer",
+      "selected_option": "현재 위치 유지",
+      "discovered_at": 14,
+      "decided_at": 22
+    },
+    {
+      "constraint_id": "CST-005",
+      "perspective": "code",
+      "summary": "차단 정보 저장 공간 없음",
+      "severity": "required",
+      "discovery_stage": "draft_phase2",
+      "decision_owner": "builder",
+      "status": "decided",
+      "decision": "inject",
+      "selected_option": "DB 테이블 신규 생성",
+      "discovered_at": 15,
+      "decided_at": 23
+    },
+    {
+      "constraint_id": "CST-006",
+      "perspective": "code",
+      "summary": "매칭 API 응답 형태 변경 위험",
+      "severity": "recommended",
+      "discovery_stage": "draft_phase2",
+      "decision_owner": "builder",
+      "status": "decided",
+      "decision": "inject",
+      "selected_option": "optional 필드 방식",
+      "discovered_at": 16,
+      "decided_at": 24
+    },
+    {
+      "constraint_id": "CST-007",
+      "perspective": "policy",
+      "summary": "차단 기록 개인정보 삭제 의무",
+      "severity": "recommended",
+      "discovery_stage": "draft_phase2",
+      "decision_owner": "product_owner",
+      "status": "decided",
+      "decision": "inject",
+      "selected_option": "자동 삭제 포함",
+      "discovered_at": 17,
+      "decided_at": 25
+    },
+    {
+      "constraint_id": "CST-008",
+      "perspective": "policy",
+      "summary": "차단 남용 방지 한도 없음",
+      "severity": "required",
+      "discovery_stage": "draft_phase2",
+      "decision_owner": "product_owner",
+      "status": "decided",
+      "decision": "inject",
+      "selected_option": "언어별 5명",
+      "discovered_at": 18,
+      "decided_at": 26
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "required": 3,
+    "recommended": 5,
+    "decided": 8,
+    "clarify_pending": 0,
+    "invalidated": 0,
+    "undecided": 0
+  }
+}

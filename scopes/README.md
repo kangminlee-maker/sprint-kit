@@ -11,6 +11,7 @@ scopes/{scope-id}/
   state/
     reality-snapshot.json
     constraint-pool.json
+    verdict-log.json
   surface/
     preview/          # experience: React + MSW app
     contract-diff/    # interface: API diff
