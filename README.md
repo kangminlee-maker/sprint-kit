@@ -44,10 +44,17 @@ scopes/  scope bundle layout and examples
 src/     future implementation modules
 ```
 
-## Current Documents
+## Documents
 
-- `docs/architecture.md` — system definition, flow, storage, state machine
-- `docs/golden-example.md` — complete Align/Draft Packet example (Tutor Block case)
+| 문서 | 내용 |
+|------|------|
+| `docs/architecture.md` | 시스템 정의, 흐름, 저장소, 상태 머신 |
+| `docs/event-state-contract.md` | 이벤트 분류, State × Event 매트릭스, Reducer 규칙 |
+| `docs/constraint-discovery.md` | 3-Perspective 탐색, Constraint Lifecycle, Invalidation |
+| `docs/align-draft-templates.md` | Align/Draft Packet 템플릿, 렌더링 규칙 |
+| `docs/build-spec-compile.md` | Build Spec 템플릿, delta-set 스키마, Compile Defense |
+| `docs/golden-example.md` | 완성된 예시 — 튜터 차단 기능 (Align + Draft Packet) |
+| `scopes/example-tutor-block/` | end-to-end 검증용 샘플 scope (이벤트, 상태, 산출물) |
 
 ## Reference Context
 
