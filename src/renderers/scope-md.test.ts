@@ -1,0 +1,206 @@
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { renderScopeMd } from "./scope-md.js";
+import { reduce } from "../kernel/reducer.js";
+import type { Event, ScopeState, ConstraintPool } from "../kernel/types.js";
+
+// ─── Helpers ───
+
+function emptyPool(): ConstraintPool {
+  return {
+    constraints: [],
+    summary: { total: 0, required: 0, recommended: 0, decided: 0, clarify_pending: 0, invalidated: 0, undecided: 0 },
+  };
+}
+
+function makeState(overrides: Partial<ScopeState> = {}): ScopeState {
+  return {
+    scope_id: "SC-TEST",
+    title: "테스트 Scope",
+    description: "테스트용",
+    entry_mode: "experience",
+    current_state: "draft",
+    constraint_pool: emptyPool(),
+    stale: false,
+    compile_ready: false,
+    convergence_blocked: false,
+    revision_count_align: 0,
+    revision_count_surface: 0,
+    verdict_log: [],
+    feedback_history: [],
+    latest_revision: 0,
+    ...overrides,
+  };
+}
+
+// ─── Golden data ───
+
+describe("scope-md — golden data", () => {
+  it("renders scope.md from golden events", () => {
+    const goldenPath = resolve(
+      import.meta.dirname,
+      "../../scopes/example-tutor-block/events.ndjson",
+    );
+    const events: Event[] = readFileSync(goldenPath, "utf-8")
+      .trimEnd()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Event);
+
+    const state = reduce(events);
+    const md = renderScopeMd(state);
+
+    expect(md).toContain("# Scope: 튜터 차단 기능");
+    expect(md).toContain("Build Spec 생성 완료");
+    expect(md).toContain("방향");
+    expect(md).toContain("학생이 튜터를 차단하면");
+    expect(md).toContain("전체: 8건");
+    expect(md).toContain("결정 완료: 8건");
+    expect(md).toContain("revision 29");
+    // verdict_log shows last 5: CST-004~008 (CST-001 is older, trimmed)
+    expect(md).toContain("CST-008");
+  });
+});
+
+// ─── Structure tests ───
+
+describe("scope-md — structure", () => {
+  it("renders header with title from state", () => {
+    const md = renderScopeMd(makeState({ title: "My Scope" }));
+    expect(md).toContain("# Scope: My Scope");
+  });
+
+  it("shows current state in human-readable form", () => {
+    const md = renderScopeMd(makeState({ current_state: "surface_confirmed" }));
+    expect(md).toContain("Surface 확정됨");
+  });
+
+  it("shows direction when present", () => {
+    const md = renderScopeMd(makeState({ direction: "test direction" }));
+    expect(md).toContain("**방향**: test direction");
+  });
+
+  it("omits direction when absent", () => {
+    const md = renderScopeMd(makeState());
+    expect(md).not.toContain("**방향**");
+  });
+
+  it("shows scope boundaries when locked", () => {
+    const md = renderScopeMd(makeState({
+      scope_boundaries: { in: ["기능A", "기능B"], out: ["기능C"] },
+    }));
+    expect(md).toContain("## 범위");
+    expect(md).toContain("기능A");
+    expect(md).toContain("기능C");
+  });
+
+  it("omits scope boundaries when not locked", () => {
+    const md = renderScopeMd(makeState());
+    expect(md).not.toContain("## 범위");
+  });
+});
+
+// ─── Next action ───
+
+describe("scope-md — next action", () => {
+  it("draft → scan sources", () => {
+    const md = renderScopeMd(makeState({ current_state: "draft" }));
+    expect(md).toContain("/start");
+  });
+
+  it("surface_confirmed with undecided → decide constraints", () => {
+    const pool = emptyPool();
+    pool.summary.total = 3;
+    pool.summary.undecided = 2;
+    const md = renderScopeMd(makeState({ current_state: "surface_confirmed", constraint_pool: pool }));
+    expect(md).toContain("2건의 constraint");
+  });
+
+  it("surface_confirmed with clarify_pending → resolve clarify", () => {
+    const pool = emptyPool();
+    pool.summary.total = 3;
+    pool.summary.clarify_pending = 1;
+    const md = renderScopeMd(makeState({ current_state: "surface_confirmed", constraint_pool: pool }));
+    expect(md).toContain("clarify");
+  });
+
+  it("closed → scope terminated", () => {
+    const md = renderScopeMd(makeState({ current_state: "closed" }));
+    expect(md).toContain("종료");
+  });
+});
+
+// ─── Blockers ───
+
+describe("scope-md — blockers", () => {
+  it("shows stale blocker with source details", () => {
+    const md = renderScopeMd(makeState({
+      stale: true,
+      stale_sources: [{ path: "src/a.ts", old_hash: "h1", new_hash: "h2" }],
+      stale_since: 10,
+    }));
+    expect(md).toContain("## 차단 상태");
+    expect(md).toContain("src/a.ts");
+    expect(md).toContain("revision 10");
+  });
+
+  it("shows convergence blocker", () => {
+    const md = renderScopeMd(makeState({ convergence_blocked: true }));
+    expect(md).toContain("수렴 차단");
+  });
+
+  it("shows clarify blocker", () => {
+    const pool = emptyPool();
+    pool.summary.total = 2;
+    pool.summary.clarify_pending = 1;
+    const md = renderScopeMd(makeState({ constraint_pool: pool }));
+    expect(md).toContain("clarify 미해소");
+  });
+
+  it("omits blocker section when no blockers", () => {
+    const md = renderScopeMd(makeState());
+    expect(md).not.toContain("## 차단 상태");
+  });
+});
+
+// ─── Constraint summary ───
+
+describe("scope-md — constraint summary", () => {
+  it("shows constraint counts", () => {
+    const pool = emptyPool();
+    pool.summary = { total: 8, required: 3, recommended: 5, decided: 6, clarify_pending: 1, invalidated: 0, undecided: 1 };
+    const md = renderScopeMd(makeState({ constraint_pool: pool }));
+    expect(md).toContain("전체: 8건");
+    expect(md).toContain("필수 3");
+    expect(md).toContain("결정 완료: 6건");
+    expect(md).toContain("미결정: 1건");
+    expect(md).toContain("clarify 대기: 1건");
+  });
+
+  it("omits constraint section when total is 0", () => {
+    const md = renderScopeMd(makeState());
+    expect(md).not.toContain("## Constraint 현황");
+  });
+});
+
+// ─── Verdict log ───
+
+describe("scope-md — verdict log", () => {
+  it("shows recent decisions (last 5)", () => {
+    const md = renderScopeMd(makeState({
+      verdict_log: [
+        { type: "align.locked", revision: 8, ts: "2026-01-01T00:00:08Z", locked_direction: "dir" },
+        { type: "constraint.decision_recorded", revision: 19, ts: "2026-01-01T00:00:19Z", constraint_id: "CST-001", decision: "inject", decision_owner: "product_owner" },
+      ],
+    }));
+    expect(md).toContain("## 최근 결정");
+    expect(md).toContain("방향 확정");
+    expect(md).toContain("CST-001");
+    expect(md).toContain("inject");
+  });
+
+  it("omits verdict section when empty", () => {
+    const md = renderScopeMd(makeState());
+    expect(md).not.toContain("## 최근 결정");
+  });
+});

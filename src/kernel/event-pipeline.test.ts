@@ -1,0 +1,316 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { appendScopeEvent, type EventInput } from "./event-pipeline.js";
+import { createScope, resolveScopePaths } from "./scope-manager.js";
+import { readEvents } from "./event-store.js";
+import { reduce } from "./reducer.js";
+import type { Event, ConstraintPool, VerdictLogEntry, ScopePaths } from "./types.js";
+
+// ─── Temp dir management ───
+
+let tempDir: string;
+let paths: ScopePaths;
+
+function setup() {
+  tempDir = mkdtempSync(join(process.cwd(), ".tmp-test-"));
+  paths = createScope(tempDir, "SC-TEST");
+}
+
+function teardown() {
+  rmSync(tempDir, { recursive: true, force: true });
+}
+
+// ─── Event input factory (simplified — type + actor + payload only) ───
+
+function input(
+  type: string,
+  payload: Record<string, unknown>,
+  actor: string = "system",
+): EventInput {
+  return { type, actor, payload } as EventInput;
+}
+
+// ─── Scope manager tests ───
+
+describe("scope-manager", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("creates scope directory structure", () => {
+    expect(existsSync(paths.base)).toBe(true);
+    expect(existsSync(paths.state)).toBe(true);
+    expect(existsSync(paths.surface)).toBe(true);
+    expect(existsSync(paths.build)).toBe(true);
+    expect(existsSync(paths.inputs)).toBe(true);
+  });
+
+  it("resolveScopePaths returns correct paths and scopeId", () => {
+    const resolved = resolveScopePaths(tempDir, "SC-TEST");
+    expect(resolved.scopeId).toBe("SC-TEST");
+    expect(resolved.events).toContain("events.ndjson");
+    expect(resolved.constraintPool).toContain("constraint-pool.json");
+    expect(resolved.verdictLog).toContain("verdict-log.json");
+  });
+
+  it("createScope is idempotent", () => {
+    const paths2 = createScope(tempDir, "SC-TEST");
+    expect(paths2.base).toBe(paths.base);
+  });
+});
+
+// ─── Pipeline: sequential event recording ───
+
+describe("event-pipeline — sequential recording", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("records scope.created as first event", () => {
+    const result = appendScopeEvent(paths, input("scope.created", {
+      title: "Test", description: "Test scope", entry_mode: "experience",
+    }, "user"));
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.event.revision).toBe(1);
+      expect(result.next_state).toBe("draft");
+      expect(result.event.scope_id).toBe("SC-TEST");
+      expect(result.event.event_id).toBe("evt_001");
+    }
+  });
+
+  it("records 3 sequential events: created → grounding → grounded", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "Test", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    appendScopeEvent(paths, input("grounding.started", {
+      sources: [{ type: "add-dir", path_or_url: "/test" }],
+    }));
+
+    const r3 = appendScopeEvent(paths, input("grounding.completed", {
+      snapshot_revision: 1,
+      source_hashes: { src: "hash1" },
+      perspective_summary: { experience: 1, code: 2, policy: 1 },
+    }));
+    expect(r3.success).toBe(true);
+    if (r3.success) {
+      expect(r3.next_state).toBe("grounded");
+      expect(r3.event.revision).toBe(3);
+    }
+
+    const events = readEvents(paths.events);
+    expect(events).toHaveLength(3);
+    expect(events[2].state_after).toBe("grounded");
+  });
+
+  it("auto-generates envelope fields", () => {
+    const result = appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    if (result.success) {
+      expect(result.event.event_id).toBeDefined();
+      expect(result.event.scope_id).toBe("SC-TEST");
+      expect(result.event.ts).toBeDefined();
+      expect(result.event.revision).toBe(1);
+      expect(result.event.state_before).toBeNull();
+      expect(result.event.state_after).toBe("draft");
+    }
+  });
+
+  it("sets state_before from current state", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+    const r2 = appendScopeEvent(paths, input("grounding.started", { sources: [] }));
+
+    if (r2.success) {
+      expect(r2.event.state_before).toBe("draft");
+    }
+  });
+});
+
+// ─── Pipeline: rejection ───
+
+describe("event-pipeline — rejection", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("rejects invalid transition", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    const result = appendScopeEvent(paths, input("align.locked", {
+      locked_direction: "d",
+      locked_scope_boundaries: { in: [], out: [] },
+      locked_in_out: true,
+    }, "user"));
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.reason).toContain("Transition denied");
+  });
+
+  it("rejects scope.created when events exist", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    const result = appendScopeEvent(paths, input("scope.created", {
+      title: "T2", description: "d2", entry_mode: "interface",
+    }, "user"));
+
+    expect(result.success).toBe(false);
+  });
+
+  it("does not write event on rejection", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    appendScopeEvent(paths, input("align.locked", {
+      locked_direction: "d",
+      locked_scope_boundaries: { in: [], out: [] },
+      locked_in_out: true,
+    }, "user"));
+
+    expect(readEvents(paths.events)).toHaveLength(1);
+  });
+});
+
+// ─── Pipeline: materialized views ───
+
+describe("event-pipeline — materialized views", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("writes constraint-pool.json after event", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    expect(existsSync(paths.constraintPool)).toBe(true);
+    const pool = JSON.parse(readFileSync(paths.constraintPool, "utf-8")) as ConstraintPool;
+    expect(pool.summary.total).toBe(0);
+  });
+
+  it("writes verdict-log.json after event", () => {
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    expect(existsSync(paths.verdictLog)).toBe(true);
+    const log = JSON.parse(readFileSync(paths.verdictLog, "utf-8")) as VerdictLogEntry[];
+    expect(log).toHaveLength(0);
+  });
+
+  it("updates constraint-pool.json when constraints are added", () => {
+    appendScopeEvent(paths, input("scope.created", { title: "T", description: "d", entry_mode: "experience" }, "user"));
+    appendScopeEvent(paths, input("grounding.completed", { snapshot_revision: 1, source_hashes: {}, perspective_summary: { experience: 0, code: 0, policy: 0 } }));
+    appendScopeEvent(paths, input("align.proposed", { packet_path: "p", packet_hash: "h", snapshot_revision: 1 }));
+    appendScopeEvent(paths, input("align.locked", { locked_direction: "dir", locked_scope_boundaries: { in: [], out: [] }, locked_in_out: true }, "user"));
+    appendScopeEvent(paths, input("surface.generated", { surface_type: "experience", surface_path: "s", content_hash: "h", based_on_snapshot: 1 }));
+    appendScopeEvent(paths, input("surface.confirmed", { final_surface_path: "s", final_content_hash: "h", total_revisions: 0 }, "user"));
+
+    appendScopeEvent(paths, input("constraint.discovered", {
+      constraint_id: "CST-001", perspective: "code", summary: "test",
+      severity: "required", discovery_stage: "draft_phase2",
+      decision_owner: "builder", impact_if_ignored: "bad", source_refs: [],
+    }));
+
+    const pool = JSON.parse(readFileSync(paths.constraintPool, "utf-8")) as ConstraintPool;
+    expect(pool.summary.total).toBe(1);
+    expect(pool.summary.undecided).toBe(1);
+  });
+
+  it("updates verdict-log.json when decisions are made", () => {
+    appendScopeEvent(paths, input("scope.created", { title: "T", description: "d", entry_mode: "experience" }, "user"));
+    appendScopeEvent(paths, input("grounding.completed", { snapshot_revision: 1, source_hashes: {}, perspective_summary: { experience: 0, code: 0, policy: 0 } }));
+    appendScopeEvent(paths, input("align.proposed", { packet_path: "p", packet_hash: "h", snapshot_revision: 1 }));
+    appendScopeEvent(paths, input("align.locked", { locked_direction: "dir", locked_scope_boundaries: { in: [], out: [] }, locked_in_out: true }, "user"));
+    appendScopeEvent(paths, input("surface.generated", { surface_type: "experience", surface_path: "s", content_hash: "h", based_on_snapshot: 1 }));
+    appendScopeEvent(paths, input("surface.confirmed", { final_surface_path: "s", final_content_hash: "h", total_revisions: 0 }, "user"));
+    appendScopeEvent(paths, input("constraint.discovered", {
+      constraint_id: "CST-001", perspective: "code", summary: "test",
+      severity: "required", discovery_stage: "draft_phase2",
+      decision_owner: "builder", impact_if_ignored: "bad", source_refs: [],
+    }));
+
+    appendScopeEvent(paths, input("constraint.decision_recorded", {
+      constraint_id: "CST-001", decision: "inject", selected_option: "opt",
+      decision_owner: "builder", rationale: "needed",
+    }, "agent"));
+
+    const log = JSON.parse(readFileSync(paths.verdictLog, "utf-8")) as VerdictLogEntry[];
+    expect(log).toHaveLength(2);
+    expect(log[0].type).toBe("align.locked");
+    expect(log[1].type).toBe("constraint.decision_recorded");
+  });
+});
+
+// ─── Pipeline: golden data replay ───
+
+describe("event-pipeline — golden data replay", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("replays all 29 golden events and produces matching materialized views", () => {
+    const goldenEventsPath = resolve(
+      import.meta.dirname,
+      "../../scopes/example-tutor-block/events.ndjson",
+    );
+    const goldenPoolPath = resolve(
+      import.meta.dirname,
+      "../../scopes/example-tutor-block/state/constraint-pool.json",
+    );
+    const goldenVerdictPath = resolve(
+      import.meta.dirname,
+      "../../scopes/example-tutor-block/state/verdict-log.json",
+    );
+
+    const goldenEvents: Event[] = readFileSync(goldenEventsPath, "utf-8")
+      .trimEnd()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Event);
+
+    // Replay: extract type/actor/payload from golden events
+    for (const evt of goldenEvents) {
+      const result = appendScopeEvent(paths, {
+        type: evt.type,
+        actor: evt.actor,
+        payload: evt.payload,
+      } as EventInput);
+      expect(
+        result.success,
+        `Event ${evt.event_id} (${evt.type}) failed: ${!result.success ? (result as { reason: string }).reason : ""}`,
+      ).toBe(true);
+    }
+
+    // Verify events count
+    const replayedEvents = readEvents(paths.events);
+    expect(replayedEvents).toHaveLength(29);
+
+    // Verify constraint-pool.json matches golden
+    const expectedPool = JSON.parse(readFileSync(goldenPoolPath, "utf-8")) as ConstraintPool;
+    const actualPool = JSON.parse(readFileSync(paths.constraintPool, "utf-8")) as ConstraintPool;
+    expect(actualPool.summary).toEqual(expectedPool.summary);
+    expect(actualPool.constraints).toEqual(expectedPool.constraints);
+
+    // Verify verdict-log.json matches golden (structure, not timestamps)
+    const expectedLog = JSON.parse(readFileSync(goldenVerdictPath, "utf-8")) as VerdictLogEntry[];
+    const actualLog = JSON.parse(readFileSync(paths.verdictLog, "utf-8")) as VerdictLogEntry[];
+    expect(actualLog).toHaveLength(expectedLog.length);
+    for (let i = 0; i < expectedLog.length; i++) {
+      // Compare structure but not ts (generated at replay time)
+      const { ts: _ets, ...expectedEntry } = expectedLog[i] as Record<string, unknown>;
+      const { ts: _ats, ...actualEntry } = actualLog[i] as Record<string, unknown>;
+      expect(actualEntry).toEqual(expectedEntry);
+    }
+
+    // Verify final state
+    const finalState = reduce(replayedEvents);
+    expect(finalState.current_state).toBe("compiled");
+    expect(finalState.latest_revision).toBe(29);
+  });
+});

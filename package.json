@@ -1,0 +1,26 @@
+{
+  "name": "sprint-kit",
+  "version": "1.0.0",
+  "description": "Sprint Kit is a constraint-aware translation runtime.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/re-speak/sprint-kit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/re-speak/sprint-kit/issues"
+  },
+  "homepage": "https://github.com/re-speak/sprint-kit#readme",
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
