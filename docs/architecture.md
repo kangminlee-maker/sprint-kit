@@ -291,6 +291,7 @@ scopes/{scope-id}/
   state/                       ← materialized views (derived, read-only)
     reality-snapshot.json
     constraint-pool.json
+    verdict-log.json
   surface/                     ← artifact layer
     preview/                   #   experience: React + MSW app
     contract-diff/             #   interface: API diff
@@ -424,7 +425,7 @@ Complete State × Event matrix is defined in `docs/event-state-contract.md`.
 | `align_locked` | Unlock → `align_proposed`. Require re-Align |
 | `surface_iterating` or `surface_confirmed` | Re-scan. Re-run constraint discovery. Notify user |
 | `target_locked` | Block compile. Redirect to Draft |
-| `compiled` or later | Block apply. Redirect to Draft |
+| `compiled` or later | Block apply. Redirect to Grounding (re-scan required) |
 
 ### Stale Detection Timing
 
