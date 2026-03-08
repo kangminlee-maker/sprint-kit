@@ -312,8 +312,14 @@ Rules:
 - `events.ndjson` is append-only. Past events are never modified
 - `scope.md` and `state/` are regenerated from events by the reducer
 - `surface/` and `build/` artifacts have corresponding events that record path + content-hash
-- If events and materialized views disagree, events win — views are regenerated
 - Artifacts must not be modified without a corresponding event
+
+Inconsistency resolution (two layers):
+
+| Layer | Scope | Rule |
+|-------|-------|------|
+| **Materialized View** (`scope.md`, `state/`) | Events에서 재생성 가능 | 불일치 시 이벤트 기준으로 재생성 |
+| **Artifact** (`surface/`, `build/`) | Events에서 재생성 불가 (hybrid storage) | content hash로 무결성 검증. 불일치 시 해당 단계부터 재실행 |
 
 ## Domain Objects
 
