@@ -1,0 +1,13 @@
+default_sources:
+  - type: github-tarball
+    url: https://github.com/re-speak/podo-backend
+    description: "podo 백엔드"
+  - type: github-tarball
+    url: https://github.com/re-speak/podo-app
+    description: "podo 앱"
+  - type: github-tarball
+    url: https://github.com/re-speak/podo-ontology
+    description: "podo 온톨로지"
+  - type: add-dir
+    path: ./sources
+    description: "로컬 참고 자료"

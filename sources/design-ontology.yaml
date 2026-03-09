@@ -1,0 +1,1236 @@
+# ============================================================
+# PODO Design System Ontology — Single Source of Truth
+# ============================================================
+# 이 파일 하나에 디자인 시스템의 모든 정보가 담겨 있습니다.
+# LLM이 이 파일만 읽으면 기존 화면의 재현과 새 화면의 생성이 가능합니다.
+#
+# 구조: constraints(공리) → functions(기능) → tokens/components(구현)
+#
+# 사용법:
+#   1. 기존 상황 → functions에서 해당 기능 찾기 → 구현 따르기
+#   2. 새로운 상황 → constraints 순서대로 적용 → 답 도출
+#   3. 컴포넌트 구현 → components에서 pixel-precise 스펙 참조
+#   4. 값 참조 → tokens에서 색상/그림자/타이포/간격 확인
+# ============================================================
+
+
+# ============================================================
+# PREMISES — 시스템의 존재 조건
+# ============================================================
+
+premises:
+  viewport:
+    min_width: 360px
+    max_width: 480px
+    orientation: portrait
+    root_bg: "#fff"
+    root_overflow: "overflow-x: hidden"
+    body_bg: "#f0f0f0"
+    body_layout: "flex justify-center min-h-screen"
+    # 반응형 브레이크포인트 없음. 데스크톱 레이아웃 없음.
+
+  purpose: design-verification
+    # 이 레포는 최종 제품이 아니라 디자인 검증 도구.
+    # 상태 분기가 있는 페이지에는 디버그 UI 포함:
+    #   위치: fixed top-8px right-8px z-300
+    #   시나리오 버튼: rounded-full bg-gray-900 text-white text-12px font-bold px-12 py-6
+    #   닫기 버튼: w-24 h-24 rounded-full bg-gray-900 text-white
+    #   shadow: shadow-lg, active:opacity-80
+
+  consumer:
+    primary: "LLM (코드 생성 에이전트). 이 파일 전체를 한 번에 읽고 컴포넌트/페이지 코드를 생성합니다."
+    secondary: "사람 (제품 전문가, 디자이너). guide/*.md 파일을 통해 산문형으로 읽습니다."
+    context: "CLAUDE.md에서 이 파일을 참조하도록 지정되어 있습니다."
+    ssot_rule: "ontology.yaml이 편집 원천. guide/*.md는 읽기 전용 파생 뷰. 불일치 시 ontology.yaml이 우선."
+
+
+# ============================================================
+# CONSTRAINTS — 공리 (4개, 상호 독립)
+# ============================================================
+
+constraints:
+
+  C1_no_purposeless_expression:
+    statement: >
+      화면에 존재하는 모든 시각 요소는 식별 가능한 기능을 수행한다.
+      기능이 없는 시각 요소는 추가하지 않는다.
+    test: "이것이 어떤 기능을 수행하는가? → 답이 없으면 추가하지 않는다."
+    derived_rules:
+      - "색상은 기능의 이름이다 (green=행동, gray=구조, blue=정보, red=경고)"
+      - "모션은 상태전환/행동피드백/행동보상일 때만 존재한다"
+      - "시각 강도는 기능의 강도에 비례한다"
+
+  C2_no_silent_rejection:
+    statement: >
+      사용자의 모든 행동은 시각적 반응을 받는다.
+      행동이 거부되는 경우에도, 거부의 이유가 시각적으로 전달된다.
+    test: "사용자가 이것을 했을 때 화면에서 무엇이 바뀌는가? → 답이 없으면 반응을 추가한다."
+    derived_rules:
+      - "클릭은 물리적으로 느껴진다 (3D 프레스)"
+      - "거부에도 설명이 따른다 (Toast 피드백)"
+      - "완료에는 보상이 따른다 (Lottie + 딜레이 시퀀스)"
+
+  C3_same_concept_same_form:
+    statement: >
+      동일한 개념은 맥락이 달라도 항상 동일한 시각 형태로 표현된다.
+      다르게 보이면 다른 개념이다.
+    test: "이 개념이 시스템에 이미 존재하는가? → 존재하면 기존 시각 형태를 그대로 사용한다."
+    derived_rules:
+      - "선택 = green-500 border + green-100 bg (예외 없음)"
+      - "비활성 = gray-100 bg + gray-300 text (예외 없음)"
+      - "오버레이 = bg-black/40 (예외 없음)"
+      - "버튼 = 3레이어 프레스 구조 (예외 없음)"
+
+  C4_read_top_act_bottom:
+    statement: >
+      정보는 화면 상단에서 하단으로 흐른다.
+      행동 유도(CTA)는 항상 자신이 속한 컨테이너의 끝(하단)에 위치한다.
+    test: "이 CTA가 자기 컨테이너의 가장 아래에 있는가? → 아니면 위치를 조정한다."
+    derived_rules:
+      - "CTA는 컨테이너 끝에 놓인다 (페이지/카드/모달/시트 모두)"
+      - "보조 선택지는 아래에서 올라온다 (BottomSheet, 드롭다운 금지)"
+      - "섹션 순서 = 컨텍스트 → 콘텐츠 → 행동"
+
+
+# ============================================================
+# TOKENS — 전체 값 참조
+# ============================================================
+
+tokens:
+
+  # ── Colors ─────────────────────────────────────────
+
+  colors:
+    gray:
+      900: {hex: "#1C1C1C", use: "본문 텍스트, 버튼 테두리/그림자, 다크 서피스"}
+      500: {hex: "#757575", use: "보조 텍스트, 설명"}
+      400: {hex: "#A5A5A5", use: "비활성 라벨, placeholder, 원가 취소선"}
+      300: {hex: "#D6D6D6", use: "비활성 텍스트, 비활성 GNB 아이콘"}
+      200: {hex: "#E8E8E8", use: "테두리, 구분선, 핸들, ghost 버튼 그림자"}
+      100: {hex: "#F5F5F5", use: "카드 배경, 비활성 버튼/칩 배경, 상세 영역 배경"}
+    green:
+      podo-green: {hex: "#B5FD4C", use: "CTA 버튼 배경 (primary)"}
+      500: {hex: "#6ABE36", use: "선택 테두리, 체크마크 SVG 스트로크"}
+      300: {hex: "#9BEB26", use: "CTA 버튼 hover/active"}
+      100: {hex: "#F2FCEC", use: "선택 배경"}
+    blue:
+      700: {hex: "#7189DF", use: "blue 버튼 hover/active"}
+      500: {hex: "#6184FF", use: "링크, 배지, blue 버튼 배경, 할부 안내, 숫자 강조"}
+      100: {hex: "#F2F5FF", use: "배지 텍스트 배경"}
+    red:
+      700: {hex: "#fc525e", use: "warning 버튼 hover/active"}
+      500: {hex: "#FD6771", use: "경고 텍스트, warning 버튼 배경, 할인율 강조"}
+      100: {hex: "#FFF0F1", use: "이벤트/쿠폰 혜택 배경"}
+    brand:
+      podo-white: {hex: "#FBFBF9", use: "따뜻한 화이트 (구매 버튼 텍스트)"}
+
+  # ── Shadows ────────────────────────────────────────
+
+  shadows:
+    card: {value: "0 4px 16px rgba(0,0,0,0.04)", use: "카드 (표면에서 살짝 떠있음)"}
+    modal: {value: "0 4px 16px rgba(0,0,0,0.12)", use: "Alert/Confirm 모달"}
+    sheet: {value: "0 -4px 16px rgba(0,0,0,0.25)", use: "BottomSheet (아래에서 올라온 레이어)"}
+
+  # ── Typography ─────────────────────────────────────
+
+  typography:
+    font_family: "Pretendard Variable, Pretendard, -apple-system, BlinkMacSystemFont, sans-serif"
+    font_cdn: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+    tracking_formula: "font-size × -0.02"
+
+    # 프로젝트에서 사용하는 모든 텍스트 스타일 (코드에서 추출)
+    styles:
+      page_title_large:
+        spec: {size: 22px, weight: bold, leading: 30px, tracking: -0.44px, color: gray-900}
+        tailwind: "text-[22px] font-bold text-gray-900 leading-[30px] tracking-[-0.44px]"
+        use: "Subscription 페이지 타이틀"
+
+      completion_title:
+        spec: {size: 18px, weight: bold, leading: 26px, tracking: -0.36px, color: gray-900}
+        tailwind: "text-[18px] font-bold text-gray-900 leading-[26px] tracking-[-0.36px]"
+        use: "완료 페이지 타이틀, 리텐션 팝업 타이틀, 모달 타이틀"
+
+      section_title:
+        spec: {size: 16px, weight: bold, leading: 24px, tracking: -0.32px, color: gray-900}
+        tailwind: "text-base font-bold text-gray-900 leading-6 tracking-[-0.32px]"
+        use: "섹션 제목, 카드 제목"
+
+      section_title_semibold:
+        spec: {size: 16px, weight: 600, leading: 24px, tracking: -0.48px, color: gray-900}
+        tailwind: "text-base font-semibold text-gray-900 leading-6 tracking-[-0.48px]"
+        use: "ExistingUserPayment 섹션 제목"
+
+      body:
+        spec: {size: 16px, weight: 500, leading: 24px, tracking: -0.32px, color: gray-900}
+        tailwind: "text-base font-medium text-gray-900 leading-6 tracking-[-0.32px]"
+        use: "본문, 선택지 라벨, 모달 설명"
+
+      body_gray:
+        spec: {size: 16px, weight: 500, leading: 24px, tracking: -0.32px, color: gray-500}
+        tailwind: "text-base font-medium text-gray-500 leading-6 tracking-[-0.32px]"
+        use: "모달/팝업 설명 텍스트"
+
+      secondary:
+        spec: {size: 14px, weight: 500, leading: 20px, tracking: -0.28px, color: gray-900}
+        tailwind: "text-sm font-medium text-gray-900 leading-5 tracking-[-0.28px]"
+        use: "피처 아이템, 동의 항목, 예약 정보"
+
+      secondary_gray:
+        spec: {size: 14px, weight: 400, leading: 20px, tracking: -0.28px, color: gray-500}
+        tailwind: "text-sm text-gray-500 leading-5 tracking-[-0.28px]"
+        use: "보조 설명, 상품 설명, StickyBottom 라벨"
+
+      secondary_bold:
+        spec: {size: 14px, weight: 600, leading: 20px, tracking: -0.28px, color: gray-900}
+        tailwind: "text-sm font-semibold text-gray-900 leading-5 tracking-[-0.28px]"
+        use: "상품명, 기간 라벨"
+
+      caption:
+        spec: {size: 12px, weight: 500, leading: 18px, tracking: -0.24px}
+        tailwind: "text-xs leading-[18px] tracking-[-0.24px]"
+        use: "배지(pill), 할부 안내, 배너 날짜"
+
+      button:
+        spec: {size: 16px, weight: bold, leading: 24px, tracking: -0.48px}
+        tailwind: "text-base font-bold leading-6 tracking-[-0.48px]"
+        use: "모든 Button 내부 텍스트 (lg)"
+
+      button_sm:
+        spec: {size: 14px, weight: bold, leading: 22px, tracking: -0.42px}
+        tailwind: "text-sm font-bold leading-[22px] tracking-[-0.42px]"
+        use: "ButtonGhost size=sm"
+
+      price_large:
+        spec: {size: 18px, weight: bold, leading: 28px}
+        tailwind: "text-lg font-bold leading-7"
+        use: "할인가, 할인율 표시"
+
+      gnb_label:
+        spec: {size: 9px, weight: 600, leading: 14px, tracking: -0.27px}
+        tailwind: "text-[9px] font-semibold leading-[14px] tracking-[-0.27px]"
+        use: "GNB 탭 라벨"
+
+      badge_corner:
+        spec: {size: 10px, weight: 500, leading: 16px, tracking: -0.2px}
+        tailwind: "text-[10px] font-medium leading-[16px] tracking-[-0.2px]"
+        use: "코너 배지 (BEST, 최저가)"
+
+  # ── Spacing ────────────────────────────────────────
+
+  spacing:
+    page_horizontal: 20px   # px-5 (모든 섹션의 좌우 패딩)
+    section_vertical: 16px   # py-4 (일반 섹션 상하 패딩)
+    card_padding: 20px       # p-5 (카드 내부 패딩)
+    card_padding_sm: 16px    # p-4 (작은 카드)
+    card_padding_xs: 12px    # p-3 (정보 박스)
+    element_gap_lg: 20px     # gap-5 (주요 영역 사이)
+    element_gap_md: 16px     # gap-4 (섹션 제목-내용 사이)
+    element_gap_sm: 8px      # gap-2 (카드 리스트 사이, 버튼 사이)
+    element_gap_xs: 4px      # gap-1 (피처 아이템 사이)
+    section_gap_xl: 28px     # gap-7 (ExistingUserPayment 선택 영역 사이)
+    topbar_height: 52px
+    gnb_height: 62px
+    button_height_lg: 52px   # 외부 버튼 높이
+    button_surface_lg: 48px  # 표면 높이 (h-12)
+    button_height_sm: 44px   # ButtonGhost size=sm
+    button_surface_sm: 40px  # 표면 높이 (h-10)
+    sticky_bottom_py: 12px   # py-3
+
+  # ── Border ─────────────────────────────────────────
+
+  border:
+    button: {width: 1.5px, color: gray-900, radius: 8px}
+    button_disabled: {width: 1.5px, color: gray-200, radius: 8px}
+    card: {width: 1px, radius: 12px}
+    chip: {width: 1px, radius: 8px}
+    modal: {radius: 12px}
+    sheet: {radius_top: 16px}
+    badge_corner: {radius_tl: 4px, radius_bl: 4px, radius_tr: 12px}
+
+  # ── Layers (z-index) ───────────────────────────────
+
+  layers:
+    navigation: {z: 100, elements: "TopBar, GNB, 플로팅 바"}
+    overlay_bg: {z: 200, elements: "모달/시트 배경 (bg-black/40)"}
+    overlay_content: {z: 201, elements: "BottomSheet 본체"}
+    debug: {z: 300, elements: "디버그 플로팅 버튼"}
+
+  # ── Timing ─────────────────────────────────────────
+
+  timing:
+    press: {ms: 100, use: "버튼 프레스, 색상 변경", easing: default}
+    hover: {ms: 150, use: "LinkCard hover", easing: default}
+    state: {ms: 200, use: "선택 전환, 아이콘 회전, Toast 등장, Alert/Confirm fadeIn", easing: ease}
+    sheet: {ms: 300, use: "BottomSheet slideUp + 오버레이 fadeIn", easing: ease}
+    reveal_height: {ms: 600, use: "CompletionLayout max-height 펼침", easing: ease}
+    reveal_opacity: {ms: 500, use: "CompletionLayout opacity + margin-top", easing: ease}
+    reveal_cta: {ms: 500, delay: 100, use: "CompletionLayout CTA 등장", easing: ease}
+    auto_dismiss: {ms: 2000, use: "Toast 자동 소멸, Lottie 구간 정지 해제"}
+    completion_delay: {ms: 1000, use: "CompletionLayout 콘텐츠 등장 딜레이"}
+
+  # ── Keyframe Animations ────────────────────────────
+
+  keyframes:
+    slideUp: {from: "translateY(100%)", to: "translateY(0)", use: "BottomSheet 등장"}
+    fadeIn: {from: "opacity 0", to: "opacity 1", use: "오버레이, 모달 카드 등장"}
+    toastIn: {from: "opacity 0 + translateY(8px)", to: "opacity 1 + translateY(0)", use: "Toast 등장"}
+
+  # ── Overlay ────────────────────────────────────────
+
+  overlay:
+    modal_backdrop: "bg-black/40"
+    toast_surface: "bg-gray-900/80 backdrop-blur-md"
+    floating_bar: "bg-gray-900/80 backdrop-blur-sm"
+
+
+# ============================================================
+# FUNCTIONS — 시스템이 수행하는 기능 (21개)
+# 네이밍 접두사 규칙:
+#   indicate_* — 정적 시각 표현 (색상, 상태 표시)
+#   respond_to_* — 사용자 행동에 대한 반응 (프레스, 드래그, 완료)
+#   show_* — 동적 상태 표시 (비활성, 오버레이, 긴급도)
+#   motion_* — 시간적 움직임 (등장, 피드백, 보상)
+#   place_* — 공간 배치 (CTA 위치, 섹션 순서)
+#   format_* — 데이터 변환 (가격 표기)
+# ============================================================
+
+functions:
+
+  # ── 색상 기능 ──────────────────────────────────────
+
+  indicate_action:
+    satisfies: [C1]
+    description: "'여기를 누르면 무언가가 일어난다'는 신호."
+    color_map: {primary: podo-green, hover: green-300, shadow: gray-900}
+    components: [ButtonPrimary(green)]
+
+  indicate_selection:
+    satisfies: [C1, C3]
+    description: "'이것이 현재 선택되어 있다'는 상태. 7곳에서 동일한 형태."
+    visual:
+      selected: {border: "1px solid green-500", bg: green-100}
+      unselected: {border: "1px solid gray-200", bg: white}
+    transition: "all 200ms"
+    components: [SelectableCard, ChipDate, ChipTime]
+
+  indicate_information:
+    satisfies: [C1]
+    description: "'참고할 정보'를 전달."
+    color_map: {primary: blue-500, hover: blue-700, light: blue-100}
+    components: [ButtonPrimary(blue), Badge(blue)]
+
+  indicate_warning:
+    satisfies: [C1]
+    description: "'주의가 필요하다'는 신호. 강도는 긴급도에 비례."
+    color_map: {primary: red-500, hover: red-700, light: red-100}
+    intensity: "텍스트만 red(낮음) → 버튼 배경까지 red(높음). ButtonWarning은 최고 긴급도만."
+    components: [ButtonWarning, Badge(red)]
+
+  indicate_structure:
+    satisfies: [C1]
+    description: "텍스트 계층, 배경 구분 등 구조적 역할."
+    color_map: {text_primary: gray-900, text_secondary: gray-500, text_placeholder: gray-400, text_disabled: gray-300, border: gray-200, surface: gray-100}
+
+  # ── 피드백 기능 ─────────────────────────────────────
+
+  respond_to_press:
+    satisfies: [C2, C3]
+    description: "버튼 3D 프레스. 3레이어 구조."
+    structure:
+      outer_button: {height: 52px, bg: transparent, border: none, padding: 0}
+      shadow_layer: {border_radius: 8px, padding_bottom: "4px(idle) → 2px(hover) → 0(active)"}
+      surface_layer: {height: 48px, border_radius: 8px, border: "1.5px solid gray-900"}
+    states:
+      idle: {shadow_pb: 4px, translate: 0}
+      hover: {shadow_pb: 2px, translate: "translateY(2px)", surface_color: "variant.hover"}
+      active: {shadow_pb: 0, translate: "translateY(4px)", surface_color: "variant.hover"}
+      disabled: {shadow_bg: gray-200, surface_bg: gray-100, border: "1.5px solid gray-200", text: gray-300, cursor: not-allowed}
+    timing: "transition-all duration-100 (shadow), transition-colors duration-100 (surface)"
+    variants:
+      green: {surface: podo-green, hover: green-300, shadow: gray-900, text: gray-900}
+      blue: {surface: blue-500, hover: blue-700, shadow: gray-900, text: white}
+      ghost: {surface: white, hover: white, shadow: gray-200, text: gray-900, border_color: gray-200}
+      warning: {surface: red-500, hover: red-700, shadow: gray-900, text: white}
+
+  respond_to_disabled_action:
+    satisfies: [C2]
+    description: "disabled CTA 클릭 시 이유를 Toast로 안내."
+    structure: |
+      <div className="relative">
+        <Toast message={toastMessage} />
+        {!isFormComplete && <div className="absolute inset-0 z-10" onClick={handleDisabledClick} />}
+        <ButtonPrimary disabled={!isFormComplete}>제출</ButtonPrimary>
+      </div>
+    rules:
+      priority: "미완료 항목 중 화면 위에서 가장 가까운 것부터"
+      dismiss: "2000ms 후 자동 소멸"
+      overlap: "새 Toast가 이전 것을 대체 (clearTimeout → setTimeout)"
+      timer_owner: "Toast는 무상태 컴포넌트. 2000ms 타이머는 페이지에서 useRef + setTimeout으로 관리. message를 null로 설정하여 소멸."
+
+  respond_to_completion:
+    satisfies: [C2]
+    description: "Lottie 축하 → 1초 딜레이 → 콘텐츠 펼침."
+    sequence:
+      0ms: "Lottie(140x140)만 화면 중앙 (flex-1 items-center justify-center)"
+      1000ms: "showContent = true"
+      content_reveal: "max-height 0→800px (600ms ease), opacity 0→1 (500ms), margin-top 0→20px (500ms)"
+      cta_reveal: "opacity 0→1 (500ms ease, 100ms delay)"
+    component: CompletionLayout
+
+  respond_to_drag:
+    satisfies: [C2]
+    description: "BottomSheet 핸들 드래그."
+    mechanics:
+      drag_area: "handle 영역에서만 드래그 시작. 콘텐츠 영역의 스크롤과 독립."
+      direction: "아래로만 (dy > 0)"
+      threshold: "100px 이상 → 닫기, 미만 → 원위치"
+      tracking: "실시간 translateY(dy)"
+      input: "touchstart/move/end + mousedown/move/up"
+    handle: {width: 48px, height: 4px, radius: 9999px, bg: gray-200, cursor: grab}
+
+  respond_to_carousel_drag:
+    satisfies: [C2]
+    description: "수평 캐러셀 마우스 드래그 스크롤."
+    implementation: "useDragScroll() 훅 (src/pages/TrialLesson.jsx 인라인). 컴포넌트가 아닌 훅으로 제공."
+    cursor: "grab → grabbing (드래그 중)"
+    snap: "snap-x snap-mandatory + scrollPaddingLeft: 20px"
+    padding: "paddingLeft: 20px, paddingRight: 20px"
+    item: "shrink-0 w-[240px] h-[300px] rounded-xl overflow-hidden snap-start"
+
+  # ── 상태 표시 기능 ───────────────────────────────────
+
+  show_disabled:
+    satisfies: [C1, C3]
+    description: "모든 비활성 요소에서 동일한 형태."
+    visual: {bg: gray-100, text: gray-300, border: gray-200}
+    applies_to: "ButtonPrimary/Ghost/Warning(disabled), ChipTime(unavailable)"
+
+  show_overlay:
+    satisfies: [C1, C3]
+    description: "오버레이/모달 배경."
+    backdrop: "bg-black/40"
+    enter_animation: "fadeIn 200~300ms ease"
+    exit: "즉시 언마운트"
+
+  show_urgency_level:
+    satisfies: [C1]
+    description: "긴급도를 단계적 시각 강도로."
+    levels:
+      low: {title: gray-900, number_highlight: blue-500, cta: ButtonPrimary, emoji: "😊"}
+      high: {title: red-500, number_highlight: none, cta: ButtonWarning, emoji: "⚠️"}
+
+  show_navigation_active:
+    satisfies: [C1, C3]
+    description: "GNB 탭 활성/비활성. '선택'과 다른 개념이므로 다른 형태."
+    active: {text: gray-900, lottie: "autoplay, key 변경으로 리렌더"}
+    inactive: {text: gray-300, lottie: "static"}
+
+  # ── 배치 기능 ──────────────────────────────────────
+
+  place_primary_cta:
+    satisfies: [C4]
+    description: "CTA를 컨테이너 가장 아래에."
+    positions:
+      page: "StickyBottom (fixed bottom-0 max-w-480 mx-auto px-20 py-12 bg-white)"
+      card: "카드 내부 최하단"
+      modal: "모달 내부 최하단 (Alert 확인, Confirm 취소/확인)"
+      sheet: "시트 내부 최하단 (absolute bottom-0, gradient 배경)"
+
+  place_secondary_options:
+    satisfies: [C4]
+    description: "보조 선택지는 아래에서 올라오는 시트로."
+    rule: "위에서 내려오는 드롭다운 금지."
+    component: BottomSheet
+
+  place_section_content:
+    satisfies: [C4]
+    description: "섹션 내부 순서."
+    order: [context_text, content_area, action_button]
+    typical_section: "px-5 py-4"
+    title_to_content_gap: "mb-4 (16px)"
+
+  # ── 모션 기능 ──────────────────────────────────────
+
+  motion_enter:
+    satisfies: [C1, C2]
+    description: "요소 등장 시 모션. 퇴장은 즉시 언마운트."
+    keyframes:
+      slideUp: {duration: 300ms, easing: ease, use: "BottomSheet 등장"}
+      fadeIn: {duration: "200~300ms", easing: ease, use: "오버레이/모달 등장"}
+      toastIn: {duration: 200ms, easing: ease, use: "Toast 등장"}
+    exit_rule: "닫기는 사용자 의도. 즉시 제거가 자연스러움."
+
+  motion_feedback:
+    satisfies: [C2]
+    description: "행동에 대한 즉각 피드백의 타이밍."
+    timing_hierarchy:
+      100ms: "손가락 아래에서 바로 일어나는 것 (버튼 프레스)"
+      150ms: "가벼운 상태 변화 (LinkCard hover)"
+      200ms: "선택 전환, 아이콘 회전, 소형 요소 등장"
+      300ms: "대형 요소 등장 (시트, 오버레이)"
+    rule: "빠를수록 직접적."
+
+  motion_celebration:
+    satisfies: [C1, C2]
+    description: "완료 축하 또는 상태 전환에 Lottie 사용. 정적 아이콘으로 부족할 때만."
+    conditions:
+      - "사용자가 의미 있는 작업을 완료 (예약, 결제)"
+      - "상태 전환에 풍부한 표현 필요 (체크박스)"
+      - "활성/비활성을 모션으로 구분 (GNB 탭)"
+    sizes: {completion: "140x140", checkbox: "32x32", gnb_icon: "24x24"}
+    lottie_files:
+      checkbox.json: {use: "체크박스 전환", loop: false, control: "프레임 직접 제어"}
+      1-13.json: {use: "마케팅 Confirm 이미지", loop: true}
+      1-14.json: {use: "체험레슨 완료 축하", loop: true}
+      1-15.json: {use: "홈 리포트 카드", loop: true, control: "프레임 42에서 2초 정지 후 재개"}
+      Comp_1-2.json: {use: "결제 완료 축하", loop: true}
+      gnb_icons: {use: "GNB 탭 아이콘 5종", loop: false, control: "activeTab일 때만 autoplay"}
+    frame_control_patterns:
+      checkbox:
+        unchecked_to_checked: "goToAndPlay(0)"
+        checked_to_unchecked: "goToAndStop(0)"
+        already_checked: "goToAndStop(60)"
+        tracking: "prevChecked ref로 이전 상태 추적"
+      pause_at_frame:
+        trigger: "onEnterFrame에서 특정 프레임 감지"
+        action: "pause() → setTimeout(2000ms) → play()"
+        guard: "ref로 중복 일시정지 방지"
+        cleanup: "컴포넌트 언마운트 시 clearTimeout"
+
+  # ── 콘텐츠 기능 ─────────────────────────────────────
+
+  format_price:
+    satisfies: [C3]
+    description: "금액 표기. 동일한 포매터와 표시 패턴 사용."
+    formatter: "n.toLocaleString('ko-KR')"
+    display:
+      original: {style: "gray-400 line-through", format: "140,000원/월"}
+      discount_rate: {style: "red-500 bold", format: "35%"}
+      final_price: {style: "gray-900 bold", format: "89,000원"}
+      unit_suffix: {style: "gray-500", format: "/월"}
+      coupon_discount: {style: "red-500", format: "-4,000원/월"}
+
+
+# ============================================================
+# COMPONENTS — 구현된 컴포넌트 (pixel-precise)
+# ============================================================
+
+components:
+
+  PageLayout:
+    file: src/components/PageLayout.jsx
+    functions: [place_section_content]
+    props:
+      topBar: {type: "boolean | string", description: "true → TopBar + pt-52. 문자열 → title 전달."}
+      gnb: {type: boolean, description: "true → GNB + pb-62."}
+      className: {type: string, default: "", description: "추가 클래스."}
+      children: {type: node}
+    base: "flex flex-col min-h-screen bg-white"
+    auto_padding: {topBar: pt-52px, gnb: pb-62px}
+    usage: |
+      <PageLayout topBar>...</PageLayout>
+      <PageLayout topBar="레슨권 구매">...</PageLayout>
+      <PageLayout gnb>...</PageLayout>
+      <PageLayout className="items-center justify-center px-5 pb-[68px]">...</PageLayout>
+
+  ButtonPrimary:
+    file: src/components/ButtonPrimary.jsx
+    functions: [indicate_action, respond_to_press]
+    props:
+      children: {type: node, description: "버튼 텍스트."}
+      onClick: {type: function}
+      disabled: {type: boolean, default: false}
+      variant: {type: "'green' | 'blue'", default: "'green'"}
+    outer: {width: "100%", height: 52px, bg: transparent, border: none, p: 0}
+    shadow_layer:
+      default: {width: "100%", radius: 8px, pb: 4px, bg: gray-900}
+      hover: {translateY: 2px, pb: 2px}
+      active: {translateY: 4px, pb: 0}
+      disabled: {bg: gray-200}
+    surface:
+      default: {width: "100%", height: 48px, radius: 8px, border: "1.5px solid gray-900"}
+      green: {bg: podo-green, text: gray-900, hover_bg: green-300}
+      blue: {bg: blue-500, text: white, hover_bg: blue-700}
+      disabled: {bg: gray-100, border: "1.5px solid gray-200", text: gray-300}
+    text: {size: 16px, weight: bold, leading: 24px, tracking: -0.48px}
+    transition: "all 100ms (shadow), colors 100ms (surface)"
+
+  ButtonGhost:
+    file: src/components/ButtonGhost.jsx
+    functions: [respond_to_press]
+    props:
+      children: {type: node}
+      onClick: {type: function}
+      disabled: {type: boolean, default: false}
+      size: {type: "'lg' | 'sm'", default: "'lg'"}
+    sizes:
+      lg: {outer_h: 52px, surface_h: 48px, text: "16px bold leading-24 tracking-[-0.32px]"}
+      sm: {outer_h: 44px, surface_h: 40px, text: "14px bold leading-22 tracking-[-0.42px]"}
+    surface: {bg: white, border: "1.5px solid gray-200", text: gray-900}
+    shadow: {bg: gray-200}
+    disabled: {surface_bg: gray-100, border: "1.5px solid gray-200", text: gray-300}
+
+  ButtonWarning:
+    file: src/components/ButtonWarning.jsx
+    functions: [indicate_warning, respond_to_press]
+    props:
+      children: {type: node}
+      onClick: {type: function}
+      disabled: {type: boolean, default: false}
+    surface: {bg: red-500, border: "1.5px solid gray-900", text: white, hover_bg: red-700}
+    shadow: {bg: gray-900}
+    note: "최고 긴급도에서만 사용. 일반 경고는 텍스트 색상(red-500)으로 처리."
+
+  SelectableCard:
+    file: src/components/SelectableCard.jsx
+    functions: [indicate_selection]
+    props:
+      selected: {type: boolean, description: "선택 여부."}
+      onClick: {type: function}
+      className: {type: string, default: "", description: "레이아웃 (rounded, padding, flex 등)."}
+      children: {type: node}
+    states:
+      selected: "border-green-500 bg-green-100"
+      unselected: "border-gray-200 bg-white"
+    transition: "all 200ms"
+    usage_patterns:
+      simple_text: "className='flex-1 flex items-center justify-center py-5 px-2 rounded-xl'"
+      with_icon: "className='flex items-center gap-3 px-4 py-3 rounded-xl text-left w-full'"
+      with_badge: "className='relative flex-1 flex flex-col items-center gap-2 py-5 px-4 rounded-xl'"
+      schedule: "className='h-[52px] flex items-center justify-center rounded-lg text-base font-medium text-gray-900 leading-6 tracking-[-0.32px]'"
+
+  Badge:
+    file: src/components/Badge.jsx
+    functions: [indicate_information, indicate_warning]
+    props:
+      children: {type: node, description: "배지 텍스트."}
+      color: {type: "'blue' | 'red'", default: "'blue'"}
+      variant: {type: "'pill' | 'corner'", default: "'pill'"}
+    pill:
+      height: 22px
+      px: 8px
+      radius: 9999px
+      text: {size: 12px, weight: bold, leading: 22px, tracking: -0.24px}
+      colors: {blue: "bg-blue-500 text-white", red: "bg-red-500 text-red-100"}
+    corner:
+      position: "absolute top-[-1px] right-[-1px]"
+      height: 20px
+      px: 8px
+      py: 1px
+      text: {size: 10px, weight: 500, leading: 16px, tracking: -0.2px}
+      radius: {tl: 4px, bl: 4px, tr: 12px}
+      note: "부모에 relative 필요"
+
+  StickyBottom:
+    file: src/components/StickyBottom.jsx
+    functions: [place_primary_cta]
+    props:
+      children: {type: node}
+      className: {type: string, default: ""}
+    base: "fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto px-5 py-3 bg-white"
+
+  FeatureItem:
+    file: src/components/FeatureItem.jsx
+    functions: [indicate_structure]
+    props:
+      icon: {type: "string (src)", description: "32x32 아이콘 이미지."}
+      children: {type: node, description: "설명 텍스트."}
+    layout: "flex items-center gap-2 (8px)"
+    icon_spec: {w: 32px, h: 32px, shrink: 0, object_fit: contain}
+    text: {size: 14px, weight: 500, color: gray-900, leading: 20px, tracking: -0.28px}
+
+  LinkCard:
+    file: src/components/LinkCard.jsx
+    functions: [indicate_structure]
+    props:
+      icon: {type: "string (src)"}
+      title: {type: string}
+      description: {type: string}
+      onClick: {type: function}
+    layout: "flex items-center gap-3 (12px) px-5 (20px) py-4 (16px)"
+    bg: "gray-100, hover: gray-200"
+    radius: 12px
+    transition: "colors 150ms"
+    active: "opacity 0.8"
+    icon_spec: {w: 40px, h: 40px, radius: 8px, object_fit: cover}
+    title_text: {size: 16px, weight: 500, color: gray-900, leading: 24px, tracking: -0.32px}
+    desc_text: {size: 14px, color: gray-500, leading: 20px, tracking: -0.28px, mt: 4px}
+    chevron: {w: 24px, h: 24px, src: "icon-line-24px-chevron-right.svg"}
+
+  Toast:
+    file: src/components/Toast.jsx
+    functions: [respond_to_disabled_action]
+    props:
+      message: {type: "string | null", description: "null이면 렌더링하지 않음."}
+    position: "absolute left-0 w-full bottom-[calc(100%+8px)]"
+    note: "부모에 relative 필요"
+    style: {p: 20px, radius: 12px, bg: "gray-900/80", backdrop: "blur(10px)", text: "16px 500 white center"}
+    animation: "toastIn 200ms ease"
+
+  Alert:
+    file: src/components/Alert.jsx
+    functions: [show_overlay, place_primary_cta]
+    props:
+      image: {type: "string | ReactNode | null"}
+      title: {type: "string | null"}
+      text: {type: string}
+      buttonText: {type: string, default: "'확인'"}
+      onConfirm: {type: function}
+      onClose: {type: function, description: "오버레이 클릭 시 호출."}
+    container: "fixed inset-0 z-200 flex items-center justify-center"
+    overlay: "absolute inset-0 bg-black/40 fadeIn 200ms"
+    modal:
+      max_width: 380px
+      mx: 20px
+      bg: white
+      radius: 12px
+      shadow: shadow-modal
+      padding: {top: 32px, bottom: 20px, x: 20px}
+      gap: 32px
+      align: center
+      animation: "fadeIn 200ms"
+    title: "text-lg font-bold text-gray-900 leading-[26px] tracking-[-0.36px]"
+    text: "text-base font-medium text-gray-500 leading-6 tracking-[-0.32px] whitespace-pre-line"
+    button: "ButtonPrimary fullWidth"
+
+  Confirm:
+    file: src/components/Confirm.jsx
+    functions: [show_overlay, place_primary_cta]
+    props:
+      image: {type: "string | ReactNode | null"}
+      title: {type: "string | null"}
+      text: {type: string}
+      cancelText: {type: string, default: "'취소'"}
+      confirmText: {type: string, default: "'확인'"}
+      vertical: {type: boolean, default: false}
+      onCancel: {type: function, description: "오버레이 클릭 시에도 호출."}
+      onConfirm: {type: function}
+    modal: "Alert와 동일한 모달 스펙"
+    button_layout:
+      horizontal: {cancel: "ButtonGhost w-98px shrink-0", confirm: "ButtonPrimary flex-1 min-w-0", gap: 8px}
+      vertical: {confirm: "ButtonPrimary w-full order-1", cancel: "ButtonGhost w-full order-2", gap: 8px}
+
+  BottomSheet:
+    file: src/components/BottomSheet.jsx
+    functions: [place_secondary_options, respond_to_drag, show_overlay]
+    props:
+      open: {type: boolean}
+      onClose: {type: function}
+      showHandle: {type: boolean, default: true}
+      children: {type: node}
+    overlay: {bg: "black/40", z: 200, animation: "fadeIn 300ms"}
+    sheet:
+      position: "fixed bottom-0 left-0 right-0"
+      max_width: 480px
+      mx: auto
+      bg: white
+      radius_top: 16px
+      z: 201
+      max_height: "80vh"
+      shadow: shadow-sheet
+      animation: "slideUp 300ms"
+    handle:
+      visible: "showHandle prop"
+      padding: "pt-2 (8px) pb-3 (12px)"
+      cursor: grab
+      bar: {w: 48px, h: 4px, radius: 9999px, bg: gray-200}
+    drag_threshold: 100px
+
+  ChipDate:
+    file: src/components/ChipDate.jsx
+    functions: [indicate_selection]
+    props: {label: string, day: string, selected: boolean, onClick: function}
+    layout: "flex-1 flex flex-col gap-1.5 (6px) items-center px-4 (16px) py-3.5 (14px) rounded-lg"
+    selected: {border: "1px solid green-500", bg: green-100}
+    unselected: {border: "1px solid transparent", bg: white}
+    label: {size: 14px, leading: 22px, tracking: -0.42px, color_selected: gray-900, color_unselected: gray-400}
+    day: {size: 16px, weight: 500, leading: 24px, tracking: -0.48px, color: gray-900}
+
+  ChipTime:
+    file: src/components/ChipTime.jsx
+    functions: [indicate_selection, show_disabled]
+    props: {time: string, selected: boolean, available: boolean, onClick: function}
+    layout: "py-3.5 (14px) rounded-lg border text-center"
+    text: {size: 16px, weight: 500, leading: 24px, tracking: -0.48px}
+    selected: {border: green-500, bg: green-100, text: gray-900}
+    available: {border: gray-200, bg: white, text: gray-900}
+    unavailable: {border: gray-200, bg: gray-100, text: gray-300, cursor: default}
+
+  CompletionLayout:
+    file: src/components/CompletionLayout.jsx
+    functions: [respond_to_completion]
+    props:
+      lottieData: {type: "JSON object", required: true}
+      children: {type: node, required: true, description: "딜레이 후 펼쳐질 콘텐츠."}
+      cta: {type: node, description: "하단 고정 CTA."}
+      delay: {type: number, default: 1000, unit: ms}
+    container: "flex flex-col min-h-screen bg-white pb-[68px]"
+    content_area: "flex flex-col items-center justify-center flex-1 p-5 (20px)"
+    lottie: {w: 140px, h: 140px, loop: true}
+    reveal:
+      hidden: {max_height: 0, opacity: 0, margin_top: 0}
+      visible: {max_height: 800px, opacity: 1, margin_top: 20px}
+      transition: "max-height 600ms ease, opacity 500ms ease, margin-top 500ms ease"
+    cta_container:
+      position: "fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto px-5 (20px) py-2 (8px)"
+      reveal: "opacity 0→1, 500ms ease, 100ms delay"
+
+  TopBar:
+    file: src/components/TopBar.jsx
+    functions: [indicate_structure]
+    props:
+      title: {type: "string | undefined"}
+    position: "fixed top-0 w-full max-w-480"
+    height: 52px
+    padding: "px-5 (20px)"
+    z: 100
+    bg: "linear-gradient(to bottom, white 80%, rgba(255,255,255,0))"
+    back_button: {w: 24px, h: 24px, svg_stroke: gray-900, stroke_width: 1.5}
+    title_text: "absolute left-50% -translate-x-50% text-base font-bold text-gray-900 leading-24 tracking-[-0.32px]"
+    note: "PageLayout이 자동 관리. 직접 사용 불필요."
+
+  GNB:
+    file: src/components/GNB.jsx
+    functions: [show_navigation_active, motion_celebration]
+    tabs: ["홈", "레슨", "예약", "AI 학습", "마이포도"]
+    position: "fixed bottom-0 w-full max-w-480"
+    height: 62px
+    z: 100
+    bg: white
+    border_top: "1px solid gray-200"
+    item: {flex: 1, direction: column, gap: 6px, py: 9px, h: 62px}
+    icon: {w: 24px, h: 24px, lottie: true}
+    label: {size: 9px, weight: 600, leading: 14px, tracking: -0.27px}
+    note: "PageLayout이 자동 관리. 직접 사용 불필요."
+
+
+# ============================================================
+# DERIVED COMPONENTS — 공리에서 도출 (아직 미구현)
+# ============================================================
+# 기존 코드에 없지만, 공리와 기존 패턴에서 논리적으로 도출된 컴포넌트입니다.
+# 새 화면 구현 시 이 스펙을 따라 만들면 됩니다.
+
+derived_components:
+
+  Input:
+    derivation:
+      C1: "기능 = 텍스트 입력 수집. border로 입력 영역 표시."
+      C2: "포커스 시 시각적 반응 필요."
+      C3: "테두리/비활성 패턴은 기존 체계를 따름."
+    props: {value: string, onChange: function, placeholder: string, error: boolean, disabled: boolean}
+    spec:
+      height: 52px  # C3: 버튼과 동일 높이로 시각적 정렬
+      radius: 8px   # C3: 버튼과 동일 (rounded-lg)
+      padding: "px-16 py-14"
+      text: {size: 16px, weight: 400, color: gray-900}
+      placeholder: {color: gray-400}
+      border: "1px solid gray-200"
+    states:
+      default: {border: gray-200, bg: white}
+      focus: {border: gray-900, ring: "1.5px ring gray-900"}   # C3: gray-900은 활성 인터랙션 색상 (버튼 테두리와 동일)
+      error: {border: red-500, bg: red-100}    # C3: red 체계 (indicate_warning)
+      disabled: {bg: gray-100, text: gray-300}  # C3: 기존 비활성 패턴 정확히 동일
+
+  Checkbox:
+    derivation:
+      C2: "체크/해제 행동에 시각적 반응 필요."
+      C3: "기존 CheckCircle(Lottie)과 동일한 표현."
+    note: "현재 TrialLesson에 CheckCircle로 인라인 구현. 컴포넌트 추출 대상."
+    props: {checked: boolean, onChange: function}
+    spec:
+      size: "32x32 (margin: -4 for touch target)"
+      animation: "Lottie checkbox.json"
+      unchecked: "frame 0 (정지)"
+      checked: "frame 0→60 (재생)"
+      already_checked: "frame 60 (정지)"
+    control: "lottieRef.current.goToAndPlay(0) / goToAndStop(0) / goToAndStop(60)"
+
+  Tabs:
+    derivation:
+      C1: "기능 = 콘텐츠 필터링. 활성 탭 표시."
+      C3: "GNB의 '네비게이션 활성'과 다른 개념. 별도 시각 형태."
+      C4: "탭은 콘텐츠 위(컨텍스트 영역)에 배치."
+    props: {items: "string[]", activeIndex: number, onChange: function}
+    spec:
+      layout: "flex w-full border-b border-gray-200"
+      item: "flex-1 py-12 text-center cursor-pointer"
+      active: {text: "gray-900 font-bold", border_bottom: "2px solid gray-900"}
+      inactive: {text: gray-400}
+      transition: "colors 200ms"
+
+  SubTab:
+    derivation:
+      C1: "기능 = 필터 칩형 탭."
+      C3: "필터링도 '선택'의 일종 → indicate_selection과 동일한 시각 형태 사용."
+    props: {items: "string[]", activeIndex: number, onChange: function}
+    spec:
+      layout: "flex gap-2 (8px)"
+      item: "px-3 (12px) py-[5px] border rounded-full text-sm"
+      active: {bg: green-100, border: green-500, text: gray-900}    # C3: selection과 동일
+      inactive: {bg: white, border: gray-200, text: gray-400}
+
+  Progress:
+    derivation:
+      C1: "기능 = 진행 상태 시각화. 채워진 영역으로 표현."
+      C3: "기능색(green/blue/red)에 따라 fill 색상 결정."
+    props: {value: "0~100", color: "'green' | 'blue' | 'red'", className: string}
+    spec:
+      track: {height: 8px, bg: gray-200, radius: 16px}
+      fill: {height: 8px, radius: 16px, transition: "width 300ms ease"}
+      colors: {green: green-500, blue: blue-500, red: red-500}
+
+  Stepper:
+    derivation:
+      C1: "기능 = 단계 진행 표시. 현재 단계를 강조."
+      C4: "콘텐츠 위(컨텍스트 영역)에 배치."
+    props: {steps: number, current: number, color: "'gray' | 'green' | 'blue'"}
+    spec:
+      layout: "flex gap-4"
+      bar: {height: 4px, flex: 1, radius: 4px}
+      active: {bg: "color에 따라 gray-900/green-500/blue-500"}
+      inactive: {bg: gray-200}
+
+  Divider:
+    derivation:
+      C1: "기능 = 영역 구분."
+    props: {className: string}
+    spec:
+      horizontal: "w-full h-px bg-gray-200"
+      with_margin: "my-16 또는 my-20"
+
+
+# ============================================================
+# PAGE TEMPLATES — 페이지 유형별 뼈대
+# ============================================================
+
+page_templates:
+
+  # 템플릿 선택 결정 트리:
+  #   사용자 입력/선택이 있는가?
+  #     예 → form_page
+  #   GNB가 있는 메인 화면인가?
+  #     예 → home_page
+  #   작업 완료 축하가 필요한가?
+  #     Lottie 딜레이 펼침 → completion_animated
+  #     단순 완료 메시지 → completion_simple
+  #   정보 조회(읽기 전용)인가?
+  #     키-값 행 구조 → detail_page
+  #     반복 목록 구조 → list_page
+  #   경고/방어 행동인가?
+  #     예 → warning_page
+
+  form_page:
+    description: "항목 선택 → disabled CTA + Toast → 제출. (TrialLesson, ExistingUserPayment)"
+    skeleton: |
+      <PageLayout topBar>
+        <section className="px-5 py-4">
+          <h2 className="{section_title} mb-4">질문</h2>
+          <div className="flex flex-col gap-2">
+            <SelectableCard selected={...} className="... rounded-xl">...</SelectableCard>
+          </div>
+        </section>
+        {/* 반복 섹션 */}
+        <section className="px-5 py-4">
+          <div className="relative">
+            <Toast message={msg} />
+            {!isComplete && <div className="absolute inset-0 z-10" onClick={handleDisabled} />}
+            <ButtonPrimary disabled={!isComplete}>제출</ButtonPrimary>
+          </div>
+        </section>
+      </PageLayout>
+
+  home_page:
+    description: "커스텀 네비 + 배너 + 메인 카드 + 섹션 + GNB. (Home)"
+    skeleton: |
+      <PageLayout gnb>
+        <nav className="flex items-center justify-between h-[52px] px-5 bg-white">
+          <img src={logo} className="h-[18px]" />
+          <button className="h-[31px] px-3 bg-gray-900 rounded">...</button>
+        </nav>
+        <section className="px-5 py-2">{/* 배너 */}</section>
+        <section className="px-5 py-2">{/* 메인 카드 */}</section>
+        <section className="p-5">{/* 추가 섹션 */}</section>
+      </PageLayout>
+
+  completion_simple:
+    description: "Lottie + 메시지 + StickyBottom CTA. (TrialLessonComplete)"
+    skeleton: |
+      <PageLayout className="items-center justify-center px-5 pb-[68px]">
+        <Lottie animationData={anim} style={{ width: 140, height: 140 }} />
+        <h1 className="{completion_title}">완료!</h1>
+        <StickyBottom className="py-2"><ButtonPrimary>다음</ButtonPrimary></StickyBottom>
+      </PageLayout>
+
+  completion_animated:
+    description: "CompletionLayout. 1초 딜레이 → 콘텐츠 펼침. (ExistingUserPaymentComplete)"
+    skeleton: |
+      <CompletionLayout lottieData={anim} cta={<ButtonPrimary>다음</ButtonPrimary>}>
+        <h1 className="{completion_title}">완료</h1>
+        <div className="w-full bg-gray-100 border border-gray-200 rounded-xl p-5">
+          {/* 요약 카드: label(gray-400 w-12) + value(gray-900) 행 반복 */}
+        </div>
+      </CompletionLayout>
+
+  detail_page:
+    description: "상세 정보 페이지. (도출 — 아직 미구현)"
+    derivation: "C4(위에서 읽고 아래에서 행동) + indicate_structure"
+    skeleton: |
+      <PageLayout topBar="상세 제목">
+        <section className="px-5 py-4">{/* 히어로 영역 */}</section>
+        <Divider />
+        <section className="px-5 py-4">
+          {/* key-value 행: flex justify-between, label(gray-500) + value(gray-900) */}
+        </section>
+        <section className="px-5 py-4 bg-gray-100 rounded-xl mx-5">
+          {/* 안내사항: · 불릿 리스트, text-sm text-gray-500 */}
+        </section>
+        <StickyBottom><ButtonPrimary>행동</ButtonPrimary></StickyBottom>
+      </PageLayout>
+
+  list_page:
+    description: "목록/이력 페이지. (도출 — 아직 미구현)"
+    derivation: "C4 + Tabs(도출) + indicate_structure"
+    skeleton: |
+      <PageLayout topBar="목록 제목">
+        <Tabs items={['탭A', '탭B']} activeIndex={idx} onChange={setIdx} />
+        <section className="px-5 py-4">
+          {items.map(item => (
+            <div className="flex items-center justify-between py-4 border-b border-gray-100">
+              <div>{/* 날짜, 내용 */}</div>
+              <Badge>상태</Badge>
+            </div>
+          ))}
+          {items.length === 0 && (
+            <div className="text-center py-20 text-sm text-gray-400">항목이 없어요.</div>
+          )}
+        </section>
+      </PageLayout>
+
+  warning_page:
+    description: "경고/확인 페이지 (해지 방어 등). (도출 — 아직 미구현)"
+    derivation: "C2(거부에도 설명) + C4(방어 CTA가 primary, 파괴 행동은 텍스트 링크)"
+    skeleton: |
+      <PageLayout topBar="경고 제목">
+        <section className="px-5 py-4">
+          <h2 className="{completion_title}">경고 메시지</h2>
+          <p className="{secondary_gray}">설명</p>
+        </section>
+        <section className="px-5 py-4">
+          {/* 손실 항목 카드: 색상 아이콘 + 수치 */}
+        </section>
+        <StickyBottom>
+          <ButtonPrimary>유지하기</ButtonPrimary>
+          <button className="w-full text-center text-sm text-gray-500 mt-3">해지하기</button>
+        </StickyBottom>
+      </PageLayout>
+    note: "파괴적 행동(해지)은 버튼 스타일 없이 텍스트 링크로. C4에 의해 유지 CTA가 더 강하게."
+
+
+# ============================================================
+# PATTERNS — 복합 UX 패턴 (7개)
+# ============================================================
+
+patterns:
+
+  form_validation:
+    description: "필수 선택 → disabled CTA → Toast → 조건부 확인 → 완료."
+    flow:
+      1: "useState로 각 선택 항목 관리"
+      2: "isFormComplete = 모든 필수 항목 AND"
+      3: "disabled CTA + 투명 오버레이 + handleDisabledClick"
+      4: "Toast 2000ms 자동 소멸, 미완료 항목 순서대로 안내"
+      5: "제출 전 조건부 Alert(에러) 또는 Confirm(추가 동의)"
+      6: "navigate('/complete', { state: formData })"
+    validation_priority: "화면 위→아래 순서로 미완료 항목 안내"
+    functions: [respond_to_disabled_action, indicate_selection]
+
+  product_selection_pricing:
+    description: "언어→상품→기간 연동 + 가격 계산 + 쿠폰."
+    selection_chain:
+      step1: "언어 (3개 SelectableCard, flex gap-2)"
+      step2: "상품 (세로 리스트, 아이콘+텍스트+Badge corner)"
+      step3: "기간 (3개 SelectableCard + Badge corner, flex gap-2)"
+    dependency: "상품 변경 → 기간 초기화 (지원 안 하면 첫 번째로 리셋)"
+    price_display:
+      original: "gray-400 line-through → '140,000원/월'"
+      discount: "red-500 bold → '35%'"
+      final: "gray-900 bold → '89,000원'"
+      unit: "gray-500 → '/월'"
+    coupon_expansion:
+      container: "bg-gray-100 rounded-lg p-12"
+      toggle: "flex justify-between, chevron rotate-180 transition-transform 200ms"
+      label: "text-xs text-gray-400 → '최대 혜택 적용가'"
+      breakdown: "flex justify-between text-sm tracking-[-0.42px], label(gray-400) amount(red-500)"
+    payment_cards:
+      lump: "ButtonPrimary(green). 상단에 절약액 리본(bg-gray-900 text-white rounded-bl-xl)"
+      monthly: "ButtonPrimary(blue). 6개월/3개월만 표시."
+    functions: [indicate_selection, indicate_warning, format_price, place_primary_cta]
+
+  scenario_branching:
+    description: "동일 페이지에서 사용자 상태별 다른 UI."
+    data: "const scenarios = [{ id, label }]"
+    state: "const [scenarioIdx, setScenarioIdx] = useState(0)"
+    rendering: "scenario.id === 'xxx' && (...)"
+    debug: "premises.purpose 참조 — 디버그 플로팅 버튼"
+    functions: [indicate_structure]
+
+  retention_escalation:
+    description: "수강권 만료 6단계 긴급도 팝업."
+    container: BottomSheet
+    phases:
+      report: {period: "D-25~15", urgency: low, emoji: "😊 or Lottie", cta_type: primary, cta: "영어 리포트 보러가기"}
+      coupon_first: {period: "D-14", urgency: low, emoji: "😊 or image", cta_type: primary, cta: "나만의 할인가 확인하기"}
+      coupon_soft: {period: "D-13~10", urgency: low, emoji: "😊 or image", cta_type: primary, cta: "나만의 할인가 확인하기"}
+      coupon_hard: {period: "D-7~2", urgency: high, emoji: "⚠️", cta_type: warning, cta: "혜택 만료 전 확인하기"}
+      coupon_d1: {period: "D-1", urgency: high, emoji: "⚠️", cta_type: warning, cta: "할인 막차 타기"}
+      coupon_d0: {period: "D-0", urgency: high, emoji: "⚠️", cta_type: warning, cta: "오늘 할인 종료"}
+    data_structure: "{label, emoji, title, subtitle, ctaText, urgent(bool), ctaType}"
+    visual_escalation:
+      low: {title_color: gray-900, number: "blue-500 강조 (regex split)", button: ButtonPrimary}
+      high: {title_color: red-500, number: "강조 없음", button: ButtonWarning}
+    functions: [show_urgency_level, indicate_warning]
+
+  completion_flow:
+    description: "폼 → 완료 페이지 → 홈 복귀 (상태 전달)."
+    navigation:
+      to_complete: "navigate('/complete', { state: { ...formData } })"
+      to_home: "navigate('/', { state: { ...resultData } })"
+      receive: "const { data } = useLocation().state ?? defaults"
+    summary_card:
+      container: "bg-gray-100 border border-gray-200 rounded-xl p-5 (20px)"
+      header: "{section_title}"
+      rows: "flex items-center gap-1.5 (6px), label(text-sm text-gray-400 w-12 (48px)) + value(text-sm text-gray-900)"
+      status_value: "text-sm font-semibold text-blue-500"
+      benefit_row: "bg-red-100 border border-red-500 rounded-lg px-3 (12px) py-2 (8px), 🔥 + text"
+    functions: [respond_to_completion, place_primary_cta]
+
+  overlay_priority:
+    description: "오버레이 선택 기준. 가벼운→무거운."
+    levels:
+      1_inline: {condition: "짧은 추가 정보, 맥락 유지", example: "쿠폰 아코디언", dismiss: "같은 영역 토글"}
+      2_bottomsheet: {condition: "선택지 제시, 목록 탐색", example: "전체 일정", dismiss: "드래그/오버레이/버튼"}
+      3_alert: {condition: "단순 안내", example: "예약실패", dismiss: "확인 버튼, 오버레이 탭"}
+      4_confirm: {condition: "행동 재확인", example: "마케팅 동의", dismiss: "취소/확인 버튼, 오버레이(=취소)"}
+    rule: "동시에 2개 이상 열리지 않음. 열기 전에 현재 것을 닫음."
+    implementation: "현재는 각 페이지에서 useState로 개별 관리. 하나를 열기 전에 다른 것을 닫는 것은 개발자(또는 LLM)의 책임."
+
+  page_entry:
+    description: "페이지 진입 시 공통 동작."
+    satisfies: [C2]  # 페이지 전환이라는 행동에 대한 반응 (스크롤 초기화, 상태 복원)
+    scroll_reset: "TopBar 페이지에서 useEffect(() => window.scrollTo(0, 0), [])"
+    state_receive: "useLocation().state로 이전 페이지 데이터 수신"
+    functions: [place_section_content]
+
+
+# ============================================================
+# CONTENT — UX Writing 규칙
+# ============================================================
+
+content:
+  tone: "존댓말 (~요 체). 이모지 미사용 (아이콘 역할 제외)."
+
+  cta_labels:
+    pattern: "동사 + '하기'"
+    examples: ["체험레슨 예약하기", "구매하기", "예습하기", "앱 다운로드", "선택한 날짜에 예약", "마이 포도 플랜으로 이동"]
+    urgency_escalation: "정보형('확인하기') → 시간 압박형('막차 타기') → 마감형('오늘 종료')"
+    dialog: {alert_default: "확인", cancel_default: "취소", confirm_default: "확인"}
+
+  section_titles:
+    form_pattern: "질문/요청 형태 + '~해주세요' 또는 '~하세요'"
+    examples: ["체험해보고 싶은 언어를 선택해 주세요.", "기간을 선택하세요.", "레슨 일정을 선택해주세요."]
+    info_pattern: "선언형"
+    info_examples: ["모든 플랜에 포함된 혜택", "레슨 준비", "앱에서 더 편하게 이용하세요!"]
+
+  feedback_messages:
+    toast: "미완료 항목 + '~해주세요.' (예: '레슨 일정을 선택해주세요.')"
+    alert_error: "상황 + 안내 (예: '선택한 시간이 마감되었어요. 다른 시간을 선택해주세요.')"
+    completion: "행동 결과 + '완료!' (예: '체험레슨 예약 완료!')"
+    empty_state: "~이(가) 없어요."
+
+  price_format: "→ functions.format_price 참조"
+
+
+# ============================================================
+# EXCEPTIONS — 토큰 미승격 하드코딩 값
+# ============================================================
+
+exceptions:
+  banner_dark_bg:
+    value: "#1A1A1A"
+    location: "ExistingUserPayment 프로모션 배너 (2곳)"
+    reason: "gray-900과 hex 2단계 차이. 프로모션 배너 전용 톤."
+    upgrade_if: "3곳 이상으로 늘어나면 dark-surface 토큰 검토."
+
+  banner_lime_accent:
+    value: "#C5F467"
+    location: "ExistingUserPayment 다크 배너 강조 텍스트 (3곳)"
+    reason: "podo-green과 다른 톤. 다크 배경 전용."
+    upgrade_if: "다크 서피스 악센트가 다른 화면에서도 반복되면 lime-accent 검토."
+
+  banner_white_opacity:
+    values: ["rgba(255,255,255,0.6)", "0.4", "0.1"]
+    location: "ExistingUserPayment 다크 배너 내 (5곳)"
+    reason: "다크 서피스 텍스트 계층용. 맥락 한정."
+    upgrade_if: "다크 서피스 컴포넌트 추출 시 text-white/60 등으로 전환."
+
+  svg_strokes:
+    values: {gray_900: "#1C1C1C", green_500: "#6ABE36", blue_500: "#6184FF"}
+    location: "TopBar, ExistingUserPayment, TrialLesson SVG stroke"
+    reason: "SVG stroke는 Tailwind 적용 불가. 값은 토큰과 동일."
+    upgrade_if: "SVG 컴포넌트 추출 시 stroke='currentColor'로 전환."
+
+
+# ============================================================
+# DERIVATION EXAMPLES — 새 상황에서의 도출 과정
+# ============================================================
+
+derivation_examples:
+
+  filter_chip:
+    situation: "목록 필터링용 칩 UI"
+    C1: "기능 = 필터 선택 → indicate_selection"
+    C3: "선택 개념 이미 존재 → green-500/green-100"
+    C4: "콘텐츠 위(컨텍스트 영역)에 배치"
+    conclusion: "SelectableCard 재사용 또는 derived SubTab 사용."
+
+  loading_spinner:
+    situation: "데이터 로딩 중 표시"
+    C1: "기능 = 로딩 상태 전환 알림."
+    C2: "페이지 진입에 대한 반응 필요."
+    functions: "motion_enter(등장 애니메이션) + motion_celebration(Lottie 조건 확인)"
+    conclusion: "Lottie 또는 CSS 애니메이션. 완료 시 즉시 제거 (motion_enter.exit_rule)."
+
+  decorative_gradient:
+    situation: "섹션 배경에 장식적 그라디언트"
+    C1: "기능 = 없음 (순수 장식)"
+    conclusion: "추가하지 않음. C1 위반."
+
+  error_toast:
+    situation: "API 에러 알림"
+    C2: "시스템 이벤트에도 전달 필요"
+    C3: "Toast 이미 존재 → 기존 형태 재사용"
+    conclusion: "Toast 컴포넌트 재사용. 메시지만 변경."
+
+  dropdown_menu:
+    situation: "옵션 목록을 드롭다운으로"
+    C4: "보조 선택지는 아래에서 올라온다. 드롭다운(위에서 내려옴) 위반."
+    conclusion: "BottomSheet 사용."
+
+  success_badge:
+    situation: "'완료' 상태 배지"
+    C1: "기능 = 상태 정보 → indicate_information 또는 indicate_action"
+    C3: "Badge 존재. color prop 확장."
+    conclusion: "Badge에 color='green' 추가. bg-green-500 text-white."
+
+  settings_toggle:
+    situation: "설정 화면에서 on/off 토글"
+    C2: "토글 행동에 즉각 반응 필요 → 상태 전환 시 시각적 변화."
+    C3: "기존에 없는 새 개념(on/off 전환) → 새 시각 형태 허용."
+    color_derivation: "indicate_structure 색상 체계 적용: on = gray-900(활성 구조색), off = gray-300(비활성)."
+    conclusion: "derived Toggle 컴포넌트. track h-6 (24px) w-[38px] rounded-[13px]. thumb w-5 (20px) h-5 rounded-full bg-white."
+
+  cancellation_page:
+    situation: "구독 해지 확인 페이지"
+    C4: "유지 CTA(primary)가 하단. 해지는 텍스트 링크(gray-500)."
+    C2: "손실 항목을 시각적으로 전달 (거부 이유 설명)."
+    conclusion: "warning_page 템플릿 사용. 손실 아이템에 색상 아이콘."

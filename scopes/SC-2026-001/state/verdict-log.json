@@ -1,0 +1,80 @@
+[
+  {
+    "type": "align.locked",
+    "revision": 12,
+    "ts": "2026-03-09T12:55:00.278Z",
+    "locked_direction": "무료체험을 1회에서 3회로 확대하고, 회차별 순차 개방·차감·복구 규칙을 정의하며, 3회 소진 후 유료 체험레슨(5,000원/3회)으로 전환하는 정책·시스템·UI를 구현한다. PO 결정: CST-003 옵션A(노쇼·취소 모두 차감+개방), CST-004 Builder 위임(A 또는 B), CST-007 옵션B(제13조의2 신설)."
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 18,
+    "ts": "2026-03-09T13:12:56.678Z",
+    "constraint_id": "CST-003",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 19,
+    "ts": "2026-03-09T13:12:56.681Z",
+    "constraint_id": "CST-004",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 20,
+    "ts": "2026-03-09T13:12:56.682Z",
+    "constraint_id": "CST-007",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 21,
+    "ts": "2026-03-09T13:12:56.682Z",
+    "constraint_id": "CST-008",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 22,
+    "ts": "2026-03-09T13:12:56.684Z",
+    "constraint_id": "CST-009",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 23,
+    "ts": "2026-03-09T13:12:56.684Z",
+    "constraint_id": "CST-001",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 24,
+    "ts": "2026-03-09T13:12:56.685Z",
+    "constraint_id": "CST-002",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 25,
+    "ts": "2026-03-09T13:12:56.685Z",
+    "constraint_id": "CST-005",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 26,
+    "ts": "2026-03-09T13:12:56.685Z",
+    "constraint_id": "CST-006",
+    "decision": "inject",
+    "decision_owner": "builder"
+  }
+]
