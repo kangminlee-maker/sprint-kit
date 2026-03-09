@@ -1,19 +1,20 @@
 # /start Protocol
 
-새로운 scope를 생성하고, 소스를 스캔하여 Align Packet을 렌더링합니다.
+scope를 생성하거나, 이미 존재하는 scope를 이어서 진행합니다.
+2단계 실행: 첫 번째 실행에서 brief를 준비하고, 두 번째 실행에서 grounding을 수행합니다.
 
 ## 입력
 
 ```
-/start {사용자 설명} [--add-dir 경로] [--github URL] [--figma file_key] [--obsidian 경로]
+/start {projectName} [--add-dir 경로] [--github URL] [--figma file_key] [--obsidian 경로]
 ```
 
-사용자가 변경하고 싶은 것을 자유 텍스트로 설명합니다.
+`projectName`은 scope를 식별하는 이름입니다. 소문자, 하이픈 허용. 공백은 하이픈으로 변환됩니다.
 추가 소스를 플래그로 지정할 수 있습니다. `.sprint-kit.yaml`의 기본 소스와 병합됩니다.
 
 예시:
 ```
-/start 튜터 차단 기능 추가 --add-dir /projects/app/src --figma abc123
+/start tutor-block --add-dir /projects/app/src --figma abc123
 ```
 
 ### 소스 설정
@@ -63,22 +64,131 @@ default_sources:
 
 `description`은 모든 타입에서 선택 사항이며, scope.md에서 스캔 소스 목록에 표시됩니다.
 
-#### 소스 병합 규칙
+#### 소스 수집 및 병합 규칙
 
-`.sprint-kit.yaml`의 `default_sources`와 `/start` 플래그 소스를 병합합니다.
+소스는 3곳에서 수집하여 중복 제거 후 전부 사용합니다.
+
+**수집 경로:**
+
+| 경로 | 수집 시점 | 설명 |
+|------|----------|------|
+| `.sprint-kit.yaml`의 `default_sources` | Path B 실행 시 | 프로젝트 공통 소스 (환경설정) |
+| `inputs/brief.md`의 "추가 소스" 섹션 | Path B 실행 시 | 이 scope에만 필요한 추가 소스 |
+| `/start` CLI 인자 (`--add-dir`, `--github`, `--figma`, `--obsidian`) | Path B 실행 시 | 실행 시점에 직접 지정하는 소스 |
+
+**병합 규칙:**
 - 키: `{type}:{identifier}` (예: `add-dir:./src`, `github-tarball:https://...`)
-- 같은 키가 있으면 `/start` 플래그가 우선
-- 결과는 `inputs/sources.yaml`에 기록
+- 3곳에서 수집한 소스를 하나의 목록으로 합칩니다
+- 같은 키가 여러 곳에 있으면 1개만 남깁니다 (중복 제거)
+- 우선순위 없음 — 모든 소스를 동등하게 사용합니다
+- 결과는 `inputs/sources.yaml`에 기록됩니다
+
+**brief.md 소스 선반영:**
+- Path A에서 brief.md를 생성할 때, `.sprint-kit.yaml`의 `default_sources`를 "자동 로드 (환경설정)" 섹션에 미리 채워둡니다
+- 이것은 생성 시점의 1회성 스냅샷이며, 이후 `.sprint-kit.yaml`이 변경되어도 brief.md는 자동 갱신되지 않습니다
+- Path B 실행 시 `.sprint-kit.yaml`을 다시 읽으므로, brief.md와 yaml의 불일치가 있어도 최종 sources.yaml에는 양쪽 소스가 모두 포함됩니다
+
+**brief.md "추가 소스" 파싱 규칙:**
+- `### 추가 소스` 섹션 아래의 체크리스트 항목을 파싱합니다
+- 형식: `- [ ] {description} ({type}: {identifier})` 또는 `- [x] {description} ({type}: {identifier})`
+- 체크 여부에 관계없이 모든 항목을 수집합니다 (체크박스는 사용자 편의용)
+- 빈 항목 `(여기에 추가 소스를 기입하세요)`은 무시합니다
 
 ## 실행 순서
 
-### 1. Scope 생성
+`/start {projectName}` 실행 시, scope 폴더와 이벤트 로그 상태에 따라 3가지 경로 중 하나로 분기합니다.
+
+### 경로 판별
+
+```
+scopesDir/{projectName}-{YYYYMMDD}-* 폴더가 존재하는가?
+├─ 없음 → Path A (신규)
+└─ 있음 → events.ndjson이 비어있거나 없는가?
+    ├─ 예 → Path B (brief 작성 완료 후 첫 grounding)
+    └─ 아니오 → Path C (재개)
+```
+
+---
+
+### Path A — 신규 (폴더 없음)
+
+scope 폴더를 생성하고 brief 템플릿을 만듭니다. grounding은 실행하지 않습니다.
 
 ```typescript
+import { generateScopeId } from "src/kernel/scope-manager";
 import { createScope } from "src/kernel/scope-manager";
-import { appendScopeEvent } from "src/kernel/event-pipeline";
 
-const paths = createScope(scopesDir, scopeId);
+const scopeId = generateScopeId(scopesDir, projectName);
+const paths = createScope(scopesDir, scopeId, {
+  projectName,
+  defaultSources,  // .sprint-kit.yaml에서 로드한 소스 목록 (선택)
+});
+```
+
+- `scopeId`: `{projectName}-{YYYYMMDD}-{NNN}` 형식 (예: tutor-block-20260309-001)
+- `YYYYMMDD`: scope 생성 날짜
+- `NNN`: 같은 날짜+프로젝트명 조합에서 순차 부여 (001부터)
+
+#### brief.md 자동 생성
+
+`createScope`는 `inputs/brief.md` 템플릿을 자동으로 생성합니다.
+- 변경 목적, 대상 사용자, 기대 결과 등 필수 항목을 포함
+- `.sprint-kit.yaml`의 `default_sources`가 있으면 소스 목록을 자동으로 채움
+- 이미 `brief.md`가 존재하면 덮어쓰지 않음 (멱등성 보장)
+
+#### 사용자 안내
+
+다음 내용을 사용자에게 표시합니다:
+
+> `scopes/{scopeId}/inputs/brief.md`가 생성되었습니다.
+>
+> 다음 필수 항목을 작성한 후 `/start {projectName}`을 다시 실행해 주세요:
+> - **변경 목적** — 무엇을 왜 변경하는가
+> - **대상 사용자** — 이 변경의 영향을 받는 사용자
+> - **기대 결과** — 변경이 성공하면 달라지는 것
+
+**이벤트 기록 없음** — `scope.created`는 Path B에서 기록합니다.
+
+---
+
+### Path B — brief 작성 완료 (폴더 있음 + events.ndjson 없거나 비어있음)
+
+brief를 검증하고, 통과하면 grounding을 실행합니다.
+
+#### B-1. 경로 확인
+
+```typescript
+import { resolveScopePaths } from "src/kernel/scope-manager";
+
+const paths = resolveScopePaths(scopesDir, scopeId);
+```
+
+#### B-2. brief.md 검증
+
+필수 항목이 채워져 있는지 확인합니다. (검증 기준은 아래 "Brief 검증 규칙" 참조)
+
+- 비어있는 필수 항목이 있으면 → 안내 후 중단:
+  > "다음 필수 항목이 비어 있습니다: {목록}. 작성 후 다시 실행해 주세요."
+- 모든 필수 항목이 채워져 있으면 → 계속 진행
+
+#### B-3. brief.md에서 정보 추출
+
+```
+title       ← 변경 목적에서 핵심 명사구 추출
+description ← 변경 목적 + 기대 결과 합성
+추가 소스    ← "추가 소스" 섹션에서 체크된 항목 파싱
+```
+
+#### B-4. 소스 수집
+
+`.sprint-kit.yaml`의 `default_sources` + brief.md 추가 소스 + CLI 인자를 병합합니다.
+- 중복 제거 키: `{type}:{identifier}` (예: `add-dir:./src`, `github-tarball:https://...`)
+- 결과는 `inputs/sources.yaml`에 기록
+
+#### B-5. scope.created 이벤트 기록
+
+```typescript
+import { appendScopeEvent } from "src/kernel/event-pipeline";
 
 appendScopeEvent(paths, {
   type: "scope.created",
@@ -87,10 +197,63 @@ appendScopeEvent(paths, {
 });
 ```
 
-- `scopeId`: `SC-{YYYY}-{NNN}` 형식 (예: SC-2026-001)
 - `entry_mode`: 사용자가 지정하지 않으면 `"experience"` 기본값
-- `title`: 사용자 설명에서 핵심 명사구 추출
-- `description`: 사용자 설명 원문
+
+#### B-6. Grounding 이후 단계 실행
+
+아래 "공통 실행 단계" (Step 2~7)를 실행합니다.
+
+---
+
+### Path C — 재개 (폴더 있음 + events.ndjson에 이벤트 있음)
+
+이벤트 로그를 읽어 현재 상태를 확인하고, 상태에 맞는 안내를 제공합니다.
+
+```typescript
+import { readEvents } from "src/kernel/event-store";
+import { reduce } from "src/kernel/reducer";
+
+const events = readEvents(paths.events);
+const state = reduce(events);
+```
+
+#### 상태별 동작
+
+| 현재 상태 | 동작 |
+|-----------|------|
+| `draft` (grounding 미완료) | brief.md 검증 → 소스 재스캔. `grounding.started`가 이미 있으면 스캔만 재실행 (Step 2부터) |
+| `grounded` | "Align Packet이 아직 생성되지 않았습니다. 계속 진행합니다." → Step 4~7 실행 |
+| `align_proposed` | "Align Packet이 대기 중입니다. `/align`으로 결정해 주세요." |
+| `align_locked` 이상 | "현재 `{state}` 상태입니다. `/draft`로 진행해 주세요." |
+| `closed` / `deferred` / `rejected` | "이 scope는 종료되었습니다. 새 scope를 만드시려면 다른 이름으로 `/start`를 실행해 주세요." |
+
+---
+
+### Recovery Paths
+
+#### grounded 이상에서 소스 변경 감지 시
+
+`snapshot.marked_stale` 경로를 사용합니다. `grounded` 상태에서 self-transition을 허용하여, 소스를 재스캔하고 snapshot을 갱신합니다.
+
+#### scope.created 후 grounding 실패 시
+
+Path C의 `draft` 상태로 재진입합니다. brief 검증 → 소스 재스캔을 수행합니다.
+
+---
+
+### Brief 검증 규칙
+
+필수 항목: **변경 목적**, **대상 사용자**, **기대 결과**
+
+판단 기준:
+- 해당 섹션의 `<!-- -->` 주석 아래에 공백이 아닌 텍스트가 1줄 이상 있으면 → **채워짐**
+- 빈 줄만 있거나 주석만 있으면 → **비어있음**
+
+---
+
+## 공통 실행 단계 (Step 2~7)
+
+Path B (B-6 이후) 또는 Path C (상태에 따라)에서 아래 단계를 실행합니다.
 
 ### 2. 소스 스캔 (Grounding)
 

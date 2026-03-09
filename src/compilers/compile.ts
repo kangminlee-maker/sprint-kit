@@ -28,6 +28,8 @@ export interface ImplementationItem {
   detail: string;
   depends_on?: string[];
   guardrail?: string;
+  pseudocode?: string;
+  test_strategy?: string;
 }
 
 export interface ChangeItem {
@@ -36,6 +38,9 @@ export interface ChangeItem {
   description: string;
   related_impl_indices: number[];
   related_cst: string[];
+  before_context?: string;
+  after_context?: string;
+  acceptance_criteria?: string[];
 }
 
 // BrownfieldContext, BrownfieldDetail and related types are defined in kernel/types.ts
@@ -51,6 +56,10 @@ export interface InjectValidation {
   method: string;
   pass_criteria: string;
   fail_action: string;
+  edge_cases?: Array<{
+    scenario: string;
+    expected_result: string;
+  }>;
 }
 
 export interface CompileInput {
@@ -253,6 +262,9 @@ function assignChangeIds(
     description: c.description,
     related_impl: c.related_impl_indices.map((idx) => implIdMap.get(idx)!),
     related_cst: c.related_cst,
+    before_context: c.before_context,
+    after_context: c.after_context,
+    acceptance_criteria: c.acceptance_criteria,
   }));
 }
 
@@ -304,6 +316,7 @@ function buildValidationPlan(
       method: iv.method,
       pass_criteria: iv.pass_criteria,
       fail_action: iv.fail_action,
+      edge_cases: iv.edge_cases,
     });
   }
 
@@ -497,6 +510,15 @@ function renderSection4(implItems: ImplWithId[]): string[] {
     if (item.guardrail) {
       lines.push(`- **guardrail:** ${item.guardrail}`);
     }
+    if (item.pseudocode) {
+      lines.push("- **pseudocode:**");
+      lines.push("```");
+      lines.push(item.pseudocode);
+      lines.push("```");
+    }
+    if (item.test_strategy) {
+      lines.push(`- **test strategy:** ${item.test_strategy}`);
+    }
     lines.push("");
   }
 
@@ -687,6 +709,16 @@ function renderValidationPlanMd(
     lines.push(`**검증 방법:** ${v.method}`);
     lines.push(`**통과 조건:** ${v.pass_criteria}`);
     lines.push(`**실패 시 조치:** ${v.fail_action}`);
+    if (v.edge_cases && v.edge_cases.length > 0) {
+      lines.push("");
+      lines.push("**Edge cases:**");
+      lines.push("");
+      lines.push("| 시나리오 | 예상 결과 |");
+      lines.push("|---------|----------|");
+      for (const ec of v.edge_cases) {
+        lines.push(`| ${ec.scenario} | ${ec.expected_result} |`);
+      }
+    }
     lines.push("");
     lines.push("---");
     lines.push("");

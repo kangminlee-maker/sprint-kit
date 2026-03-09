@@ -207,11 +207,11 @@ function renderConstraintDetail(
     // PO detail
     lines.push("**선택지:**");
     lines.push("");
-    lines.push("| 선택 | 내용 | 리스크 | 되돌림 비용 |");
-    lines.push("|------|------|--------|------------|");
+    lines.push("| 선택 | 이점 | 내용 | 리스크 | 되돌림 비용 |");
+    lines.push("|------|------|------|--------|------------|");
     for (const opt of detail.options_table) {
       lines.push(
-        `| ${opt.choice} | ${opt.description} | ${opt.risk} | ${opt.reversal_cost} |`,
+        `| ${opt.choice} | ${opt.pros} | ${opt.description} | ${opt.risk} | ${opt.reversal_cost} |`,
       );
     }
     lines.push("");
@@ -312,7 +312,13 @@ function renderDecision(
   if (content.constraint_details.length === 0) {
     lines.push("발견된 제약이 없으므로, Approve만 선택하시면 됩니다.");
     lines.push("");
-    lines.push("선택: **Approve** / **Revise** / **Reject** / **Redirect to Align**");
+    lines.push("- **Approve**: 위 결정에 동의하며, compile 단계로 진행합니다. 각 CST에 대한 결정을 함께 제출해 주세요.");
+    lines.push("- **Revise**: 피드백을 주시면 Draft Packet을 수정하여 다시 보여드립니다.");
+    lines.push("- **Reject**: 이 scope를 거절하고 종료합니다.");
+    lines.push("- **Redirect to Align**: 방향 자체를 재검토하기 위해 Align 단계로 돌아갑니다.");
+    lines.push("- **Review**: 이 Packet 전체에 대해 6-Agent Panel Review를 요청합니다.");
+    lines.push("");
+    lines.push("선택: **Approve** / **Revise** / **Reject** / **Redirect to Align** / **Review**");
   } else {
     for (let i = 0; i < content.decision_questions.length; i++) {
       lines.push(`${i + 1}. ${content.decision_questions[i]}`);
@@ -328,8 +334,14 @@ function renderDecision(
 
     lines.push("모든 결정이 완료되면 compile을 시작합니다.");
     lines.push("");
+    lines.push("- **Approve**: 위 결정에 동의하며, compile 단계로 진행합니다. 각 CST에 대한 결정을 함께 제출해 주세요.");
+    lines.push("- **Revise**: 피드백을 주시면 Draft Packet을 수정하여 다시 보여드립니다.");
+    lines.push("- **Reject**: 이 scope를 거절하고 종료합니다.");
+    lines.push("- **Redirect to Align**: 방향 자체를 재검토하기 위해 Align 단계로 돌아갑니다.");
+    lines.push("- **Review**: 이 Packet 전체에 대해 6-Agent Panel Review를 요청합니다.");
+    lines.push("");
     lines.push(
-      "선택: **Approve** + 각 CST 결정 / **Revise** / **Reject** / **Redirect to Align**",
+      "선택: **Approve** + 각 CST 결정 / **Revise** / **Reject** / **Redirect to Align** / **Review**",
     );
   }
   lines.push("");

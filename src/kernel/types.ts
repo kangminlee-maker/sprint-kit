@@ -147,6 +147,29 @@ export type SourceType =
   | "figma-mcp"
   | "obsidian-vault";
 
+// ─── Source Entry (config 수준) ───
+
+export type SourceEntry =
+  | { type: "add-dir"; path: string; description?: string }
+  | { type: "github-tarball"; url: string; description?: string }
+  | { type: "figma-mcp"; file_key: string; description?: string }
+  | { type: "obsidian-vault"; path: string; description?: string };
+
+// ─── Source Key ───
+
+export function sourceKey(entry: SourceEntry): string {
+  switch (entry.type) {
+    case "add-dir":
+      return `add-dir:${entry.path}`;
+    case "github-tarball":
+      return `github-tarball:${entry.url}`;
+    case "figma-mcp":
+      return `figma-mcp:${entry.file_key}`;
+    case "obsidian-vault":
+      return `obsidian-vault:${entry.path}`;
+  }
+}
+
 // ─── Brownfield Types ───
 
 export interface BrownfieldFileEntry {
@@ -213,6 +236,10 @@ export interface ValidationPlanItem extends ValidationPlanEntry {
   method: string;
   pass_criteria: string;
   fail_action: string;
+  edge_cases?: Array<{
+    scenario: string;
+    expected_result: string;
+  }>;
 }
 
 // ─── Reality Snapshot ───
@@ -658,7 +685,13 @@ export interface AlignPacketContent {
     why_conflict: string;
     // "처리하지 않으면"은 pool의 impact_if_ignored에서 자동 가져옴 (단일 소스)
     scale: string;
-    options?: string[];
+    options?: Array<{
+      choice: string;
+      pros: string;
+      risk: string;
+      detail?: string;
+    }>;
+    recommendation?: string;
     details?: string;
   }>;
   decision_questions: string[];
@@ -675,6 +708,7 @@ export type ConstraintDetailPO = {
   situation: string;
   options_table: Array<{
     choice: string;
+    pros: string;
     description: string;
     risk: string;
     reversal_cost: string;

@@ -105,7 +105,7 @@ export class UserService {
       brownfieldDetail: detail,
       surfaceSummary: "Integration test scenario",
       injectValidations: [
-        { related_cst: "CST-001", target: "user feature", method: "unit test", pass_criteria: "passes", fail_action: "fix" },
+        { related_cst: "CST-001", target: "user feature", method: "unit test", pass_criteria: "passes", fail_action: "fix", edge_cases: [{ scenario: "empty user", expected_result: "returns error" }] },
       ],
     };
 

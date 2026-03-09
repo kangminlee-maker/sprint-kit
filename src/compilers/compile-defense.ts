@@ -19,6 +19,9 @@ export interface DeltaSetChange {
   description: string;
   related_impl: string[];
   related_cst: string[];
+  before_context?: string;
+  after_context?: string;
+  acceptance_criteria?: string[];
 }
 
 export interface BuildSpecSection3Entry {
@@ -137,6 +140,9 @@ function checkLayer2(
 
   // Reverse traceability: every CHG.related_impl references a valid IMPL
   checkChangesReferenceValidImpls(buildSpec, deltaSet, implIds, violations);
+
+  // inject constraints should have edge cases in validation plan
+  checkInjectEdgeCases(state, validationPlan, violations);
 }
 
 /** inject → must have IMPL, CHG referencing this CST, and VAL item */
@@ -250,6 +256,29 @@ function checkImplHasChanges(
       violations.push({
         rule: "L2-impl-no-chg",
         detail: `${impl.impl_id} has no CHG in delta-set`,
+      });
+    }
+  }
+}
+
+/** inject constraints should have at least 1 edge_case in validation plan */
+function checkInjectEdgeCases(
+  state: ScopeState,
+  validationPlan: ValidationPlanEntry[],
+  violations: DefenseViolation[],
+): void {
+  const injectConstraints = state.constraint_pool.constraints.filter(
+    (c) => c.status !== "invalidated" && c.decision === "inject",
+  );
+
+  for (const c of injectConstraints) {
+    const valItem = validationPlan.find(
+      (v) => v.related_cst === c.constraint_id,
+    ) as ValidationPlanItem | undefined;
+    if (valItem && (!valItem.edge_cases || valItem.edge_cases.length === 0)) {
+      violations.push({
+        rule: "L2-inject-edge-case",
+        detail: `${c.constraint_id} (inject) has no edge_cases in validation plan item ${valItem.val_id}`,
       });
     }
   }

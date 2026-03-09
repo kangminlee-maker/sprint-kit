@@ -8,7 +8,7 @@
 /align {verdict}
 ```
 
-verdict 종류: `approve`, `revise {피드백}`, `reject {사유}`, `redirect`
+verdict 종류: `approve`, `revise {피드백}`, `reject {사유}`, `redirect`, `review`
 
 ## 전제 조건
 
@@ -133,6 +133,30 @@ appendScopeEvent(paths, {
   payload: {
     from_state: "align_proposed",
     reason: "복귀 사유",
+  },
+});
+```
+
+#### review
+
+이 Packet 전체에 대해 6-Agent Panel Review를 실행합니다.
+
+1. 에이전트가 `/ask-review` 스킬을 호출하여 현재 Align Packet을 리뷰합니다.
+2. 리뷰 결과를 반영하여 Align Packet을 재렌더링합니다.
+3. 재렌더링된 Packet의 constraint에 recommendation이 보강됩니다.
+
+```typescript
+// 1. 6-Agent Panel Review 실행 (에이전트 스킬)
+// 2. 리뷰 결과를 반영하여 Align Packet 재렌더링
+appendScopeEvent(paths, {
+  type: "align.revised",
+  actor: "system",
+  payload: {
+    revision_count: state.revision_count_align + 1,
+    feedback_scope: "6-agent panel review",
+    feedback_text: "6-Agent Panel Review 결과 반영",
+    packet_path: "build/align-packet.md",
+    packet_hash: contentHash(updatedMarkdown),
   },
 });
 ```

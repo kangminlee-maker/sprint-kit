@@ -256,15 +256,24 @@ describe("align-packet — Section 3 Tension", () => {
     expect(md).toContain("**변경 규모:** BIG");
   });
 
-  it("renders options as bullet list when present", () => {
+  it("renders options as table when present", () => {
     const entry = makeEntry("CST-001");
     const state = makeState({ constraint_pool: makePoolWith(entry) });
     const content = makeContent({
-      tensions: [{ constraint_id: "CST-001", what: "w", why_conflict: "c", scale: "s", options: ["opt A", "opt B"] }],
+      tensions: [{
+        constraint_id: "CST-001", what: "w", why_conflict: "c", scale: "s",
+        options: [
+          { choice: "opt A", pros: "빠름", risk: "낮음", detail: "상세A" },
+          { choice: "opt B", pros: "안정적", risk: "중간" },
+        ],
+        recommendation: "opt A 추천",
+      }],
     });
     const md = renderAlignPacket(state, content);
-    expect(md).toContain("- opt A");
-    expect(md).toContain("- opt B");
+    expect(md).toContain("| 선택 | 이점 | 리스크 | 내용 |");
+    expect(md).toContain("| opt A | 빠름 | 낮음 | 상세A |");
+    expect(md).toContain("| opt B | 안정적 | 중간 |  |");
+    expect(md).toContain("**추천:** opt A 추천");
   });
 
   it("renders tension details in <details>", () => {

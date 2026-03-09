@@ -215,9 +215,18 @@ function renderTension(
 
     if (t.options && t.options.length > 0) {
       lines.push("**선택지:**");
+      lines.push("");
+      lines.push("| 선택 | 이점 | 리스크 | 내용 |");
+      lines.push("|------|------|--------|------|");
       for (const opt of t.options) {
-        lines.push(`- ${opt}`);
+        const detail = opt.detail ?? "";
+        lines.push(`| ${opt.choice} | ${opt.pros} | ${opt.risk} | ${detail} |`);
       }
+      lines.push("");
+    }
+
+    if (t.recommendation) {
+      lines.push(`**추천:** ${t.recommendation}`);
       lines.push("");
     }
 
@@ -249,7 +258,13 @@ function renderDecision(
   }
   lines.push("");
 
-  lines.push("선택: **Approve** / **Revise** / **Reject** / **Redirect**");
+  lines.push("- **Approve**: 이 방향과 범위에 동의하며, Surface(화면 설계) 단계로 진행합니다.");
+  lines.push("- **Revise**: 피드백을 주시면 Align Packet을 수정하여 다시 보여드립니다.");
+  lines.push("- **Reject**: 이 scope를 거절하고 종료합니다.");
+  lines.push("- **Redirect**: 정보가 부족하여 소스를 재스캔한 뒤 해당 단계부터 재시작합니다.");
+  lines.push("- **Review**: 이 Packet 전체에 대해 6-Agent Panel Review를 요청합니다.");
+  lines.push("");
+  lines.push("선택: **Approve** / **Revise** / **Reject** / **Redirect** / **Review**");
   lines.push("");
 }
 

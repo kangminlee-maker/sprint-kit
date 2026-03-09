@@ -1,12 +1,9 @@
-import type { SourceType } from "../kernel/types.js";
+import type { SourceType, SourceEntry } from "../kernel/types.js";
+import { sourceKey } from "../kernel/types.js";
 
-// ─── Source Entry (config 수준) ───
+// ─── Source Entry (re-exported from kernel) ───
 
-export type SourceEntry =
-  | { type: "add-dir"; path: string; description?: string }
-  | { type: "github-tarball"; url: string; description?: string }
-  | { type: "figma-mcp"; file_key: string; description?: string }
-  | { type: "obsidian-vault"; path: string; description?: string };
+export { type SourceEntry, sourceKey } from "../kernel/types.js";
 
 // ─── Scan Result ───
 
@@ -72,21 +69,6 @@ export type PatternResult = DepEdge | ApiPattern | SchemaPattern | ConfigPattern
 export interface PatternDetector {
   name: string;
   detect(content: string, filePath: string): PatternResult[];
-}
-
-// ─── Source Key ───
-
-export function sourceKey(entry: SourceEntry): string {
-  switch (entry.type) {
-    case "add-dir":
-      return `add-dir:${entry.path}`;
-    case "github-tarball":
-      return `github-tarball:${entry.url}`;
-    case "figma-mcp":
-      return `figma-mcp:${entry.file_key}`;
-    case "obsidian-vault":
-      return `obsidian-vault:${entry.path}`;
-  }
 }
 
 // ─── Normalize to GroundingStartedPayload format ───

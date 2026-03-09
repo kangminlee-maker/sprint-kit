@@ -40,7 +40,31 @@ appendScopeEvent(paths, {
 
 **Surface 생성 후 사용자에게 제시:**
 생성된 surface를 사용자에게 보여주고, 피드백을 요청합니다.
-- experience scope: "`cd surface/preview && npm run dev`로 mockup을 확인하세요"
+
+**experience scope — dev 서버 자동 시작:**
+1. `cd {surface_path} && npm install && npm run dev`를 background로 실행합니다.
+2. 서버 시작 후 URL(예: `http://localhost:5173`)을 사용자에게 안내합니다.
+3. PID를 `state/dev-server.pid`에 기록합니다.
+4. 다음 상황에서 dev 서버를 종료합니다:
+   - `surface.confirmed` 이벤트 기록 시
+   - `redirect.to_align` 또는 `redirect.to_grounding` 발생 시
+   - `scope.deferred`, `scope.rejected`, `scope.closed` 등 terminal state 진입 시
+   - 새 `surface.generated` 이벤트 발생 시 (기존 서버 종료 후 재시작)
+5. 재진입 시 기존 PID 파일이 있으면 해당 프로세스를 종료한 뒤 새로 시작합니다.
+
+**Surface 프로덕션 규격 체크리스트 (best-effort):**
+
+에이전트는 Surface 생성 시 다음 항목을 준수합니다. 이것은 에이전트 프로토콜 수준의 지침이며, compile-defense invariant가 아닙니다.
+
+- [ ] 디자인 토큰(색상, 간격, 타이포그래피)이 소스 스캔에서 발견된 디자인 시스템과 일치
+- [ ] 컴포넌트 명명 규칙이 기존 코드베이스와 동일 (예: CVA variants, Tailwind 클래스)
+- [ ] 타입 정의가 기존 코드의 enum/interface를 참조 (예: `InvoiceStatus`, `TicketEventType`)
+- [ ] 레이아웃이 기존 화면 템플릿(디자인 가이드 Section 3)을 따름
+- [ ] MSW mock 핸들러가 실제 API 엔드포인트와 응답 구조를 반영
+- [ ] UX Writing이 기존 플로우별 톤 & 매너 규칙을 준수
+
+미준수 항목이 있으면 `constraint.discovered` 이벤트로 기록하여 Draft Phase 2에서 처리합니다.
+
 - interface scope: "`surface/contract-diff/`의 API 명세를 확인하세요"
 - "수정이 필요하면 피드백을 주세요. 이 모습이 맞으면 '확정합니다'라고 말씀해 주세요."
 
@@ -229,6 +253,15 @@ appendScopeEvent(paths, {
 - `severity: required` + `decision: override` → `rationale` 필수 (비어 있으면 gate-guard가 거부)
 - `decision: modify-direction` → `constraint.decision_recorded` 기록 후 즉시 `redirect.to_align` 발행. 나머지 미결정 중단
 
+#### review verdict
+
+사용자가 Draft Packet 전체에 대해 `review`를 선택하면:
+
+1. 에이전트가 `/ask-review` 스킬을 호출하여 현재 Draft Packet과 constraint 목록을 리뷰합니다.
+2. 리뷰 결과를 각 constraint의 `recommendation` 필드에 반영합니다.
+3. Draft Packet을 재렌더링하여 다시 제시합니다.
+4. `draft_packet.rendered` 이벤트를 다시 기록합니다.
+
 ### clarify 결정 시 처리
 
 `clarify`를 선택하면 해소 전까지 target 잠금이 불가합니다.
@@ -314,7 +347,7 @@ const result = compile({
   changes,           // 에이전트가 코드 분석 후 작성
   brownfield,        // 에이전트가 기존 코드 스캔 결과
   surfaceSummary,    // 확정 surface 시나리오 요약
-  injectValidations, // inject 결정의 검증 시나리오
+  injectValidations, // inject 결정의 검증 시나리오 (edge_cases 필수)
 });
 
 if (!result.success) {
@@ -342,6 +375,18 @@ appendScopeEvent(paths, {
   },
 });
 ```
+
+**Edge case 탐색 체크리스트:**
+각 inject constraint의 `InjectValidation`에 최소 1건의 `edge_cases`를 포함해야 합니다.
+compile-defense가 `L2-inject-edge-case` 규칙으로 검증합니다.
+
+탐색 기준:
+- 빈 값 / null / 0 입력
+- 경계값 (최소, 최대, 한도 초과)
+- 동시 요청 (같은 사용자가 동시에 2개 요청)
+- 되돌림 시나리오 (적용 -> 취소 -> 재적용)
+- 기존 데이터와의 충돌 (마이그레이션 대상)
+- 외부 시스템 장애 (MCP 타임아웃, API 오류)
 
 **gap_found 처리:**
 compile 호출 전에 에이전트가 새 constraint를 발견하면, compile을 호출하지 않고 이벤트를 기록합니다.

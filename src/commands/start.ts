@@ -48,7 +48,7 @@ export interface StartInput {
   projectRoot: string;
   /** Directory where scopes are stored */
   scopesDir: string;
-  /** Scope ID (SC-YYYY-NNN format) */
+  /** Scope ID ({projectName}-{YYYYMMDD}-{NNN} or legacy SC-YYYY-NNN format) */
   scopeId: string;
   /** Title extracted from user input */
   title: string;

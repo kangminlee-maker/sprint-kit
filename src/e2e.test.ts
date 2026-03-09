@@ -110,6 +110,7 @@ describe("E2E — tutor-block full lifecycle", () => {
         method: `${c.summary} 구현 확인`,
         pass_criteria: `${cstId} 관련 동작 확인`,
         fail_action: "구현 오류. apply 재시도",
+        edge_cases: [{ scenario: `${cstId} 빈 입력`, expected_result: "에러 반환" }],
       };
     });
 

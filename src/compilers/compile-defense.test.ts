@@ -4,6 +4,7 @@ import {
   type BuildSpecData,
   type DeltaSet,
   type ValidationPlanEntry,
+  type ValidationPlanItem,
 } from "./compile-defense.js";
 import type { ScopeState, ConstraintPool, ConstraintEntry } from "../kernel/types.js";
 
@@ -67,9 +68,9 @@ describe("compile-defense — Layer 1 Checklist", () => {
       { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
       { change_id: "CHG-002", action: "create", file_path: "b.ts", description: "d", related_impl: ["IMPL-002"], related_cst: ["CST-002"] },
     ]);
-    const vp: ValidationPlanEntry[] = [
-      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject" },
-      { val_id: "VAL-002", related_cst: "CST-002", decision_type: "inject" },
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "null", expected_result: "error" }] },
+      { val_id: "VAL-002", related_cst: "CST-002", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "null", expected_result: "error" }] },
     ];
     const result = compileDefense(makeState(pool), bs, ds, vp);
     expect(result.passed).toBe(true);
@@ -104,7 +105,7 @@ describe("compile-defense — Layer 1 Checklist", () => {
     const ds = makeDeltaSet([
       { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
     ]);
-    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject" }];
+    const vp: ValidationPlanItem[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "null", expected_result: "error" }] }];
     const result = compileDefense(makeState(pool), bs, ds, vp);
     expect(result.passed).toBe(true);
   });
@@ -363,7 +364,7 @@ describe("compile-defense — Layer 2 CHG→IMPL reverse", () => {
     const ds = makeDeltaSet([
       { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
     ]);
-    const vp: ValidationPlanEntry[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject" }];
+    const vp: ValidationPlanItem[] = [{ val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "null", expected_result: "error" }] }];
     const result = compileDefense(makeState(pool), bs, ds, vp);
     expect(result.passed).toBe(true);
   });
@@ -404,12 +405,17 @@ describe("compile-defense — golden data", () => {
     const buildSpec = makeBuildSpec(section3, section4);
 
     // Build validation plan from golden validation-plan.md (simplified: 1 VAL per CST)
-    const valPlan: ValidationPlanEntry[] = state.constraint_pool.constraints
+    const valPlan: ValidationPlanItem[] = state.constraint_pool.constraints
       .filter((c) => c.status !== "invalidated" && c.decision)
       .map((c, i) => ({
         val_id: `VAL-${String(i + 1).padStart(3, "0")}`,
         related_cst: c.constraint_id,
         decision_type: c.decision === "defer" ? "defer" as const : "inject" as const,
+        target: `${c.summary} 검증`,
+        method: `${c.summary} 구현 확인`,
+        pass_criteria: `${c.constraint_id} 관련 동작 확인`,
+        fail_action: "구현 오류",
+        ...(c.decision !== "defer" ? { edge_cases: [{ scenario: `${c.constraint_id} 빈 입력`, expected_result: "에러 반환" }] } : {}),
       }));
 
     const result = compileDefense(state, buildSpec, deltaSet, valPlan);

@@ -58,7 +58,7 @@ function makeContent(overrides: Partial<DraftPacketContent> = {}): DraftPacketCo
 function poDet(id: string): ConstraintDetailPO {
   return {
     constraint_id: id, decision_owner: "product_owner", situation: `situation ${id}`,
-    options_table: [{ choice: "inject", description: "desc", risk: "low", reversal_cost: "낮음" }],
+    options_table: [{ choice: "inject", pros: "빠른 적용", description: "desc", risk: "low", reversal_cost: "낮음" }],
     recommendation: "inject 추천",
   };
 }
@@ -193,7 +193,7 @@ describe("draft-packet — Section 3 PO/Builder detail", () => {
     const state = makeState({ constraint_pool: makePoolWith(entry) });
     const content = makeContent({ constraint_details: [poDet("CST-001")] });
     const md = renderDraftPacket(state, content);
-    expect(md).toContain("| 선택 | 내용 | 리스크 | 되돌림 비용 |");
+    expect(md).toContain("| 선택 | 이점 | 내용 | 리스크 | 되돌림 비용 |");
     expect(md).toContain("추천:");
     expect(md).toContain("선택: ___");
   });

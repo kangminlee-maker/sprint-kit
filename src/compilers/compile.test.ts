@@ -74,7 +74,7 @@ function makeFullInput(overrides: Partial<CompileInput> = {}): CompileInput {
     brownfieldDetail: makeBrownfieldDetail(),
     surfaceSummary: "Test scenario summary",
     injectValidations: [
-      { related_cst: "CST-001", target: "feature A", method: "unit test", pass_criteria: "passes", fail_action: "fix" },
+      { related_cst: "CST-001", target: "feature A", method: "unit test", pass_criteria: "passes", fail_action: "fix", edge_cases: [{ scenario: "empty input", expected_result: "returns error" }] },
     ],
     ...overrides,
   };
@@ -365,7 +365,7 @@ describe("compile — edge cases", () => {
     const input = makeFullInput({
       state: makeState(pool),
       injectValidations: [
-        { related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f" },
+        { related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "null input", expected_result: "error" }] },
       ],
     });
     const result = compile(input);
@@ -409,7 +409,7 @@ describe("compile — edge cases", () => {
       brownfieldDetail: makeBrownfieldDetail(),
       surfaceSummary: "s",
       injectValidations: [
-        { related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f" },
+        { related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "null input", expected_result: "error" }] },
       ],
     };
     const result = compile(input);
@@ -566,8 +566,8 @@ describe("compile — additional edge cases", () => {
         { action: "create", file_path: "b.ts", description: "d", related_impl_indices: [1], related_cst: ["CST-002"] },
       ],
       injectValidations: [
-        { related_cst: "CST-001", target: "t1", method: "m1", pass_criteria: "p1", fail_action: "f1" },
-        { related_cst: "CST-002", target: "t2", method: "m2", pass_criteria: "p2", fail_action: "f2" },
+        { related_cst: "CST-001", target: "t1", method: "m1", pass_criteria: "p1", fail_action: "f1", edge_cases: [{ scenario: "null", expected_result: "error" }] },
+        { related_cst: "CST-002", target: "t2", method: "m2", pass_criteria: "p2", fail_action: "f2", edge_cases: [{ scenario: "null", expected_result: "error" }] },
       ],
     });
     const result = compile(input);
