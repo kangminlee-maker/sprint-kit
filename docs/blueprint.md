@@ -293,7 +293,7 @@ Discover → Present → Decide → Inject → Verify
                         ↘ Invalidate (redirect 후 re-discovery 시)
 ```
 
-**Invalidation**(무효화): Align으로 되돌아간 후 re-discovery에서 시스템이 기존 Constraint를 재평가합니다. 방향 변경으로 더 이상 관련 없는 Constraint는 시스템이 자동으로 `invalidated` 처리합니다. 단, `severity: required`인 Constraint는 시스템 단독 무효화가 금지되며, Draft Packet에 "제외 제안"으로 표시하여 사용자 확인 후 확정합니다. [GC-017 — Gate Guard에서 구현 필요. 현재 코드에 이 검증 없음]
+**Invalidation**(무효화): Align으로 되돌아간 후 re-discovery에서 시스템이 기존 Constraint를 재평가합니다. 방향 변경으로 더 이상 관련 없는 Constraint는 시스템이 자동으로 `invalidated` 처리합니다. 단, `severity: required`인 Constraint는 시스템 단독 무효화가 금지되며, Draft Packet에 "제외 제안"으로 표시하여 사용자 확인 후 확정합니다. [GC-017 — Gate Guard Rule 3b에서 구현됨]
 
 **Clarify 흐름**: `clarify`를 선택하면 해당 Constraint는 `clarify_pending` 상태가 됩니다. 이 상태가 1건이라도 있으면 target 잠금이 불가합니다. 외부에서 정보를 확보한 뒤, 최종 결정(inject/defer/override)을 내려야 합니다.
 

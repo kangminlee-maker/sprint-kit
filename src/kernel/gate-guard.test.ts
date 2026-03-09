@@ -275,6 +275,67 @@ describe("gate-guard — Rule 3: required override", () => {
   });
 });
 
+// ─── Rule 3b: Required constraint invalidation protection (GC-017) ───
+
+describe("gate-guard — Rule 3b: required constraint invalidation [GC-017]", () => {
+  it("denies system invalidation of required constraint", () => {
+    const state = makeStateWithConstraints([
+      { id: "CST-001", severity: "required", status: "undecided" },
+    ]);
+    const event = {
+      ...makeEvent("constraint.invalidated", {
+        constraint_id: "CST-001", reason: "방향 변경으로 무관",
+      }),
+      actor: "system" as const,
+    };
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) expect(result.reason).toContain("cannot be invalidated by system alone");
+  });
+
+  it("allows user invalidation of required constraint", () => {
+    const state = makeStateWithConstraints([
+      { id: "CST-001", severity: "required", status: "undecided" },
+    ]);
+    const event = {
+      ...makeEvent("constraint.invalidated", {
+        constraint_id: "CST-001", reason: "사용자 확인 완료",
+      }),
+      actor: "user" as const,
+    };
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+
+  it("allows system invalidation of recommended constraint", () => {
+    const state = makeStateWithConstraints([
+      { id: "CST-001", severity: "recommended", status: "undecided" },
+    ]);
+    const event = {
+      ...makeEvent("constraint.invalidated", {
+        constraint_id: "CST-001", reason: "방향 변경으로 무관",
+      }),
+      actor: "system" as const,
+    };
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+
+  it("allows agent invalidation of required constraint", () => {
+    const state = makeStateWithConstraints([
+      { id: "CST-001", severity: "required", status: "undecided" },
+    ]);
+    const event = {
+      ...makeEvent("constraint.invalidated", {
+        constraint_id: "CST-001", reason: "에이전트가 사용자 확인 후 발행",
+      }),
+      actor: "agent" as const,
+    };
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+});
+
 // ─── Rule 4: Convergence blocking ───
 
 describe("gate-guard — Rule 4: convergence blocking", () => {

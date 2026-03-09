@@ -22,6 +22,9 @@ export function wrapGateError(reason: string): string {
   if (reason.includes("Compile retry limit")) {
     return "compile 재시도 한도(3회)를 초과했습니다. scope를 보류하거나 방향을 재검토하세요.";
   }
+  if (reason.includes("cannot be invalidated by system alone")) {
+    return "필수 제약 사항은 시스템이 단독으로 무효화할 수 없습니다. 사용자의 확인이 필요합니다.";
+  }
   if (reason.includes("Target lock")) {
     return reason; // 이미 한국어
   }

@@ -46,6 +46,7 @@ const CONVERGENCE_BLOCKED_EVENTS = new Set<string>([
  * 1. State transition authorization (state machine matrix)
  * 2. Referential integrity (constraint_id existence)
  * 3. Required override validation (rationale required)
+ * 3b. Required constraint invalidation protection [GC-017]
  * 4. Convergence blocking (revise blocked after convergence.blocked)
  * 5. Compile retry limit (compile.started blocked after 3 gap_found cycles)
  *
@@ -109,6 +110,18 @@ export function validateEvent(
             };
           }
         }
+      }
+
+      // ── Rule 3b: Required constraint invalidation protection [GC-017] ──
+      if (
+        eventType === "constraint.invalidated" &&
+        entry.severity === "required" &&
+        newEvent.actor === "system"
+      ) {
+        return {
+          allowed: false,
+          reason: `Required constraint "${constraintId}" cannot be invalidated by system alone. User confirmation is required.`,
+        };
       }
     }
   }
