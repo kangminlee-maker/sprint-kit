@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { appendScopeEvent, type EventInput } from "./event-pipeline.js";
+import type { EventType } from "./types.js";
 import { createScope, resolveScopePaths } from "./scope-manager.js";
 import { readEvents } from "./event-store.js";
 import { reduce } from "./reducer.js";
@@ -23,12 +24,12 @@ function teardown() {
 
 // ─── Event input factory (simplified — type + actor + payload only) ───
 
-function input(
-  type: string,
-  payload: Record<string, unknown>,
-  actor: string = "system",
-): EventInput {
-  return { type, actor, payload } as EventInput;
+function input<T extends EventType>(
+  type: T,
+  payload: EventInput<T>["payload"],
+  actor: "user" | "system" | "agent" = "system",
+): EventInput<T> {
+  return { type, actor, payload };
 }
 
 // ─── Scope manager tests ───

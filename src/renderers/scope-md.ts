@@ -1,4 +1,5 @@
 import type { ScopeState, VerdictLogEntry } from "../kernel/types.js";
+import { MAX_COMPILE_RETRIES } from "../kernel/constants.js";
 
 /**
  * Render scope.md — the current status view of a scope.
@@ -60,6 +61,16 @@ export function renderScopeMd(state: ScopeState): string {
     }
   }
 
+  // ── Scanned sources ──
+  if (state.grounding_sources && state.grounding_sources.length > 0) {
+    lines.push("## 스캔 소스");
+    lines.push("");
+    for (const src of state.grounding_sources) {
+      lines.push(`- \`${src.type}\`: ${src.path_or_url}`);
+    }
+    lines.push("");
+  }
+
   // ── Constraint summary ──
   const { summary } = state.constraint_pool;
   if (summary.total > 0) {
@@ -76,6 +87,38 @@ export function renderScopeMd(state: ScopeState): string {
     if (summary.invalidated > 0) {
       lines.push(`- 제외됨: ${summary.invalidated}건`);
     }
+    lines.push("");
+  }
+
+  // ── Validation results ──
+  if (state.validation_result) {
+    const vr = state.validation_result;
+    lines.push("## 검증 결과");
+    lines.push("");
+    lines.push(`- **결과**: ${vr.result === "pass" ? "통과" : "실패"}`);
+    lines.push(`- **통과**: ${vr.pass_count}건, **실패**: ${vr.fail_count}건`);
+    if (vr.fail_count > 0 && vr.items.length > 0) {
+      const failItems = vr.items.filter(i => i.result === "fail");
+      for (const item of failItems) {
+        lines.push(`- ${item.val_id} (${item.related_cst}): ${item.detail}`);
+      }
+    }
+    lines.push("");
+  }
+
+  // ── Constraint decision details (#8) ──
+  const decidedConstraints = state.constraint_pool.constraints.filter(c => c.status === "decided");
+  if (decidedConstraints.length > 0) {
+    lines.push("<details>");
+    lines.push(`<summary>Constraint 결정 상세 (${decidedConstraints.length}건)</summary>`);
+    lines.push("");
+    lines.push("| CST-ID | 결정 | 선택 |");
+    lines.push("|--------|------|------|");
+    for (const c of decidedConstraints) {
+      lines.push(`| ${c.constraint_id} | ${c.decision ?? "-"} | ${c.selected_option ?? "-"} |`);
+    }
+    lines.push("");
+    lines.push("</details>");
     lines.push("");
   }
 
@@ -117,41 +160,55 @@ function formatState(state: string): string {
 }
 
 function formatNextAction(state: ScopeState): string {
+  if (state.stale) {
+    return "소스가 변경되었습니다. 재스캔이 필요합니다 (`/start`를 다시 실행하세요)";
+  }
+
   if (state.convergence_blocked) {
-    return "수렴 차단 상태입니다. convergence.action_taken이 필요합니다";
+    return "수렴 차단 상태입니다. 다음 중 하나를 선택하세요: (1) 방향 변경 (`/align redirect`) (2) scope 축소 (`/align revise`) (3) scope 보류 (`scope.deferred`)";
   }
 
   switch (state.current_state) {
     case "draft":
-      return "소스를 스캔하세요 (`/start`)";
+      return "소스를 스캔하세요 (`/start`를 실행하세요)";
     case "grounded":
-      return "Align Packet을 검토하세요 (`/align`)";
+      return "스캔 결과를 검토하세요. Align Packet이 준비되었습니다 (`/align`을 실행하세요)";
     case "align_proposed":
-      return "Align Packet에 대해 결정하세요 (approve/revise/reject)";
+      return "Align Packet을 읽고 방향과 범위를 확정하세요 (승인/수정/거절/재스캔 중 선택)";
     case "align_locked":
-      return "Surface를 생성하세요 (`/draft`)";
+      return "방향이 확정되었습니다. 화면 설계를 시작하세요 (`/draft`를 실행하세요)";
     case "surface_iterating":
-      return "Surface를 검토하고 피드백하세요";
+      return state.entry_mode === "experience"
+        ? "mockup을 확인하세요 (`cd surface/preview && npm run dev`). 수정이 필요하면 피드백을, 맞으면 '확정합니다'라고 말씀하세요"
+        : "API 명세를 확인하세요 (`surface/contract-diff/`). 수정이 필요하면 피드백을, 맞으면 '확정합니다'라고 말씀하세요";
     case "surface_confirmed":
       return state.constraint_pool.summary.undecided > 0
-        ? `${state.constraint_pool.summary.undecided}건의 constraint에 대해 결정하세요`
+        ? `${state.constraint_pool.summary.undecided}건의 제약 사항에 대해 결정이 필요합니다. 각 항목의 선택지를 검토하고 결정하세요`
         : state.constraint_pool.summary.clarify_pending > 0
-          ? `${state.constraint_pool.summary.clarify_pending}건의 clarify를 해소하세요`
-          : "모든 결정이 완료되었습니다. target을 잠그세요";
+          ? `${state.constraint_pool.summary.clarify_pending}건의 확인이 필요합니다. 외부에서 정보를 확보한 뒤 \`/draft\`를 실행하여 결정을 제출하세요`
+          : "모든 결정이 완료되었습니다. 확정을 진행합니다 (`/draft`를 실행하세요)";
     case "constraints_resolved":
-      return "target을 잠그세요";
+      if (state.validation_result?.result === "fail") {
+        return "검증에서 실패한 항목이 있습니다. 해당 제약 사항을 재검토한 뒤 다시 구현 명세를 생성하세요 (`/draft`를 실행하세요)";
+      }
+      if (state.retry_count_compile > 0) {
+        return `compile 중 새 제약이 발견되었습니다 (재시도 ${state.retry_count_compile}회). 새 제약에 대해 결정한 뒤 진행하세요 (\`/draft\`를 실행하세요)`;
+      }
+      return "모든 제약 사항이 해결되었습니다. 구현 명세를 생성합니다 (`/draft`를 실행하세요)";
     case "target_locked":
-      return "compile이 진행 중입니다";
+      return "구현 명세(Build Spec)를 생성하고 있습니다";
     case "compiled":
-      return "구현을 적용하세요";
+      return "구현 명세가 완성되었습니다. Builder가 코드를 작성합니다";
     case "applied":
-      return "검증을 실행하세요";
+      return "코드 작성이 완료되었습니다. 검증을 진행합니다";
     case "validated":
-      return "scope를 종료하세요";
+      return "모든 검증을 통과했습니다. 결과를 확인하시고, 완료하려면 '완료'라고 말씀하세요";
     case "closed":
+      return "이 scope는 완료되었습니다";
     case "deferred":
+      return "이 scope는 보류 중입니다";
     case "rejected":
-      return "이 scope는 종료되었습니다";
+      return "이 scope는 거절되었습니다";
     default:
       return `현재 상태: ${state.current_state}`;
   }
@@ -168,6 +225,12 @@ function collectBlockers(state: ScopeState): string[] {
   }
   if (state.constraint_pool.summary.clarify_pending > 0) {
     blockers.push(`clarify 미해소: ${state.constraint_pool.summary.clarify_pending}건. 해소 전까지 target 잠금 불가`);
+  }
+  if (state.current_state === "constraints_resolved" && state.retry_count_compile > 0) {
+    blockers.push(`compile 중 새 제약이 발견되어 결정이 필요합니다 (재시도 ${state.retry_count_compile}/${MAX_COMPILE_RETRIES}회)`);
+  }
+  if (state.last_backward_reason) {
+    blockers.push(`이전 단계 복귀 사유: ${state.last_backward_reason}`);
   }
   return blockers;
 }

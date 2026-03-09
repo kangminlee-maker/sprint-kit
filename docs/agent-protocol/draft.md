@@ -290,8 +290,8 @@ target이 잠기면 compile 단계로 진행합니다.
 
 **이벤트 기록 순서 (필수):**
 
-1. `compile.started` 이벤트를 **반드시 먼저** 기록합니다. gate-guard가 `retry_count_compile >= 3`이면 거부합니다.
-2. `compile()` 순수 함수를 호출하여 Build Spec + delta-set + validation-plan을 생성합니다.
+1. `compile()` 순수 함수를 **먼저** 호출합니다. 실패 시 이벤트를 기록하지 않고 반환합니다 (orphaned compile.started 방지).
+2. 성공 시 `compile.started` 이벤트를 기록합니다. gate-guard가 `retry_count_compile >= 3`이면 거부합니다.
 3. 산출물을 `build/` 디렉토리에 저장합니다.
 4. `compile.completed` 이벤트를 기록합니다.
 

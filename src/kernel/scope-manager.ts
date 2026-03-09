@@ -13,6 +13,8 @@ export interface ScopePaths {
   inputs: string;
   constraintPool: string;
   verdictLog: string;
+  realitySnapshot: string;
+  sourcesYaml: string;
   scopeMd: string;
 }
 
@@ -34,6 +36,8 @@ export function resolveScopePaths(
     inputs: join(base, "inputs"),
     constraintPool: join(base, "state", "constraint-pool.json"),
     verdictLog: join(base, "state", "verdict-log.json"),
+    realitySnapshot: join(base, "state", "reality-snapshot.json"),
+    sourcesYaml: join(base, "inputs", "sources.yaml"),
     scopeMd: join(base, "scope.md"),
   };
 }

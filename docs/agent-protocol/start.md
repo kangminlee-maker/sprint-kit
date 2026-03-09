@@ -5,10 +5,70 @@
 ## 입력
 
 ```
-/start {사용자 설명}
+/start {사용자 설명} [--add-dir 경로] [--github URL] [--figma file_key] [--obsidian 경로]
 ```
 
 사용자가 변경하고 싶은 것을 자유 텍스트로 설명합니다.
+추가 소스를 플래그로 지정할 수 있습니다. `.sprint-kit.yaml`의 기본 소스와 병합됩니다.
+
+예시:
+```
+/start 튜터 차단 기능 추가 --add-dir /projects/app/src --figma abc123
+```
+
+### 소스 설정
+
+#### `.sprint-kit.yaml` (레포 루트)
+
+기본 소스를 선언합니다. 이 파일이 없으면 `/start` 플래그로만 소스를 지정합니다.
+
+```yaml
+default_sources:
+  # ── Code ──
+  - type: github-tarball          # GitHub 레포를 tarball로 다운로드
+    url: https://github.com/org/backend
+    description: 백엔드 소스
+
+  - type: add-dir                 # 로컬 파일 또는 디렉토리
+    path: ./src
+    description: 프론트엔드 소스
+
+  # ── Policy ──
+  - type: github-tarball
+    url: https://github.com/org/ontology
+    description: 도메인 모델 (온톨로지)
+
+  - type: add-dir
+    path: ./scopes/terms-of-service.md
+    description: 서비스 이용약관
+
+  - type: obsidian-vault           # Obsidian vault 디렉토리
+    path: /vaults/company-docs
+    description: 회사 정책 문서
+
+  # ── Design ──
+  - type: figma-mcp               # Figma 파일 (MCP로 조회)
+    file_key: xxxxx
+    description: 디자인 시스템
+```
+
+허용되는 `type` 값:
+
+| type | 필수 필드 | 접근 방법 |
+|------|----------|----------|
+| `add-dir` | `path` | 로컬 파일/디렉토리 직접 읽기 |
+| `github-tarball` | `url` | `gh api tarball/HEAD`로 다운로드 |
+| `figma-mcp` | `file_key` | MCP 서버 통해 Figma 데이터 조회 |
+| `obsidian-vault` | `path` | 로컬 vault 디렉토리 읽기 (`.obsidian/` 제외) |
+
+`description`은 모든 타입에서 선택 사항이며, scope.md에서 스캔 소스 목록에 표시됩니다.
+
+#### 소스 병합 규칙
+
+`.sprint-kit.yaml`의 `default_sources`와 `/start` 플래그 소스를 병합합니다.
+- 키: `{type}:{identifier}` (예: `add-dir:./src`, `github-tarball:https://...`)
+- 같은 키가 있으면 `/start` 플래그가 우선
+- 결과는 `inputs/sources.yaml`에 기록
 
 ## 실행 순서
 
@@ -35,6 +95,11 @@ appendScopeEvent(paths, {
 ### 2. 소스 스캔 (Grounding)
 
 사용자가 지정한 소스를 읽고, 3개 관점에서 현재 상태를 파악합니다.
+
+**스캔 진행 피드백:** 각 소스 처리 전에 사용자에게 진행 상태를 안내합니다:
+- "소스 스캔을 시작합니다 (N개 소스)"
+- 소스별: "{description} 스캔 중 ({순서}/{전체})..." (예: "백엔드 소스 스캔 중 (1/4)...")
+- 완료: "소스 스캔 완료 (파일 {N}개, constraint {M}건 발견)"
 
 ```typescript
 appendScopeEvent(paths, {

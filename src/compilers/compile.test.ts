@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { compile, type CompileInput, type CompileSuccess, type BrownfieldContext, type ImplementationItem, type ChangeItem, type InjectValidation } from "./compile.js";
+import { compile, type CompileInput, type CompileSuccess, type BrownfieldContext, type BrownfieldDetail, type ImplementationItem, type ChangeItem, type InjectValidation } from "./compile.js";
 import { contentHash } from "../kernel/hash.js";
 import type { ScopeState, ConstraintPool, ConstraintEntry } from "../kernel/types.js";
 
@@ -42,8 +42,18 @@ function makeState(pool: ConstraintPool, overrides: Partial<ScopeState> = {}): S
 
 function makeBrownfield(): BrownfieldContext {
   return {
-    related_files: [{ path: "src/app.ts", role: "entry point" }],
-    module_dependencies: [{ module: "app", depends_on: "db" }],
+    related_files: [{ path: "src/app.ts", role: "entry point", detail_anchor: "app-entry" }],
+    module_dependencies: [{ module: "app", depends_on: "db", detail_anchor: "dep-app-db" }],
+  };
+}
+
+function makeBrownfieldDetail(): BrownfieldDetail {
+  return {
+    scope_id: "SC-TEST",
+    sections: [
+      { anchor: "app-entry", source: "local", title: "app.ts", content: "Entry point of the application" },
+      { anchor: "dep-app-db", source: "local", title: "app → db", content: "App module depends on db module" },
+    ],
   };
 }
 
@@ -61,6 +71,7 @@ function makeFullInput(overrides: Partial<CompileInput> = {}): CompileInput {
       { action: "create", file_path: "src/feature.ts", description: "New file", related_impl_indices: [0], related_cst: ["CST-001"] },
     ],
     brownfield: makeBrownfield(),
+    brownfieldDetail: makeBrownfieldDetail(),
     surfaceSummary: "Test scenario summary",
     injectValidations: [
       { related_cst: "CST-001", target: "feature A", method: "unit test", pass_criteria: "passes", fail_action: "fix" },
@@ -246,10 +257,38 @@ describe("compile — Build Spec markdown", () => {
     expect(result.buildSpecMd).toContain("Add feature A");
   });
 
-  it("uses <details> for brownfield", () => {
-    const result = compile(makeFullInput()) as CompileSuccess;
+  it("test files in brownfield are rendered as Tier 2 (collapsed)", () => {
+    const brownfield: BrownfieldContext = {
+      related_files: [
+        { path: "src/app.ts", role: "typescript (local)", detail_anchor: "app-entry" },
+        { path: "src/app.test.ts", role: "test (local)", detail_anchor: "app-test" },
+      ],
+      module_dependencies: [],
+    };
+    const result = compile(makeFullInput({ brownfield })) as CompileSuccess;
+    // Non-test file is in Tier 1 (always visible)
+    expect(result.buildSpecMd).toContain("### 변경 대상 파일 (1건)");
+    expect(result.buildSpecMd).toContain("src/app.ts");
+    // Test file is in Tier 2 (collapsed <details>)
+    expect(result.buildSpecMd).toContain("<summary>테스트 파일 (1건)</summary>");
+    expect(result.buildSpecMd).toContain("src/app.test.ts");
+  });
+
+  it("Tier 1 items are always visible, Tier 2 uses <details>", () => {
+    const brownfield: BrownfieldContext = {
+      related_files: [{ path: "src/app.ts", role: "entry", detail_anchor: "app-entry" }],
+      module_dependencies: [{ module: "app", depends_on: "db", detail_anchor: "dep-app-db" }],
+      api_contracts: [{ endpoint: "/api/test", method: "GET", description: "test", detail_anchor: "api-test" }],
+    };
+    const result = compile(makeFullInput({ brownfield })) as CompileSuccess;
+    // Tier 1: always visible (no <details> wrapping)
+    expect(result.buildSpecMd).toContain("### 변경 대상 파일");
+    expect(result.buildSpecMd).toContain("### 직접 의존 모듈");
+    // Tier 2: collapsed with <details>
     expect(result.buildSpecMd).toContain("<details>");
-    expect(result.buildSpecMd).toContain("<summary>");
+    expect(result.buildSpecMd).toContain("API 계약");
+    // detail reference links
+    expect(result.buildSpecMd).toContain("[→ 상세](brownfield-detail.md#app-entry)");
   });
 });
 
@@ -367,6 +406,7 @@ describe("compile — edge cases", () => {
         { action: "modify", file_path: "b.ts", description: "d", related_impl_indices: [1], related_cst: ["CST-001"] },
       ],
       brownfield: makeBrownfield(),
+      brownfieldDetail: makeBrownfieldDetail(),
       surfaceSummary: "s",
       injectValidations: [
         { related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f" },
@@ -433,11 +473,11 @@ describe("compile — additional edge cases", () => {
 
   it("brownfield with all optional sections", () => {
     const brownfield: BrownfieldContext = {
-      related_files: [{ path: "src/app.ts", role: "entry" }],
-      module_dependencies: [{ module: "app", depends_on: "db" }],
-      api_contracts: [{ endpoint: "/api/test", method: "GET", description: "test endpoint" }],
-      db_schemas: [{ table: "users", columns: "id, name" }],
-      config_env: [{ key: "DB_URL", description: "database connection" }],
+      related_files: [{ path: "src/app.ts", role: "entry", detail_anchor: "app-entry" }],
+      module_dependencies: [{ module: "app", depends_on: "db", detail_anchor: "dep-app-db" }],
+      api_contracts: [{ endpoint: "/api/test", method: "GET", description: "test endpoint", detail_anchor: "api-test" }],
+      db_schemas: [{ table: "users", columns: "id, name", detail_anchor: "schema-users" }],
+      config_env: [{ key: "DB_URL", description: "database connection", detail_anchor: "config-db-url" }],
     };
     const input = makeFullInput({ brownfield });
     const result = compile(input);

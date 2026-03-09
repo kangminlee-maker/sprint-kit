@@ -1,4 +1,7 @@
-import type { ScopeState, ConstraintEntry } from "../kernel/types.js";
+import type { ScopeState, ConstraintEntry, ValidationPlanEntry, ValidationPlanItem } from "../kernel/types.js";
+
+// Re-export for backward compatibility
+export type { ValidationPlanEntry, ValidationPlanItem } from "../kernel/types.js";
 
 // ─── Types ───
 
@@ -31,20 +34,6 @@ export interface BuildSpecSection4Entry {
 export interface BuildSpecData {
   section3: BuildSpecSection3Entry[];
   section4: BuildSpecSection4Entry[];
-}
-
-export interface ValidationPlanEntry {
-  val_id: string;
-  related_cst: string;
-  decision_type: "inject" | "defer" | "override";
-}
-
-/** Extended entry with rendering/execution fields. compile-defense ignores these. */
-export interface ValidationPlanItem extends ValidationPlanEntry {
-  target: string;
-  method: string;
-  pass_criteria: string;
-  fail_action: string;
 }
 
 export interface DefenseViolation {

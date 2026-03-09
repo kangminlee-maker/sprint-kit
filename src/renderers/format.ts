@@ -1,13 +1,5 @@
 /**
- * Shared formatting utilities for renderers.
+ * Re-export from kernel/types.ts for backward compatibility.
+ * Single source of truth is kernel/types.ts.
  */
-
-/** Format perspective value for display. */
-export function formatPerspective(p: string): string {
-  switch (p) {
-    case "experience": return "Experience";
-    case "code": return "Code";
-    case "policy": return "Policy";
-    default: return p;
-  }
-}
+export { formatPerspective } from "../kernel/types.js";

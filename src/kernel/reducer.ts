@@ -7,10 +7,16 @@ import type {
   ScopeCreatedPayload,
   AlignLockedPayload,
   SurfaceConfirmedPayload,
+  GroundingStartedPayload,
   GroundingCompletedPayload,
   SnapshotMarkedStalePayload,
   ConstraintDecisionRecordedPayload,
   ConstraintClarifyResolvedPayload,
+  RedirectToGroundingPayload,
+  RedirectToAlignPayload,
+  SurfaceChangeRequiredPayload,
+  CompileConstraintGapFoundPayload,
+  ApplyDecisionGapFoundPayload,
 } from "./types.js";
 import { buildConstraintPool, isConstraintsResolved } from "./constraint-pool.js";
 
@@ -35,6 +41,7 @@ export function reduce(events: Event[]): ScopeState {
   let scope_boundaries: { in: string[]; out: string[] } | undefined;
   let surface_hash: string | undefined;
 
+  let grounding_sources: ScopeState["grounding_sources"];
   let lastGroundingRev = -1;
   let lastStaleRev = -1;
   let stale = false;
@@ -48,6 +55,8 @@ export function reduce(events: Event[]): ScopeState {
   let revision_count_surface = 0;
   let retry_count_compile = 0;
   let validation_plan_hash: string | undefined;
+  let validation_result: ScopeState["validation_result"];
+  let last_backward_reason: string | undefined;
 
   const verdict_log: VerdictLogEntry[] = [];
   const feedback_history: FeedbackClassifiedPayload[] = [];
@@ -69,11 +78,31 @@ export function reduce(events: Event[]): ScopeState {
         break;
       }
 
+      // ── Redirect (backward) ──
+      case "redirect.to_grounding": {
+        const p = evt.payload as RedirectToGroundingPayload;
+        last_backward_reason = p.reason;
+        break;
+      }
+
+      case "redirect.to_align": {
+        const p = evt.payload as RedirectToAlignPayload;
+        last_backward_reason = p.reason;
+        break;
+      }
+
+      case "surface.change_required": {
+        const p = evt.payload as SurfaceChangeRequiredPayload;
+        last_backward_reason = p.reason;
+        break;
+      }
+
       // ── Align ──
       case "align.locked": {
         const p = evt.payload as AlignLockedPayload;
         direction = p.locked_direction;
         scope_boundaries = p.locked_scope_boundaries;
+        last_backward_reason = undefined;
         verdict_log.push({
           type: "align.locked",
           revision: evt.revision,
@@ -99,6 +128,12 @@ export function reduce(events: Event[]): ScopeState {
         break;
 
       // ── Grounding / Stale ──
+      case "grounding.started": {
+        const p = evt.payload as GroundingStartedPayload;
+        grounding_sources = p.sources;
+        break;
+      }
+
       case "grounding.completed": {
         lastGroundingRev = evt.revision;
         break;
@@ -151,6 +186,17 @@ export function reduce(events: Event[]): ScopeState {
         break;
       }
 
+      case "validation.completed": {
+        const vp = evt.payload as import("./types.js").ValidationCompletedPayload;
+        validation_result = {
+          result: vp.result,
+          pass_count: vp.pass_count,
+          fail_count: vp.fail_count,
+          items: vp.items,
+        };
+        break;
+      }
+
       // ── Convergence ──
       case "convergence.blocked":
         lastBlockedRev = evt.revision;
@@ -189,6 +235,7 @@ export function reduce(events: Event[]): ScopeState {
     direction,
     scope_boundaries,
     surface_hash,
+    grounding_sources,
     constraint_pool,
     stale,
     stale_sources,
@@ -199,6 +246,7 @@ export function reduce(events: Event[]): ScopeState {
     revision_count_surface,
     retry_count_compile,
     validation_plan_hash,
+    validation_result,
     verdict_log,
     feedback_history,
     latest_revision,

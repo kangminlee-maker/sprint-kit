@@ -1,10 +1,13 @@
-import type {
-  ScopeState,
-  ConstraintEntry,
-  Perspective,
+import {
+  formatPerspective,
+  type ScopeState,
+  type ConstraintEntry,
+  type Perspective,
+  type BrownfieldContext,
+  type BrownfieldDetail,
 } from "../kernel/types.js";
 import { contentHash } from "../kernel/hash.js";
-import { formatPerspective } from "../renderers/format.js";
+import { makeId } from "../kernel/id.js";
 import {
   compileDefense,
   type BuildSpecData,
@@ -35,13 +38,12 @@ export interface ChangeItem {
   related_cst: string[];
 }
 
-export interface BrownfieldContext {
-  related_files: Array<{ path: string; role: string }>;
-  module_dependencies: Array<{ module: string; depends_on: string }>;
-  api_contracts?: Array<{ endpoint: string; method: string; description: string }>;
-  db_schemas?: Array<{ table: string; columns: string }>;
-  config_env?: Array<{ key: string; description: string }>;
-}
+// BrownfieldContext, BrownfieldDetail and related types are defined in kernel/types.ts
+// Re-export for backward compatibility
+export type {
+  BrownfieldContext,
+  BrownfieldDetail,
+} from "../kernel/types.js";
 
 export interface InjectValidation {
   related_cst: string;
@@ -56,6 +58,7 @@ export interface CompileInput {
   implementations: ImplementationItem[];
   changes: ChangeItem[];
   brownfield: BrownfieldContext;
+  brownfieldDetail: BrownfieldDetail;
   surfaceSummary: string;
   injectValidations: InjectValidation[];
 }
@@ -67,6 +70,8 @@ export interface CompileSuccess {
   buildSpecMd: string;
   buildSpecHash: string;
   buildSpecData: BuildSpecData;
+  brownfieldDetailMd: string;
+  brownfieldDetailHash: string;
   deltaSetJson: string;
   deltaSetHash: string;
   deltaSet: DeltaSet;
@@ -143,7 +148,13 @@ export function compile(input: CompileInput): CompileOutput {
   const refSections =
     renderSection5(deltaSetHash, deltaSet.changes) +
     renderSection6(validationPlanHash, valItems.length);
-  const section7 = renderSection7(input.brownfield).join("\n") + "\n";
+
+  // Brownfield Detail (separate file)
+  const brownfieldDetailMd = renderBrownfieldDetail(input.brownfieldDetail);
+  const brownfieldDetailHash = contentHash(brownfieldDetailMd);
+
+  // Section 7 (Tier 1+2 with references to brownfield-detail.md)
+  const section7 = renderSection7(input.brownfield, brownfieldDetailHash).join("\n") + "\n";
   const buildSpecMd = coreMd + refSections + section7;
   const buildSpecHash = contentHash(buildSpecMd);
 
@@ -153,6 +164,8 @@ export function compile(input: CompileInput): CompileOutput {
     buildSpecMd,
     buildSpecHash,
     buildSpecData,
+    brownfieldDetailMd,
+    brownfieldDetailHash,
     deltaSetJson,
     deltaSetHash,
     deltaSet,
@@ -225,7 +238,7 @@ interface ImplWithId extends ImplementationItem {
 function assignImplIds(implementations: ImplementationItem[]): ImplWithId[] {
   return implementations.map((item, i) => ({
     ...item,
-    impl_id: `IMPL-${String(i + 1).padStart(3, "0")}`,
+    impl_id: makeId("IMPL-", i + 1),
   }));
 }
 
@@ -234,7 +247,7 @@ function assignChangeIds(
   implIdMap: Map<number, string>,
 ): DeltaSetChange[] {
   return changes.map((c, i) => ({
-    change_id: `CHG-${String(i + 1).padStart(3, "0")}`,
+    change_id: makeId("CHG-", i + 1),
     action: c.action,
     file_path: c.file_path,
     description: c.description,
@@ -279,7 +292,7 @@ function buildValidationPlan(
 ): ValidationPlanItem[] {
   const items: ValidationPlanItem[] = [];
   let valCounter = 0;
-  const nextValId = () => `VAL-${String(++valCounter).padStart(3, "0")}`;
+  const nextValId = () => makeId("VAL-", ++valCounter);
 
   // inject (agent-written)
   for (const iv of injectValidations) {
@@ -528,81 +541,97 @@ function renderSection6(
   return lines.join("\n");
 }
 
-function renderSection7(brownfield: BrownfieldContext): string[] {
+function renderSection7(brownfield: BrownfieldContext, detailHash: string): string[] {
   const lines: string[] = [];
+  const detailFile = "brownfield-detail.md";
 
   lines.push("## 7. Brownfield Context");
   lines.push("");
+  lines.push(`상세: [\`build/${detailFile}\`](${detailFile}) (hash: \`${detailHash.slice(0, 8)}\`)`);
+  lines.push("");
 
-  // Related files
-  if (brownfield.related_files.length > 0) {
-    lines.push("<details>");
-    lines.push(`<summary>관련 파일 목록 (${brownfield.related_files.length}건)</summary>`);
+  // Split related_files into non-test (Tier 1) and test (Tier 2)
+  const nonTestFiles = brownfield.related_files.filter(f => !f.role.startsWith("test ("));
+  const testFiles = brownfield.related_files.filter(f => f.role.startsWith("test ("));
+
+  // Tier 1: Non-test related files (always expanded)
+  if (nonTestFiles.length > 0) {
+    lines.push(`### 변경 대상 파일 (${nonTestFiles.length}건)`);
     lines.push("");
-    lines.push("| 경로 | 역할 |");
-    lines.push("|------|------|");
-    for (const f of brownfield.related_files) {
-      lines.push(`| \`${f.path}\` | ${f.role} |`);
+    lines.push("| 경로 | 역할 | 상세 |");
+    lines.push("|------|------|------|");
+    for (const f of nonTestFiles) {
+      lines.push(`| \`${f.path}\` | ${f.role} | [→ 상세](${detailFile}#${f.detail_anchor}) |`);
+    }
+    lines.push("");
+  }
+
+  // Tier 2: Test files (collapsed)
+  if (testFiles.length > 0) {
+    lines.push("<details>");
+    lines.push(`<summary>테스트 파일 (${testFiles.length}건)</summary>`);
+    lines.push("");
+    lines.push("| 경로 | 역할 | 상세 |");
+    lines.push("|------|------|------|");
+    for (const f of testFiles) {
+      lines.push(`| \`${f.path}\` | ${f.role} | [→ 상세](${detailFile}#${f.detail_anchor}) |`);
     }
     lines.push("");
     lines.push("</details>");
     lines.push("");
   }
 
-  // Module dependencies
+  // Tier 1: Module dependencies (always expanded)
   if (brownfield.module_dependencies.length > 0) {
-    lines.push("<details>");
-    lines.push(`<summary>모듈 의존성 (${brownfield.module_dependencies.length}건)</summary>`);
+    lines.push(`### 직접 의존 모듈 (${brownfield.module_dependencies.length}건)`);
     lines.push("");
-    lines.push("| 모듈 | 의존 대상 |");
-    lines.push("|------|----------|");
+    lines.push("| 모듈 | 의존 대상 | 상세 |");
+    lines.push("|------|----------|------|");
     for (const d of brownfield.module_dependencies) {
-      lines.push(`| ${d.module} | ${d.depends_on} |`);
+      lines.push(`| ${d.module} | ${d.depends_on} | [→ 상세](${detailFile}#${d.detail_anchor}) |`);
     }
-    lines.push("");
-    lines.push("</details>");
     lines.push("");
   }
 
-  // API contracts
+  // Tier 2: API contracts (collapsed)
   if (brownfield.api_contracts && brownfield.api_contracts.length > 0) {
     lines.push("<details>");
     lines.push(`<summary>API 계약 (${brownfield.api_contracts.length}건)</summary>`);
     lines.push("");
-    lines.push("| endpoint | method | 설명 |");
-    lines.push("|----------|--------|------|");
+    lines.push("| endpoint | method | 설명 | 상세 |");
+    lines.push("|----------|--------|------|------|");
     for (const a of brownfield.api_contracts) {
-      lines.push(`| ${a.endpoint} | ${a.method} | ${a.description} |`);
+      lines.push(`| ${a.endpoint} | ${a.method} | ${a.description} | [→ 상세](${detailFile}#${a.detail_anchor}) |`);
     }
     lines.push("");
     lines.push("</details>");
     lines.push("");
   }
 
-  // DB schemas
+  // Tier 2: DB schemas (collapsed)
   if (brownfield.db_schemas && brownfield.db_schemas.length > 0) {
     lines.push("<details>");
     lines.push(`<summary>DB 스키마 (${brownfield.db_schemas.length}건)</summary>`);
     lines.push("");
-    lines.push("| 테이블 | 컬럼 |");
-    lines.push("|--------|------|");
+    lines.push("| 테이블 | 컬럼 | 상세 |");
+    lines.push("|--------|------|------|");
     for (const s of brownfield.db_schemas) {
-      lines.push(`| ${s.table} | ${s.columns} |`);
+      lines.push(`| ${s.table} | ${s.columns} | [→ 상세](${detailFile}#${s.detail_anchor}) |`);
     }
     lines.push("");
     lines.push("</details>");
     lines.push("");
   }
 
-  // Config/env
+  // Tier 2: Config/env (collapsed)
   if (brownfield.config_env && brownfield.config_env.length > 0) {
     lines.push("<details>");
     lines.push(`<summary>설정/환경 변수 (${brownfield.config_env.length}건)</summary>`);
     lines.push("");
-    lines.push("| 키 | 설명 |");
-    lines.push("|-----|------|");
+    lines.push("| 키 | 설명 | 상세 |");
+    lines.push("|-----|------|------|");
     for (const e of brownfield.config_env) {
-      lines.push(`| ${e.key} | ${e.description} |`);
+      lines.push(`| ${e.key} | ${e.description} | [→ 상세](${detailFile}#${e.detail_anchor}) |`);
     }
     lines.push("");
     lines.push("</details>");
@@ -610,6 +639,30 @@ function renderSection7(brownfield: BrownfieldContext): string[] {
   }
 
   return lines;
+}
+
+// ─── Brownfield Detail Rendering ───
+
+function renderBrownfieldDetail(detail: BrownfieldDetail): string {
+  const lines: string[] = [];
+
+  lines.push("# Brownfield Detail");
+  lines.push("");
+  lines.push(`scope: ${detail.scope_id}`);
+  lines.push("");
+
+  for (const section of detail.sections) {
+    lines.push(`<a id="${section.anchor}"></a>`);
+    lines.push("");
+    lines.push(`## ${section.title}`);
+    lines.push("");
+    lines.push(`**소스:** ${section.source}`);
+    lines.push("");
+    lines.push(section.content);
+    lines.push("");
+  }
+
+  return lines.join("\n");
 }
 
 // ─── Validation Plan Rendering ───

@@ -2,8 +2,8 @@ import type {
   ScopeState,
   ValidationItemResult,
   ValidationResult,
+  ValidationPlanItem,
 } from "../kernel/types.js";
-import type { ValidationPlanItem } from "../compilers/compile-defense.js";
 
 // ─── Input Types ───
 

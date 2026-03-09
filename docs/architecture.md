@@ -276,11 +276,12 @@ triggers a suggestion to return to Align and re-examine scope.
 
 Sprint Kit uses a hybrid event-sourced storage model.
 
-### Two Layers
+### Three Layers
 
 | Layer | Contents | Role |
 |-------|----------|------|
 | **Event Layer** | `events.ndjson` (append-only) | Source of truth for state transitions, verdicts, constraint decisions |
+| **Input Layer** | `inputs/` | 사용자 제공 원본 자료. 시스템이 수정하지 않음. 변경 시 grounding 재실행 필요 |
 | **Artifact Layer** | `surface/`, `build/` | Source of truth for generated files. Events record artifact path + content-hash but not file contents |
 
 ### Directory Structure
@@ -303,6 +304,7 @@ scopes/{scope-id}/
     align-packet.md
     draft-packet.md
     build-spec.md
+    brownfield-detail.md
     delta-set.json
     validation-plan.md
 ```
@@ -310,7 +312,8 @@ scopes/{scope-id}/
 Rules:
 
 - `events.ndjson` is append-only. Past events are never modified
-- `scope.md` and `state/` are regenerated from events by the reducer
+- `scope.md` and `state/constraint-pool.json`, `state/verdict-log.json` are regenerated from events by the reducer
+- `state/reality-snapshot.json` is written by commands/ layer (contains scan results not in event payloads). Recoverable via re-grounding
 - `surface/` and `build/` artifacts have corresponding events that record path + content-hash
 - Artifacts must not be modified without a corresponding event
 
@@ -318,7 +321,9 @@ Inconsistency resolution (two layers):
 
 | Layer | Scope | Rule |
 |-------|-------|------|
-| **Materialized View** (`scope.md`, `state/`) | Events에서 재생성 가능 | 불일치 시 이벤트 기준으로 재생성 |
+| **Materialized View** (`scope.md`, `state/constraint-pool.json`, `state/verdict-log.json`) | Events에서 재생성 가능 | 불일치 시 이벤트 기준으로 재생성 |
+| **Reality Snapshot** (`state/reality-snapshot.json`) | Events에서 재생성 불가 (스캔 결과 포함) | 불일치 시 re-grounding으로 재스캔 |
+| **Input** (`inputs/`) | 사용자 제공 원본 | 시스템 수정 불가. 변경 시 grounding 재실행 |
 | **Artifact** (`surface/`, `build/`) | Events에서 재생성 불가 (hybrid storage) | content hash로 무결성 검증. 불일치 시 해당 단계부터 재실행 |
 
 ## Domain Objects
@@ -449,11 +454,26 @@ Complete State × Event matrix is defined in `docs/event-state-contract.md`.
 
 | Module | Responsibility | Owns |
 |--------|---------------|------|
-| `kernel/` | Event store, reducers, state machine, constraint pool, stale detection | Reality Snapshot, Constraint Pool, Verdict Log |
-| `commands/` | `/start`, `/align`, `/draft` entrypoints | Scope, Intent |
+| `kernel/` | Event store, reducers, state machine, constraint pool, stale detection, shared types | Reality Snapshot, Constraint Pool, Verdict Log |
+| `config/` | `.sprint-kit.yaml` 로딩, 소스 병합, `/start` 플래그 파싱 | — |
+| `scanners/` | 소스 스캔, 패턴 탐지, ontology 인덱스/쿼리, brownfield-builder | ScanResult |
+| `commands/` | `/start`, `/align`, `/draft` entrypoints, Reality Snapshot 작성 | Scope, Intent |
 | `renderers/` | `scope.md`, Align Packet, Draft Packet, surface views | — |
-| `compilers/` | Compile, Build Spec generation | Delta Set, Build Spec |
+| `compilers/` | Compile, Build Spec generation, Brownfield Detail rendering | Delta Set, Build Spec, Brownfield Detail |
 | `validators/` | Apply and validation runners | — |
+
+### 의존 방향
+
+```
+config/ → kernel/, scanners/types (SourceEntry, sourceKey)
+scanners/ → kernel/, config/
+commands/ → kernel/, config/, scanners/, renderers/, compilers/, validators/
+renderers/ → kernel/
+compilers/ → kernel/
+validators/ → kernel/
+```
+
+금지 의존: `scanners/ → compilers/`, `scanners/ → renderers/`, `kernel/ → 다른 모듈`
 
 ## Terminology Mapping
 

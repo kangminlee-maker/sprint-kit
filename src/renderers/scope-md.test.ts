@@ -27,6 +27,7 @@ function makeState(overrides: Partial<ScopeState> = {}): ScopeState {
     convergence_blocked: false,
     revision_count_align: 0,
     revision_count_surface: 0,
+    retry_count_compile: 0,
     verdict_log: [],
     feedback_history: [],
     latest_revision: 0,
@@ -113,7 +114,7 @@ describe("scope-md — next action", () => {
     pool.summary.total = 3;
     pool.summary.undecided = 2;
     const md = renderScopeMd(makeState({ current_state: "surface_confirmed", constraint_pool: pool }));
-    expect(md).toContain("2건의 constraint");
+    expect(md).toContain("2건의 제약 사항");
   });
 
   it("surface_confirmed with clarify_pending → resolve clarify", () => {
@@ -192,7 +193,7 @@ describe("scope-md — edge cases", () => {
       convergence_blocked: true,
     }));
     expect(md).toContain("수렴 차단 상태입니다");
-    expect(md).toContain("convergence.action_taken");
+    expect(md).toContain("방향 변경");
   });
 
   it("stale with undefined stale_sources shows '알 수 없음'", () => {
@@ -232,11 +233,48 @@ describe("scope-md — edge cases", () => {
     expect(md).not.toContain("제외됨:");
   });
 
-  it("all terminal states show '이 scope는 종료되었습니다'", () => {
-    for (const terminal of ["closed", "deferred", "rejected"] as const) {
-      const md = renderScopeMd(makeState({ current_state: terminal }));
-      expect(md).toContain("종료");
-    }
+  it("terminal states show appropriate messages", () => {
+    expect(renderScopeMd(makeState({ current_state: "closed" }))).toContain("완료");
+    expect(renderScopeMd(makeState({ current_state: "deferred" }))).toContain("보류");
+    expect(renderScopeMd(makeState({ current_state: "rejected" }))).toContain("거절");
+  });
+});
+
+// ─── Backward transition ───
+
+describe("scope-md — backward transition", () => {
+  it("shows compile retry blocker when constraints_resolved with retry_count > 0", () => {
+    const md = renderScopeMd(makeState({
+      current_state: "constraints_resolved",
+      retry_count_compile: 1,
+    }));
+    expect(md).toContain("## 차단 상태");
+    expect(md).toContain("compile 중 새 제약이 발견되어 결정이 필요합니다");
+    expect(md).toContain("재시도 1/3회");
+  });
+
+  it("shows retry count 2/3 in blocker message", () => {
+    const md = renderScopeMd(makeState({
+      current_state: "constraints_resolved",
+      retry_count_compile: 2,
+    }));
+    expect(md).toContain("재시도 2/3회");
+  });
+
+  it("does not show compile retry blocker when retry_count is 0", () => {
+    const md = renderScopeMd(makeState({
+      current_state: "constraints_resolved",
+      retry_count_compile: 0,
+    }));
+    expect(md).not.toContain("compile 중 새 제약이 발견되어");
+  });
+
+  it("does not show compile retry blocker for other states even with retry_count > 0", () => {
+    const md = renderScopeMd(makeState({
+      current_state: "target_locked",
+      retry_count_compile: 1,
+    }));
+    expect(md).not.toContain("compile 중 새 제약이 발견되어");
   });
 });
 

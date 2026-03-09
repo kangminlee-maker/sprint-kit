@@ -9,6 +9,7 @@ import { readFileSync, mkdtempSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
 import { appendScopeEvent, type EventInput } from "./kernel/event-pipeline.js";
+import type { EventType } from "./kernel/types.js";
 import { createScope } from "./kernel/scope-manager.js";
 import { readEvents } from "./kernel/event-store.js";
 import { reduce } from "./kernel/reducer.js";
@@ -50,7 +51,7 @@ describe("E2E — tutor-block full lifecycle", () => {
         type: evt.type,
         actor: evt.actor,
         payload: evt.payload,
-      } as EventInput);
+      });
       expect(result.success).toBe(true);
     }
 
@@ -118,11 +119,19 @@ describe("E2E — tutor-block full lifecycle", () => {
       changes,
       brownfield: {
         related_files: [
-          { path: "src/matching/matching-engine.ts", role: "매칭 엔진" },
-          { path: "src/api/v1/matching.ts", role: "매칭 API" },
+          { path: "src/matching/matching-engine.ts", role: "매칭 엔진", detail_anchor: "matching-engine" },
+          { path: "src/api/v1/matching.ts", role: "매칭 API", detail_anchor: "api-matching" },
         ],
         module_dependencies: [
-          { module: "matching-engine", depends_on: "tutor-block" },
+          { module: "matching-engine", depends_on: "tutor-block", detail_anchor: "dep-matching-tutor-block" },
+        ],
+      },
+      brownfieldDetail: {
+        scope_id: "SC-TEST",
+        sections: [
+          { anchor: "matching-engine", source: "podo-backend", title: "MatchingEngine", content: "매칭 엔진 상세" },
+          { anchor: "api-matching", source: "podo-backend", title: "Matching API", content: "매칭 API 상세" },
+          { anchor: "dep-matching-tutor-block", source: "podo-backend", title: "matching → tutor-block", content: "의존성 상세" },
         ],
       },
       surfaceSummary: "튜터 프로필에서 차단 버튼 → 확인 → 차단 완료. 설정에서 차단 관리.",
@@ -150,7 +159,7 @@ describe("E2E — tutor-block full lifecycle", () => {
       type: "compile.started",
       actor: "system",
       payload: { snapshot_revision: 3, surface_hash: state.surface_hash },
-    } as EventInput);
+    });
     expect(compileStarted.success).toBe(true);
 
     const compileCompleted = appendScopeEvent(paths, {
@@ -159,12 +168,14 @@ describe("E2E — tutor-block full lifecycle", () => {
       payload: {
         build_spec_path: "build/build-spec.md",
         build_spec_hash: compileResult.buildSpecHash,
+        brownfield_detail_path: "build/brownfield-detail.md",
+        brownfield_detail_hash: compileResult.brownfieldDetailHash,
         delta_set_path: "build/delta-set.json",
         delta_set_hash: compileResult.deltaSetHash,
         validation_plan_path: "build/validation-plan.md",
         validation_plan_hash: compileResult.validationPlanHash,
       },
-    } as EventInput);
+    });
     expect(compileCompleted.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -176,7 +187,7 @@ describe("E2E — tutor-block full lifecycle", () => {
       type: "apply.started",
       actor: "agent",
       payload: { build_spec_hash: compileResult.buildSpecHash },
-    } as EventInput);
+    });
     expect(applyStartResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -186,7 +197,7 @@ describe("E2E — tutor-block full lifecycle", () => {
       type: "apply.completed",
       actor: "agent",
       payload: { result: "success" },
-    } as EventInput);
+    });
     expect(applyCompleteResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -197,7 +208,7 @@ describe("E2E — tutor-block full lifecycle", () => {
       type: "validation.started",
       actor: "agent",
       payload: { validation_plan_hash: compileResult.validationPlanHash },
-    } as EventInput);
+    });
     expect(valStartResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -232,7 +243,7 @@ describe("E2E — tutor-block full lifecycle", () => {
         fail_count: validateOutput.fail_count,
         items: validateOutput.items,
       },
-    } as EventInput);
+    });
     expect(valCompleteResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -243,7 +254,7 @@ describe("E2E — tutor-block full lifecycle", () => {
       type: "scope.closed",
       actor: "user",
       payload: {},
-    } as EventInput);
+    });
     expect(closeResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -271,18 +282,18 @@ describe("E2E — tutor-block full lifecycle", () => {
 
     // Replay to compiled
     for (const evt of goldenEvents) {
-      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload } as EventInput);
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
     }
 
     // Apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } } as EventInput);
-    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } } as EventInput);
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } });
+    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     let state = reduce(readEvents(paths.events));
     expect(state.current_state).toBe("applied");
 
     // Validation with 1 failure
-    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "h" } } as EventInput);
+    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "h" } });
 
     const failResult = appendScopeEvent(paths, {
       type: "validation.completed",
@@ -293,7 +304,7 @@ describe("E2E — tutor-block full lifecycle", () => {
         fail_count: 1,
         items: [{ val_id: "VAL-001", related_cst: "CST-001", result: "fail", detail: "차단 반영 안 됨" }],
       },
-    } as EventInput);
+    });
     expect(failResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -306,19 +317,19 @@ describe("E2E — tutor-block full lifecycle", () => {
 
     // Replay to compiled
     for (const evt of goldenEvents) {
-      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload } as EventInput);
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
     }
 
     // Apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } } as EventInput);
-    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } } as EventInput);
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } });
+    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     // Mark stale during applied
     const staleResult = appendScopeEvent(paths, {
       type: "snapshot.marked_stale",
       actor: "system",
       payload: { stale_sources: [{ path: "src/matching/matching-engine.ts", old_hash: "a", new_hash: "b" }] },
-    } as EventInput);
+    });
     expect(staleResult.success).toBe(true);
 
     let state = reduce(readEvents(paths.events));
@@ -326,13 +337,13 @@ describe("E2E — tutor-block full lifecycle", () => {
     expect(state.stale).toBe(true);
 
     // Validation pass but stale → grounded
-    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "h" } } as EventInput);
+    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "h" } });
 
     const valResult = appendScopeEvent(paths, {
       type: "validation.completed",
       actor: "agent",
       payload: { result: "pass", pass_count: 8, fail_count: 0, items: [] },
-    } as EventInput);
+    });
     expect(valResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -361,7 +372,7 @@ describe("E2E — edge case scenarios", () => {
         type: evt.type,
         actor: evt.actor,
         payload: evt.payload,
-      } as EventInput);
+      });
       if (!result.success) throw new Error(`Replay failed: ${result.reason}`);
       if (result.success && result.next_state === targetState) break;
     }
@@ -382,7 +393,7 @@ describe("E2E — edge case scenarios", () => {
       type: "compile.started",
       actor: "system",
       payload: { snapshot_revision: 1, surface_hash: "hash_sf_004" },
-    } as EventInput);
+    });
     expect(csResult.success).toBe(true);
 
     // constraint.discovered FIRST (referential integrity)
@@ -399,7 +410,7 @@ describe("E2E — edge case scenarios", () => {
         impact_if_ignored: "빌드 시 누락",
         source_refs: [{ source: "compile-check", detail: "새 제약 발견" }],
       },
-    } as EventInput);
+    });
     expect(discResult.success).toBe(true);
 
     // compile.constraint_gap_found (CST-NEW)
@@ -407,7 +418,7 @@ describe("E2E — edge case scenarios", () => {
       type: "compile.constraint_gap_found",
       actor: "system",
       payload: { new_constraint_id: "CST-NEW", perspective: "code", summary: "컴파일 중 발견된 새 제약" },
-    } as EventInput);
+    });
     expect(gapResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -425,7 +436,7 @@ describe("E2E — edge case scenarios", () => {
         decision_owner: "product_owner",
         rationale: "빌드에 필요",
       },
-    } as EventInput);
+    });
     expect(decResult.success).toBe(true);
 
     // target.locked again
@@ -446,7 +457,7 @@ describe("E2E — edge case scenarios", () => {
           { constraint_id: "CST-NEW", decision: "inject" },
         ],
       },
-    } as EventInput);
+    });
     expect(tlResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -457,7 +468,7 @@ describe("E2E — edge case scenarios", () => {
       type: "compile.started",
       actor: "system",
       payload: { snapshot_revision: 1, surface_hash: "hash_sf_004" },
-    } as EventInput);
+    });
     expect(cs2Result.success).toBe(true);
 
     // compile.completed
@@ -467,12 +478,14 @@ describe("E2E — edge case scenarios", () => {
       payload: {
         build_spec_path: "build/build-spec.md",
         build_spec_hash: "hash_bs_002",
+        brownfield_detail_path: "build/brownfield-detail.md",
+        brownfield_detail_hash: "hash_bd_002",
         delta_set_path: "build/delta-set.json",
         delta_set_hash: "hash_ds_002",
         validation_plan_path: "build/validation-plan.md",
         validation_plan_hash: "hash_vp_002",
       },
-    } as EventInput);
+    });
     expect(ccResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -500,7 +513,7 @@ describe("E2E — edge case scenarios", () => {
         content_hash: "hash_sf_new_001",
         based_on_snapshot: 1,
       },
-    } as EventInput);
+    });
     expect(sgResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -511,7 +524,7 @@ describe("E2E — edge case scenarios", () => {
       type: "redirect.to_align",
       actor: "user",
       payload: { from_state: "surface_iterating", reason: "방향 재조정 필요" },
-    } as EventInput);
+    });
     expect(raResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -528,7 +541,7 @@ describe("E2E — edge case scenarios", () => {
         packet_path: "build/align-packet.md",
         packet_hash: "hash_ap_002",
       },
-    } as EventInput);
+    });
     expect(arResult.success).toBe(true);
 
     // align.locked
@@ -543,7 +556,7 @@ describe("E2E — edge case scenarios", () => {
         },
         locked_in_out: true,
       },
-    } as EventInput);
+    });
     expect(alResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -559,7 +572,7 @@ describe("E2E — edge case scenarios", () => {
         content_hash: "hash_sf_new_002",
         based_on_snapshot: 1,
       },
-    } as EventInput);
+    });
     expect(sg2Result.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -574,7 +587,7 @@ describe("E2E — edge case scenarios", () => {
         final_content_hash: "hash_sf_new_002",
         total_revisions: 0,
       },
-    } as EventInput);
+    });
     expect(scResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -596,7 +609,7 @@ describe("E2E — edge case scenarios", () => {
       type: "convergence.blocked",
       actor: "system",
       payload: { state: "surface_iterating", revision_count: 5, requires_action: true },
-    } as EventInput);
+    });
     expect(cbResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -608,7 +621,7 @@ describe("E2E — edge case scenarios", () => {
       type: "scope.deferred",
       actor: "user",
       payload: { reason: "수렴 실패", resume_condition: "방향 재정립 후 재개" },
-    } as EventInput);
+    });
     expect(sdResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -625,7 +638,7 @@ describe("E2E — edge case scenarios", () => {
         type: evt.type,
         actor: evt.actor,
         payload: evt.payload,
-      } as EventInput);
+      });
       expect(result.success).toBe(true);
     }
 
@@ -637,7 +650,7 @@ describe("E2E — edge case scenarios", () => {
       type: "snapshot.marked_stale",
       actor: "system",
       payload: { stale_sources: [{ path: "src/matching/matching-engine.ts", old_hash: "a", new_hash: "b" }] },
-    } as EventInput);
+    });
     expect(staleResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -663,7 +676,7 @@ describe("E2E — edge case scenarios", () => {
         type: "compile.started",
         actor: "system",
         payload: { snapshot_revision: 1, surface_hash: "hash_sf_004" },
-      } as EventInput);
+      });
       expect(csRes.success).toBe(true);
 
       // constraint.discovered FIRST
@@ -680,7 +693,7 @@ describe("E2E — edge case scenarios", () => {
           impact_if_ignored: "빌드 실패",
           source_refs: [{ source: "compile", detail: `gap ${i + 1}` }],
         },
-      } as EventInput);
+      });
       expect(discRes.success).toBe(true);
 
       // compile.constraint_gap_found
@@ -688,7 +701,7 @@ describe("E2E — edge case scenarios", () => {
         type: "compile.constraint_gap_found",
         actor: "system",
         payload: { new_constraint_id: cstId, perspective: "code", summary: `Gap ${i + 1}` },
-      } as EventInput);
+      });
       expect(gapRes.success).toBe(true);
 
       // → constraints_resolved
@@ -706,7 +719,7 @@ describe("E2E — edge case scenarios", () => {
           decision_owner: "product_owner",
           rationale: "빌드 필요",
         },
-      } as EventInput);
+      });
       expect(decRes.success).toBe(true);
 
       // target.locked
@@ -717,7 +730,7 @@ describe("E2E — edge case scenarios", () => {
           surface_hash: "hash_sf_004",
           constraint_decisions: [{ constraint_id: cstId, decision: "inject" }],
         },
-      } as EventInput);
+      });
       expect(tlRes.success).toBe(true);
 
       state = reduce(readEvents(paths.events));
@@ -732,7 +745,7 @@ describe("E2E — edge case scenarios", () => {
       type: "compile.started",
       actor: "system",
       payload: { snapshot_revision: 1, surface_hash: "hash_sf_004" },
-    } as EventInput);
+    });
     expect(fourthResult.success).toBe(false);
     if (!fourthResult.success) {
       expect(fourthResult.reason).toContain("retry limit");
@@ -745,20 +758,20 @@ describe("E2E — edge case scenarios", () => {
 
     // Replay full golden → compiled
     for (const evt of goldenEvents) {
-      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload } as EventInput);
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
     }
 
     // Apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } } as EventInput);
-    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } } as EventInput);
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } });
+    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     // Validation pass
-    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "h" } } as EventInput);
+    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "h" } });
     const valResult = appendScopeEvent(paths, {
       type: "validation.completed",
       actor: "agent",
       payload: { result: "pass", pass_count: 8, fail_count: 0, items: [] },
-    } as EventInput);
+    });
     expect(valResult.success).toBe(true);
 
     let state = reduce(readEvents(paths.events));
@@ -769,7 +782,7 @@ describe("E2E — edge case scenarios", () => {
       type: "scope.deferred",
       actor: "user",
       payload: { reason: "출시 보류", resume_condition: "다음 분기 재개" },
-    } as EventInput);
+    });
     expect(sdResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -782,18 +795,18 @@ describe("E2E — edge case scenarios", () => {
 
     // Replay full golden → compiled
     for (const evt of goldenEvents) {
-      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload } as EventInput);
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
     }
 
     // Apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } } as EventInput);
-    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } } as EventInput);
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } });
+    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     let state = reduce(readEvents(paths.events));
     expect(state.current_state).toBe("applied");
 
     // Validation fail
-    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "h" } } as EventInput);
+    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "h" } });
     const valFailResult = appendScopeEvent(paths, {
       type: "validation.completed",
       actor: "agent",
@@ -803,7 +816,7 @@ describe("E2E — edge case scenarios", () => {
         fail_count: 1,
         items: [{ val_id: "VAL-001", related_cst: "CST-001", result: "fail", detail: "차단 반영 안 됨" }],
       },
-    } as EventInput);
+    });
     expect(valFailResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -820,7 +833,7 @@ describe("E2E — edge case scenarios", () => {
         decision_owner: "product_owner",
         rationale: "구현 방식 변경하여 재시도",
       },
-    } as EventInput);
+    });
     expect(decResult.success).toBe(true);
 
     // target.locked
@@ -840,7 +853,7 @@ describe("E2E — edge case scenarios", () => {
           { constraint_id: "CST-008", decision: "inject" },
         ],
       },
-    } as EventInput);
+    });
     expect(tlResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -851,7 +864,7 @@ describe("E2E — edge case scenarios", () => {
       type: "compile.started",
       actor: "system",
       payload: { snapshot_revision: 1, surface_hash: "hash_sf_004" },
-    } as EventInput);
+    });
 
     const ccResult = appendScopeEvent(paths, {
       type: "compile.completed",
@@ -859,31 +872,33 @@ describe("E2E — edge case scenarios", () => {
       payload: {
         build_spec_path: "build/build-spec.md",
         build_spec_hash: "hash_bs_003",
+        brownfield_detail_path: "build/brownfield-detail.md",
+        brownfield_detail_hash: "hash_bd_003",
         delta_set_path: "build/delta-set.json",
         delta_set_hash: "hash_ds_003",
         validation_plan_path: "build/validation-plan.md",
         validation_plan_hash: "hash_vp_003",
       },
-    } as EventInput);
+    });
     expect(ccResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
     expect(state.current_state).toBe("compiled");
 
     // Re-apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "hash_bs_003" } } as EventInput);
-    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } } as EventInput);
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "hash_bs_003" } });
+    appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     state = reduce(readEvents(paths.events));
     expect(state.current_state).toBe("applied");
 
     // Validation pass
-    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "hash_vp_003" } } as EventInput);
+    appendScopeEvent(paths, { type: "validation.started", actor: "agent", payload: { validation_plan_hash: "hash_vp_003" } });
     const valPassResult = appendScopeEvent(paths, {
       type: "validation.completed",
       actor: "agent",
       payload: { result: "pass", pass_count: 8, fail_count: 0, items: [] },
-    } as EventInput);
+    });
     expect(valPassResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -894,10 +909,41 @@ describe("E2E — edge case scenarios", () => {
       type: "scope.closed",
       actor: "user",
       payload: {},
-    } as EventInput);
+    });
     expect(closeResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
     expect(state.current_state).toBe("closed");
+  });
+
+  it("constraints_resolved → new constraint discovered → undecided exists", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-008");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay to constraints_resolved (all 8 constraints decided)
+    replayUntilState(paths, goldenEvents, "constraints_resolved");
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("constraints_resolved");
+    expect(state.constraint_pool.summary.undecided).toBe(0);
+
+    // New constraint discovered while in constraints_resolved
+    const discResult = appendScopeEvent(paths, {
+      type: "constraint.discovered",
+      actor: "system",
+      payload: {
+        constraint_id: "CST-LATE-001", perspective: "experience", summary: "late discovery",
+        severity: "recommended", discovery_stage: "draft_phase2", decision_owner: "product_owner",
+        impact_if_ignored: "UX 문제", source_refs: [{ source: "test", detail: "d" }],
+      },
+    });
+    expect(discResult.success).toBe(true);
+
+    state = reduce(readEvents(paths.events));
+    // New undecided constraint exists
+    expect(state.constraint_pool.constraints.some(c => c.constraint_id === "CST-LATE-001")).toBe(true);
+    expect(state.constraint_pool.summary.undecided).toBe(1);
+    // target.locked should be blocked (isConstraintsResolved = false)
+    expect(state.compile_ready).toBe(false);
   });
 });

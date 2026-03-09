@@ -1,16 +1,17 @@
 import { writeFileSync } from "node:fs";
-import type { Event, EventType, State, Actor, ScopeState } from "./types.js";
-import { readEvents, appendEvent, nextRevision } from "./event-store.js";
+import type { Event, EventType, State, Actor, ScopeState, PayloadMap } from "./types.js";
+import { readEvents, appendEvent } from "./event-store.js";
 import { reduce } from "./reducer.js";
 import { validateEvent, type GateResult } from "./gate-guard.js";
 import type { ScopePaths } from "./scope-manager.js";
+import { makeId } from "./id.js";
 
 // ─── Input type (caller provides only what they control) ───
 
-export interface EventInput {
-  type: EventType;
+export interface EventInput<T extends EventType = EventType> {
+  type: T;
   actor: Actor;
-  payload: Record<string, unknown>;
+  payload: T extends keyof PayloadMap ? PayloadMap[T] : Record<string, unknown>;
 }
 
 // ─── Result type ───
@@ -44,9 +45,9 @@ export function appendScopeEvent(
   const currentState = reduce(currentEvents);
 
   // ── Step 2: Build temporary event for validation ──
-  const revision = nextRevision(paths.events);
+  const revision = currentEvents.length + 1;
   const tempEvent = {
-    event_id: `evt_${String(revision).padStart(3, "0")}`,
+    event_id: makeId("evt_", revision),
     scope_id: paths.scopeId,
     type: input.type,
     ts: new Date().toISOString(),
@@ -71,9 +72,8 @@ export function appendScopeEvent(
 
   appendEvent(paths.events, eventToAppend);
 
-  // ── Step 5: Re-reduce and write kernel materialized views ──
-  const updatedEvents = readEvents(paths.events);
-  const updatedState = reduce(updatedEvents);
+  // ── Step 5: Incremental reduce (reuse currentEvents instead of re-reading) ──
+  const updatedState = reduce([...currentEvents, eventToAppend]);
 
   writeFileSync(
     paths.constraintPool,

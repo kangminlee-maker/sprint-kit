@@ -9,14 +9,6 @@ The user is a domain expert — not a developer.
 The user decides direction, defines the target through a working model, and resolves constraints.
 The system does everything else.
 
-## Communication Principles
-
-1. **있는 그대로 쓴다** — 비유로 바꾸지 않는다. 기술 용어는 그대로 쓰되 쉬운 말로 뜻을 붙인다.
-2. **판단 재료를 빠뜨리지 않는다** — 선택지, 각 선택의 결과, 영향 범위, 되돌림 비용을 함께 보여준다.
-3. **짧게 쓴다. 필요하면 펼친다** — 핵심만 먼저. 세부는 요청 시.
-
-이 원칙은 시스템이 생산하는 모든 산출물과 문서에 적용됩니다.
-
 ## Core Flow
 
 ```text

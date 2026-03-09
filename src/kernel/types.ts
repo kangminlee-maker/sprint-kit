@@ -147,6 +147,95 @@ export type SourceType =
   | "figma-mcp"
   | "obsidian-vault";
 
+// ─── Brownfield Types ───
+
+export interface BrownfieldFileEntry {
+  path: string;
+  role: string;
+  detail_anchor: string;
+}
+
+export interface BrownfieldDepEntry {
+  module: string;
+  depends_on: string;
+  detail_anchor: string;
+}
+
+export interface BrownfieldApiEntry {
+  endpoint: string;
+  method: string;
+  description: string;
+  detail_anchor: string;
+}
+
+export interface BrownfieldSchemaEntry {
+  table: string;
+  columns: string;
+  detail_anchor: string;
+}
+
+export interface BrownfieldConfigEntry {
+  key: string;
+  description: string;
+  detail_anchor: string;
+}
+
+export interface BrownfieldContext {
+  related_files: BrownfieldFileEntry[];
+  module_dependencies: BrownfieldDepEntry[];
+  api_contracts?: BrownfieldApiEntry[];
+  db_schemas?: BrownfieldSchemaEntry[];
+  config_env?: BrownfieldConfigEntry[];
+}
+
+export interface BrownfieldDetail {
+  scope_id: string;
+  sections: BrownfieldDetailSection[];
+}
+
+export interface BrownfieldDetailSection {
+  anchor: string;
+  source: string;
+  title: string;
+  content: string;
+}
+
+// ─── Validation Plan Types ───
+
+export interface ValidationPlanEntry {
+  val_id: string;
+  related_cst: string;
+  decision_type: "inject" | "defer" | "override";
+}
+
+export interface ValidationPlanItem extends ValidationPlanEntry {
+  target: string;
+  method: string;
+  pass_criteria: string;
+  fail_action: string;
+}
+
+// ─── Reality Snapshot ───
+
+export interface RealitySnapshot {
+  scope_id: string;
+  snapshot_revision: number;
+  source_hashes: Record<string, string>;
+  perspective_summary: Record<Perspective, number>;
+  scanned_at: string;
+}
+
+// ─── Format Utilities ───
+
+export function formatPerspective(p: string): string {
+  switch (p) {
+    case "experience": return "Experience";
+    case "code": return "Code";
+    case "policy": return "Policy";
+    default: return p;
+  }
+}
+
 // ─── Validation Result ───
 
 export type ValidationResult = "pass" | "fail";
@@ -184,6 +273,7 @@ export interface GroundingCompletedPayload {
   snapshot_revision: number;
   source_hashes: Record<string, string>;
   perspective_summary: Record<Perspective, number>;
+  failed_sources?: Array<{ source_key: string; error_type: string; message: string }>;
 }
 
 export interface SnapshotMarkedStalePayload {
@@ -310,6 +400,8 @@ export interface CompileStartedPayload {
 export interface CompileCompletedPayload {
   build_spec_path: string;
   build_spec_hash: string;
+  brownfield_detail_path: string;
+  brownfield_detail_hash: string;
   delta_set_path: string;
   delta_set_hash: string;
   validation_plan_path: string;
@@ -530,6 +622,7 @@ export interface ScopeState {
   scope_boundaries?: { in: string[]; out: string[] };
   surface_hash?: string;
   constraint_pool: ConstraintPool;
+  grounding_sources?: Array<{ type: SourceType; path_or_url: string }>;
   stale: boolean;
   stale_sources?: Array<{ path: string; old_hash: string; new_hash: string }>;
   stale_since?: number; // revision of the snapshot.marked_stale event
@@ -539,6 +632,8 @@ export interface ScopeState {
   revision_count_surface: number;
   retry_count_compile: number;
   validation_plan_hash?: string;
+  validation_result?: { result: ValidationResult; pass_count: number; fail_count: number; items: ValidationItemResult[] };
+  last_backward_reason?: string;
   verdict_log: VerdictLogEntry[];
   feedback_history: FeedbackClassifiedPayload[];
   latest_revision: number;

@@ -11,6 +11,7 @@ import type {
   ValidationCompletedPayload,
 } from "./types.js";
 import { resolveTransition } from "./state-machine.js";
+import { MAX_COMPILE_RETRIES } from "./constants.js";
 import { findConstraint, isConstraintsResolved } from "./constraint-pool.js";
 
 // ─── Result type ───
@@ -126,11 +127,23 @@ export function validateEvent(
   // ── Rule 5: Compile retry limit ──
   if (
     eventType === "compile.started" &&
-    state.retry_count_compile >= 3
+    state.retry_count_compile >= MAX_COMPILE_RETRIES
   ) {
     return {
       allowed: false,
       reason: `Compile retry limit exceeded (${state.retry_count_compile} gap_found cycles). Consider scope.deferred or redirect.to_align.`,
+    };
+  }
+
+  // ── Rule 6: target.locked requires all constraints resolved ──
+  if (eventType === "target.locked" && !isConstraintsResolved(state.constraint_pool)) {
+    const { summary } = state.constraint_pool;
+    const reasons: string[] = [];
+    if (summary.undecided > 0) reasons.push(`미결정 ${summary.undecided}건`);
+    if (summary.clarify_pending > 0) reasons.push(`clarify 대기 ${summary.clarify_pending}건`);
+    return {
+      allowed: false,
+      reason: `Target lock 불가: ${reasons.join(", ")}. 모든 constraint 결정이 완료되어야 합니다.`,
     };
   }
 
