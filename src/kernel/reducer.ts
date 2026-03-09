@@ -237,6 +237,7 @@ export function reduce(events: Event[]): ScopeState {
     surface_hash,
     grounding_sources,
     constraint_pool,
+    last_backward_reason,
     stale,
     stale_sources,
     stale_since,

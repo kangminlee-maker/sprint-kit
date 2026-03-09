@@ -14,11 +14,12 @@
  *   executes immediately (existing tests keep passing).
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   createScope,
   generateScopeId,
+  normalizeProjectName,
   resolveScopePaths,
   type ScopePaths,
   type BriefSourceEntry,
@@ -100,6 +101,32 @@ export interface StartFailure {
 
 export type StartOutput = StartResult | StartInitResult | StartResumeResult | StartFailure;
 
+// ─── Scope lookup ───
+
+/**
+ * Search for an existing scope directory matching the projectName pattern.
+ *
+ * Looks for directories matching `{normalized}-{YYYYMMDD}-{NNN}` and returns
+ * the most recent one (lexicographically last). Returns null if none found.
+ */
+export function findExistingScope(scopesDir: string, projectName: string): string | null {
+  const normalized = normalizeProjectName(projectName);
+  if (!existsSync(scopesDir)) return null;
+
+  const entries = readdirSync(scopesDir, { withFileTypes: true });
+  const pattern = new RegExp(`^${normalized}-\\d{8}-\\d{3}$`);
+
+  const matches = entries
+    .filter(e => e.isDirectory() && pattern.test(e.name))
+    .map(e => e.name)
+    .sort()
+    .reverse();
+
+  if (matches.length === 0) return null;
+
+  return matches[0];
+}
+
 // ─── Main ───
 
 export async function executeStart(input: StartInput): Promise<StartOutput> {
@@ -113,25 +140,26 @@ export async function executeStart(input: StartInput): Promise<StartOutput> {
 
   // New 3-path branching: determine scopeId
   const projectName = input.projectName ?? "scope";
+
+  // Before generating new ID, check for existing scope
+  const existingScopeId = findExistingScope(input.scopesDir, projectName);
+
+  if (existingScopeId) {
+    const paths = resolveScopePaths(input.scopesDir, existingScopeId);
+    const existingEvents = readEvents(paths.events);
+
+    if (existingEvents.length > 0) {
+      // PATH C: Resume
+      return handleResume(paths, existingScopeId, existingEvents, progress);
+    }
+
+    // PATH B: Folder exists, no events — check brief
+    return handleBriefExecution(input, existingScopeId, paths, progress);
+  }
+
+  // No existing scope found → PATH A: New
   const scopeId = input.scopeId ?? generateScopeId(input.scopesDir, projectName);
-  const paths = resolveScopePaths(input.scopesDir, scopeId);
-
-  // Check existing state
-  const existingEvents = readEvents(paths.events);
-
-  if (existingEvents.length > 0) {
-    // PATH C: Resume
-    return handleResume(paths, scopeId, existingEvents, progress);
-  }
-
-  if (!existsSync(paths.base)) {
-    // PATH A: New scope — create directory + brief
-    return handleNewScope(input, projectName, scopeId, paths, progress);
-  }
-
-  // Folder exists but no events — check brief
-  // PATH B: Brief filled -> execute
-  return handleBriefExecution(input, scopeId, paths, progress);
+  return handleNewScope(input, projectName, scopeId, resolveScopePaths(input.scopesDir, scopeId), progress);
 }
 
 // ─── Path A: New scope ───
@@ -312,8 +340,21 @@ async function handleResume(
   } else if (currentState === "align_proposed") {
     nextAction = "Align Packet이 대기 중입니다. /align으로 결정해 주세요.";
   } else {
-    // align_locked and beyond
-    nextAction = `현재 ${currentState} 상태입니다. /draft로 진행해 주세요.`;
+    // align_locked and beyond — provide state-specific guidance
+    switch (currentState) {
+      case "compiled":
+        nextAction = "compile이 완료되었습니다. apply를 진행해 주세요.";
+        break;
+      case "applied":
+        nextAction = "apply가 완료되었습니다. validation을 진행해 주세요.";
+        break;
+      case "validated":
+        nextAction = "validation이 완료되었습니다. 결과를 확인하시고 종료하려면 '완료'라고 말씀해 주세요.";
+        break;
+      default:
+        nextAction = `현재 ${currentState} 상태입니다. /draft로 진행해 주세요.`;
+        break;
+    }
   }
 
   progress(`기존 scope를 재개합니다 (${currentState})`);

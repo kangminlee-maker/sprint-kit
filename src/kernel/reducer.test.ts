@@ -607,6 +607,116 @@ describe("reducer — additional edge cases", () => {
   });
 });
 
+// ─── last_backward_reason (TCOV-1) ───
+
+describe("reducer — last_backward_reason", () => {
+  beforeEach(resetRev);
+
+  it("redirect.to_grounding sets last_backward_reason to payload reason", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("redirect.to_grounding", "align_locked", "draft", { from_state: "align_locked", reason: "소스 변경으로 재분석 필요" }),
+    ];
+    const state = reduce(events);
+    expect(state.last_backward_reason).toBe("소스 변경으로 재분석 필요");
+  });
+
+  it("redirect.to_align sets last_backward_reason to payload reason", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("redirect.to_align", "surface_iterating", "align_proposed", { from_state: "surface_iterating", reason: "방향 재검토 필요" }),
+    ];
+    const state = reduce(events);
+    expect(state.last_backward_reason).toBe("방향 재검토 필요");
+  });
+
+  it("surface.change_required sets last_backward_reason to payload reason", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("surface.change_required", "surface_confirmed", "surface_iterating", { constraint_id: "CST-001", reason: "UI 요구사항 변경" }),
+    ];
+    const state = reduce(events);
+    expect(state.last_backward_reason).toBe("UI 요구사항 변경");
+  });
+
+  it("align.locked resets last_backward_reason to undefined", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("redirect.to_align", "surface_iterating", "align_proposed", { from_state: "surface_iterating", reason: "방향 재검토" }),
+      evt("align.locked", "align_proposed", "align_locked", {
+        locked_direction: "direction", locked_scope_boundaries: { in: ["a"], out: ["b"] }, locked_in_out: true,
+      }),
+    ];
+    const state = reduce(events);
+    expect(state.last_backward_reason).toBeUndefined();
+  });
+
+  it("undefined when no backward events exist", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+    ];
+    const state = reduce(events);
+    expect(state.last_backward_reason).toBeUndefined();
+  });
+});
+
+// ─── validation_result (TCOV-5) ───
+
+describe("reducer — validation_result", () => {
+  beforeEach(resetRev);
+
+  it("contains correct result after validation.completed", () => {
+    const items = [
+      { val_id: "VAL-001", related_cst: "CST-001", result: "pass" as const, detail: "통과" },
+      { val_id: "VAL-002", related_cst: "CST-002", result: "fail" as const, detail: "실패: 엣지 케이스 미처리" },
+      { val_id: "VAL-003", related_cst: "CST-003", result: "pass" as const, detail: "통과" },
+    ];
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("grounding.started", "draft", "draft", { sources: [] }),
+      evt("grounding.completed", "draft", "grounded", { snapshot_revision: 1, source_hashes: {}, perspective_summary: { experience: 0, code: 0, policy: 0 } }),
+      evt("align.proposed", "grounded", "align_proposed", { packet_path: "p", packet_hash: "h", snapshot_revision: 1 }),
+      evt("align.locked", "align_proposed", "align_locked", {
+        locked_direction: "dir", locked_scope_boundaries: { in: ["a"], out: ["b"] }, locked_in_out: true,
+      }),
+      evt("surface.generated", "align_locked", "surface_iterating", { surface_type: "experience", surface_path: "p", content_hash: "h", based_on_snapshot: 1 }),
+      evt("surface.confirmed", "surface_iterating", "surface_confirmed", { final_surface_path: "p", final_content_hash: "h", total_revisions: 1 }),
+      evt("target.locked", "constraints_resolved", "target_locked", { surface_hash: "h", constraint_decisions: [] }),
+      evt("compile.started", "target_locked", "target_locked", { snapshot_revision: 1, surface_hash: "h" }),
+      evt("compile.completed", "target_locked", "compiled", {
+        build_spec_path: "p", build_spec_hash: "h",
+        delta_set_path: "p", delta_set_hash: "h",
+        validation_plan_path: "p", validation_plan_hash: "vph",
+      }),
+      evt("apply.started", "compiled", "compiled", { build_spec_hash: "h" }),
+      evt("apply.completed", "compiled", "applied", { result: "done" }),
+      evt("validation.started", "applied", "applied", { validation_plan_hash: "vph" }),
+      evt("validation.completed", "applied", "validated", {
+        result: "fail", pass_count: 2, fail_count: 1, items,
+      }),
+    ];
+    const state = reduce(events);
+    expect(state.validation_result).toBeDefined();
+    expect(state.validation_result!.result).toBe("fail");
+    expect(state.validation_result!.pass_count).toBe(2);
+    expect(state.validation_result!.fail_count).toBe(1);
+    expect(state.validation_result!.items).toEqual(items);
+  });
+
+  it("undefined before validation.completed", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("compile.completed", "target_locked", "compiled", {
+        build_spec_path: "p", build_spec_hash: "h",
+        delta_set_path: "p", delta_set_hash: "h",
+        validation_plan_path: "p", validation_plan_hash: "vph",
+      }),
+    ];
+    const state = reduce(events);
+    expect(state.validation_result).toBeUndefined();
+  });
+});
+
 // ─── determinism ───
 
 describe("reducer — determinism", () => {

@@ -740,6 +740,65 @@ describe("gate-guard — conditional target: last undecided constraint", () => {
   });
 });
 
+// ─── Rule 6: target.locked constraint resolution (TCOV-4) ───
+
+describe("gate-guard — Rule 6: target.locked constraint resolution", () => {
+  it("denies target.locked with undecided constraints", () => {
+    const state = makeStateWithConstraints(
+      [
+        { id: "CST-001", severity: "required", status: "decided" },
+        { id: "CST-002", severity: "recommended", status: "undecided" },
+      ],
+      { current_state: "constraints_resolved" },
+    );
+    const event = makeEvent("target.locked", {
+      surface_hash: "h",
+      constraint_decisions: [{ constraint_id: "CST-001", decision: "inject" }],
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) expect(result.reason).toContain("미결정");
+  });
+
+  it("denies target.locked with clarify_pending constraints", () => {
+    const state = makeStateWithConstraints(
+      [
+        { id: "CST-001", severity: "required", status: "decided" },
+        { id: "CST-002", severity: "recommended", status: "clarify_pending" },
+      ],
+      { current_state: "constraints_resolved" },
+    );
+    const event = makeEvent("target.locked", {
+      surface_hash: "h",
+      constraint_decisions: [{ constraint_id: "CST-001", decision: "inject" }],
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) expect(result.reason).toContain("clarify");
+  });
+
+  it("allows target.locked with all decided/invalidated constraints", () => {
+    const state = makeStateWithConstraints(
+      [
+        { id: "CST-001", severity: "required", status: "decided" },
+        { id: "CST-002", severity: "recommended", status: "decided" },
+        { id: "CST-003", severity: "recommended", status: "invalidated" },
+      ],
+      { current_state: "constraints_resolved" },
+    );
+    const event = makeEvent("target.locked", {
+      surface_hash: "h",
+      constraint_decisions: [
+        { constraint_id: "CST-001", decision: "inject" },
+        { constraint_id: "CST-002", decision: "defer" },
+      ],
+    });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+    if (result.allowed) expect(result.next_state).toBe("target_locked");
+  });
+});
+
 // ─── scope.deferred exhaustive: allowed from every non-terminal state ───
 
 describe("gate-guard — scope.deferred exhaustive non-terminal", () => {

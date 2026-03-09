@@ -423,6 +423,64 @@ describe("compile-defense — golden data", () => {
   });
 });
 
+// ─── Layer 2: inject edge_cases (TCOV-3) ───
+
+describe("compile-defense — L2-inject-edge-case", () => {
+  it("fails when inject item has edge_cases: [] (empty array)", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [] },
+    ];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      expect(result.violations.some((v) => v.rule === "L2-inject-edge-case" && v.detail.includes("CST-001"))).toBe(true);
+    }
+  });
+
+  it("fails when inject item has edge_cases: undefined (omitted)", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f" },
+    ];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(false);
+    if (!result.passed) {
+      expect(result.violations.some((v) => v.rule === "L2-inject-edge-case" && v.detail.includes("CST-001"))).toBe(true);
+    }
+  });
+
+  it("passes when inject item has non-empty edge_cases", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "null", expected_result: "error" }] },
+    ];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+  });
+});
+
 // ─── Additional Edge Cases ───
 
 describe("compile-defense — additional edge cases", () => {

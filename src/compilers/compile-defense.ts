@@ -63,7 +63,7 @@ export function compileDefense(
   state: ScopeState,
   buildSpec: BuildSpecData,
   deltaSet: DeltaSet,
-  validationPlan: ValidationPlanEntry[],
+  validationPlan: ValidationPlanItem[],
 ): DefenseResult {
   const violations: DefenseViolation[] = [];
 
@@ -102,7 +102,7 @@ function checkLayer2(
   state: ScopeState,
   buildSpec: BuildSpecData,
   deltaSet: DeltaSet,
-  validationPlan: ValidationPlanEntry[],
+  validationPlan: ValidationPlanItem[],
   violations: DefenseViolation[],
 ): void {
   const implIds = new Set(buildSpec.section4.map((e) => e.impl_id));
@@ -264,7 +264,7 @@ function checkImplHasChanges(
 /** inject constraints should have at least 1 edge_case in validation plan */
 function checkInjectEdgeCases(
   state: ScopeState,
-  validationPlan: ValidationPlanEntry[],
+  validationPlan: ValidationPlanItem[],
   violations: DefenseViolation[],
 ): void {
   const injectConstraints = state.constraint_pool.constraints.filter(
@@ -274,7 +274,7 @@ function checkInjectEdgeCases(
   for (const c of injectConstraints) {
     const valItem = validationPlan.find(
       (v) => v.related_cst === c.constraint_id,
-    ) as ValidationPlanItem | undefined;
+    );
     if (valItem && (!valItem.edge_cases || valItem.edge_cases.length === 0)) {
       violations.push({
         rule: "L2-inject-edge-case",
