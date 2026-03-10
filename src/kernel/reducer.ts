@@ -40,6 +40,7 @@ export function reduce(events: Event[]): ScopeState {
   let direction: string | undefined;
   let scope_boundaries: { in: string[]; out: string[] } | undefined;
   let surface_hash: string | undefined;
+  let surface_path: string | undefined;
 
   let grounding_sources: ScopeState["grounding_sources"];
   let lastGroundingRev = -1;
@@ -120,6 +121,7 @@ export function reduce(events: Event[]): ScopeState {
       case "surface.confirmed": {
         const p = evt.payload as SurfaceConfirmedPayload;
         surface_hash = p.final_content_hash;
+        surface_path = p.final_surface_path;
         break;
       }
 
@@ -235,6 +237,7 @@ export function reduce(events: Event[]): ScopeState {
     direction,
     scope_boundaries,
     surface_hash,
+    surface_path,
     grounding_sources,
     constraint_pool,
     last_backward_reason,

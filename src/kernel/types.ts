@@ -118,6 +118,7 @@ export type ConstraintDecision =
 
 export type DiscoveryStage =
   | "grounding"
+  | "draft_surface_gen" // Surface 생성 직후 품질 체크에서 발견
   | "draft_phase1"
   | "draft_phase2"
   | "compile"
@@ -354,6 +355,7 @@ export interface SurfaceGeneratedPayload {
   surface_path: string;
   content_hash: string;
   based_on_snapshot: number;
+  ontology_sections_used?: string[]; // audit trail: which ontology sections the agent referenced
 }
 
 export interface SurfaceRevisionRequestedPayload {
@@ -648,6 +650,7 @@ export interface ScopeState {
   direction?: string;
   scope_boundaries?: { in: string[]; out: string[] };
   surface_hash?: string;
+  surface_path?: string; // from surface.confirmed final_surface_path
   constraint_pool: ConstraintPool;
   grounding_sources?: Array<{ type: SourceType; path_or_url: string }>;
   stale: boolean;

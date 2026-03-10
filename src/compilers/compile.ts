@@ -406,8 +406,8 @@ function renderSection1(state: ScopeState): string[] {
 
 function renderSection2(state: ScopeState, surfaceSummary: string): string[] {
   const lines: string[] = [];
-  const surfaceDir =
-    state.entry_mode === "experience" ? "surface/preview/" : "surface/contract-diff/";
+  const surfaceDir = state.surface_path ??
+    (state.entry_mode === "experience" ? "surface/preview/" : "surface/contract-diff/");
 
   lines.push("## 2. Confirmed Surface");
   lines.push("");

@@ -1,3 +1,15 @@
+target_stack:
+  framework: "Next.js 15"
+  runtime: "React 19"
+  language: "TypeScript"
+  styling: "Tailwind CSS v3 + class-variance-authority (CVA)"
+  state_management: "@tanstack/react-query"
+  animation: "motion (Framer Motion v12) + react-lottie-player"
+  carousel: "embla-carousel-react"
+  icons: "lucide-react"
+  monorepo: "pnpm + Turborepo"
+  package_manager: "pnpm@10"
+
 default_sources:
   - type: github-tarball
     url: https://github.com/re-speak/podo-backend
@@ -5,9 +17,11 @@ default_sources:
   - type: github-tarball
     url: https://github.com/re-speak/podo-app
     description: "podo 앱"
+    usage_hint: context
   - type: github-tarball
     url: https://github.com/re-speak/podo-ontology
     description: "podo 온톨로지"
   - type: add-dir
     path: ./sources
-    description: "로컬 참고 자료"
+    description: "로컬 참고 자료 (디자인 온톨로지, 이용약관)"
+    usage_hint: context

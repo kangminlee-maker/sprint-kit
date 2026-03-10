@@ -71,7 +71,11 @@ export async function scanTarball(
     // Handle HTTP error responses
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        return { source, error_type: "auth", message: `Authentication failed for ${repoPath}: HTTP ${response.status}` };
+        const rateLimitRemaining = response.headers.get("X-RateLimit-Remaining");
+        if (rateLimitRemaining === "0") {
+          return { source, error_type: "auth", message: `GitHub API rate limit exceeded for ${repoPath}. GITHUB_TOKEN 환경변수를 설정하세요.` };
+        }
+        return { source, error_type: "auth", message: `Authentication failed for ${repoPath}: HTTP ${response.status}. Private 레포라면 GITHUB_TOKEN 환경변수를 설정하세요.` };
       }
       if (response.status === 404) {
         return { source, error_type: "not_found", message: `Repository not found: ${repoPath}` };

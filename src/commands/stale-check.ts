@@ -54,7 +54,11 @@ export function checkStale(paths: ScopePaths): StaleCheckResult {
   const staleSources: StaleCheckResult["stale_sources"] = [];
 
   for (const source of sources) {
-    // Only check local sources
+    // Only check local sources (synchronous hash comparison).
+    // github-tarball: requires network access — not checked here.
+    // figma-mcp: requires MCP calls — delegated to agent protocol.
+    //   Agent calls get_metadata, compares lastModified, and records
+    //   snapshot.marked_stale if changed. See: scanners/figma-adapter.ts
     if (source.type !== "add-dir" && source.type !== "obsidian-vault") {
       continue;
     }

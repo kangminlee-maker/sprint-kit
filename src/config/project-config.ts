@@ -8,21 +8,31 @@ import { sourceKey } from "../scanners/types.js";
 
 // ─── Zod Schemas ───
 
+/**
+ * usage_hint: when this source should be loaded into agent context.
+ * - grounding_only: read once during grounding (default if omitted)
+ * - context: re-inject into agent context at surface generation and compile
+ * - full: always available (grounding + surface + compile + apply)
+ */
+const usageHintSchema = z.enum(["grounding_only", "context", "full"]).optional();
+
 const sourceEntrySchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("add-dir"), path: z.string(), description: z.string().optional() }),
-  z.object({ type: z.literal("github-tarball"), url: z.string(), description: z.string().optional() }),
-  z.object({ type: z.literal("figma-mcp"), file_key: z.string(), description: z.string().optional() }),
-  z.object({ type: z.literal("obsidian-vault"), path: z.string(), description: z.string().optional() }),
+  z.object({ type: z.literal("add-dir"), path: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
+  z.object({ type: z.literal("github-tarball"), url: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
+  z.object({ type: z.literal("figma-mcp"), file_key: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
+  z.object({ type: z.literal("obsidian-vault"), path: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
 ]);
 
 export const projectConfigSchema = z.object({
   default_sources: z.array(sourceEntrySchema),
+  target_stack: z.record(z.string()).optional(),
 });
 
 // ─── Project Config ───
 
 export interface ProjectConfig {
   default_sources: SourceEntry[];
+  target_stack?: Record<string, string>;
 }
 
 const CONFIG_FILENAME = ".sprint-kit.yaml";
@@ -52,7 +62,10 @@ export function loadProjectConfig(projectRoot: string): ProjectConfig {
       return { default_sources: [] };
     }
 
-    return { default_sources: result.data.default_sources as SourceEntry[] };
+    return {
+      default_sources: result.data.default_sources as SourceEntry[],
+      target_stack: result.data.target_stack,
+    };
   } catch (error) {
     getLogger().debug("loadProjectConfig: failed to load config", { path: configPath, error });
     return { default_sources: [] };

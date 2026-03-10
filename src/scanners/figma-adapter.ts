@@ -3,8 +3,15 @@ import { sourceKey, type SourceEntry } from "./types.js";
 /**
  * Adapter for figma-mcp source hash generation.
  *
- * Since figma-mcp has no Scanner (agent calls MCP directly),
- * this adapter ensures source_hashes key follows the `{type}:{identifier}` convention.
+ * figma-mcp has no automated Scanner. The agent calls Figma MCP directly
+ * during grounding and records hashes via these helper functions.
+ *
+ * Stale detection for figma-mcp is delegated to the agent protocol:
+ * - The agent calls `get_metadata` to obtain `lastModified`
+ * - If changed, the agent records `snapshot.marked_stale` via appendScopeEvent
+ * - stale-check.ts intentionally skips figma-mcp (only checks local sources)
+ *
+ * See: commands/stale-check.ts, docs/agent-protocol/start.md
  */
 export function figmaSourceHashKey(source: SourceEntry & { type: "figma-mcp" }): string {
   return sourceKey(source);
