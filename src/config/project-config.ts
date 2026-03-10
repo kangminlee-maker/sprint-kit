@@ -25,7 +25,7 @@ const sourceEntrySchema = z.discriminatedUnion("type", [
 
 export const projectConfigSchema = z.object({
   default_sources: z.array(sourceEntrySchema),
-  target_stack: z.record(z.string()).optional(),
+  target_stack: z.record(z.string(), z.string()).optional(),
 });
 
 // ─── Project Config ───

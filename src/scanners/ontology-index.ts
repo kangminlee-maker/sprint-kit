@@ -97,19 +97,20 @@ function parseActions(yaml_str: string): Map<string, ActionEntry> {
   if (Array.isArray(doc.read_actions)) actionLists.push(doc.read_actions);
 
   for (const list of actionLists) {
-    for (const item of list) {
-      const id: string = item.id ?? "";
+    for (const raw of list) {
+      const item = raw as Record<string, unknown>;
+      const id: string = (item.id as string) ?? "";
       const targetEntities = Array.isArray(item.target_entities)
-        ? item.target_entities.map(String)
+        ? (item.target_entities as unknown[]).map(String)
         : [];
       map.set(id, {
         id,
-        name: item.name ?? "",
-        display_name: item.display_name ?? "",
-        domain: item.domain ?? "",
-        actor: item.actor ?? undefined,
+        name: (item.name as string) ?? "",
+        display_name: (item.display_name as string) ?? "",
+        domain: (item.domain as string) ?? "",
+        actor: (item.actor as string) ?? undefined,
         target_entities: targetEntities,
-        source_code: item.source_code ?? "",
+        source_code: (item.source_code as string) ?? "",
       });
     }
   }
