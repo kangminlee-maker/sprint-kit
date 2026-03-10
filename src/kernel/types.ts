@@ -79,6 +79,7 @@ export const OBSERVATIONAL_EVENT_TYPES = [
   "convergence.blocked",
   "convergence.action_taken",
   "draft_packet.rendered",
+  "constraint.evidence_updated",
 ] as const;
 
 export type ObservationalEventType =
@@ -426,6 +427,12 @@ export interface ConstraintClarifyResolvedPayload {
   selected_option: string;
   decision_owner: DecisionOwner;
   rationale: string;
+}
+
+export interface ConstraintEvidenceUpdatedPayload {
+  constraint_id: string;
+  evidence_status: EvidenceStatus;
+  evidence_note?: string;
 }
 
 export interface ConstraintInvalidatedPayload {

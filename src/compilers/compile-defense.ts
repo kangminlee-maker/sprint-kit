@@ -1,5 +1,5 @@
 import { isEvidenceUnverified } from "../kernel/types.js";
-import type { ScopeState, ConstraintEntry, ValidationPlanEntry, ValidationPlanItem } from "../kernel/types.js";
+import type { ScopeState, ConstraintEntry, ValidationPlanEntry, ValidationPlanItem, BrownfieldDetail } from "../kernel/types.js";
 
 // Re-export for backward compatibility
 export type { ValidationPlanEntry, ValidationPlanItem } from "../kernel/types.js";
@@ -65,13 +65,14 @@ export function compileDefense(
   buildSpec: BuildSpecData,
   deltaSet: DeltaSet,
   validationPlan: ValidationPlanItem[],
+  brownfieldDetail?: BrownfieldDetail,
 ): DefenseResult {
   const violations: DefenseViolation[] = [];
   const warnings: DefenseViolation[] = [];
 
   checkLayer1(state, buildSpec, violations);
   checkLayer2(state, buildSpec, deltaSet, validationPlan, violations);
-  checkLayer3(state, warnings);
+  checkLayer3(state, buildSpec, brownfieldDetail, warnings);
 
   const errors = violations;
 
@@ -293,9 +294,12 @@ function checkInjectEdgeCases(
 
 function checkLayer3(
   state: ScopeState,
+  buildSpec: BuildSpecData,
+  brownfieldDetail: BrownfieldDetail | undefined,
   warnings: DefenseViolation[],
 ): void {
   checkUnverifiedInject(state, warnings);
+  checkStateCompleteness(state, buildSpec, brownfieldDetail, warnings);
 }
 
 /**
@@ -303,7 +307,7 @@ function checkLayer3(
  */
 function checkUnverifiedInject(
   state: ScopeState,
-  violations: DefenseViolation[],
+  warnings: DefenseViolation[],
 ): void {
   for (const c of state.constraint_pool.constraints) {
     if (c.status === "invalidated") continue;
@@ -311,9 +315,46 @@ function checkUnverifiedInject(
     if (c.severity !== "required") continue;
 
     if (isEvidenceUnverified(c.evidence_status)) {
-      violations.push({
+      warnings.push({
         rule: "L3-unverified-inject",
         detail: `${c.constraint_id} (required, inject) has evidence_status="${c.evidence_status}". 정책 문서에서 확인되지 않은 가정이 구현에 포함됩니다.${c.evidence_note ? ` Note: ${c.evidence_note}` : ""}`,
+      });
+    }
+  }
+}
+
+/**
+ * Warn when brownfieldDetail.enums defines enum values that are not
+ * mentioned anywhere in the build spec (constraint summaries, IMPL related_cst,
+ * or brownfield sections). Detects missing state mappings
+ * (e.g., NOSHOW_BOTH not covered by any implementation).
+ */
+function checkStateCompleteness(
+  state: ScopeState,
+  buildSpec: BuildSpecData,
+  brownfieldDetail: BrownfieldDetail | undefined,
+  warnings: DefenseViolation[],
+): void {
+  if (!brownfieldDetail?.enums || brownfieldDetail.enums.length === 0) return;
+
+  // Collect all relevant text from constraints, impl references, and brownfield content
+  const constraintText = state.constraint_pool.constraints
+    .map((c) => `${c.summary} ${c.selected_option ?? ""}`)
+    .join(" ");
+  const sectionText = brownfieldDetail.sections
+    .map((s) => s.content)
+    .join(" ");
+  const searchText = `${constraintText} ${sectionText}`;
+
+  for (const enumDef of brownfieldDetail.enums) {
+    const uncovered = enumDef.values.filter(
+      (val) => !searchText.includes(val),
+    );
+
+    if (uncovered.length > 0) {
+      warnings.push({
+        rule: "L3-state-completeness",
+        detail: `${enumDef.name} (source: ${enumDef.source})의 다음 값이 구현 계획에서 언급되지 않습니다: ${uncovered.join(", ")}. 상태 매핑이 누락되었을 수 있습니다.`,
       });
     }
   }

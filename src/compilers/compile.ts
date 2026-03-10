@@ -132,7 +132,7 @@ export function compile(input: CompileInput): CompileOutput {
     section3: section3.filter((e) => e.decision !== "invalidated"),
     section4,
   };
-  const defenseResult = compileDefense(state, buildSpecData, deltaSet, valItems);
+  const defenseResult = compileDefense(state, buildSpecData, deltaSet, valItems, input.brownfieldDetail);
   if (!defenseResult.passed) {
     return {
       success: false,

@@ -85,7 +85,7 @@ describe("types — constants", () => {
     expect(GLOBAL_EVENT_TYPES).toHaveLength(2);
   });
 
-  it("has 6 observational event types", () => {
-    expect(OBSERVATIONAL_EVENT_TYPES).toHaveLength(6);
+  it("has 7 observational event types", () => {
+    expect(OBSERVATIONAL_EVENT_TYPES).toHaveLength(7);
   });
 });

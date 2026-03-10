@@ -8,6 +8,7 @@ import type {
   ConstraintClarifyResolvedPayload,
   ConstraintInvalidatedPayload,
   ConstraintClarifyRequestedPayload,
+  ConstraintEvidenceUpdatedPayload,
 } from "./types.js";
 
 // ─── Constraint event types handled by this module ───
@@ -18,6 +19,7 @@ const CONSTRAINT_EVENT_TYPES = new Set<string>([
   "constraint.clarify_requested",
   "constraint.clarify_resolved",
   "constraint.invalidated",
+  "constraint.evidence_updated",
 ]);
 
 // ─── Build ───
@@ -100,6 +102,17 @@ export function buildConstraintPool(events: Event[]): ConstraintPool {
         if (!entry) break;
         entry.status = "invalidated";
         entry.invalidation_reason = p.reason;
+        break;
+      }
+
+      case "constraint.evidence_updated": {
+        const p = evt.payload as ConstraintEvidenceUpdatedPayload;
+        const entry = map.get(p.constraint_id);
+        if (!entry) break;
+        entry.evidence_status = p.evidence_status;
+        if (p.evidence_note !== undefined) {
+          entry.evidence_note = p.evidence_note;
+        }
         break;
       }
     }

@@ -365,6 +365,31 @@ target이 잠기면 compile 단계로 진행합니다.
 3. 산출물을 `build/` 디렉토리에 저장합니다.
 4. `compile.completed` 이벤트를 기록합니다.
 
+**L3 미검증 가정 안내 (compile 성공 시):**
+
+`compile()` 반환값의 `warnings` 필드에 L3 경고가 있으면, 사용자에게 안내합니다:
+
+> "compile이 완료되었습니다. 단, 다음 constraint는 정책 문서에서 확인되지 않은 가정이 포함되어 있습니다:
+> {warnings의 각 항목을 CST-ID + evidence_note로 나열}
+>
+> 이 가정이 잘못된 것으로 밝혀지면 apply 단계 이후 수정이 필요할 수 있습니다."
+
+PO가 정책을 확인한 경우, `constraint.evidence_updated` 이벤트를 기록하여 `evidence_status`를 `verified`로 변경할 수 있습니다:
+
+```typescript
+appendScopeEvent(paths, {
+  type: "constraint.evidence_updated",
+  actor: "user",
+  payload: {
+    constraint_id: "CST-001",
+    evidence_status: "verified",
+    evidence_note: "schedule/policies.md 섹션 3.2에서 확인 완료",
+  },
+});
+```
+
+이 이벤트는 observational(상태 전이 없음)이므로 어떤 비터미널 상태에서든 기록 가능합니다.
+
 ```typescript
 // 1. compile.started 기록 (gate-guard가 retry 상한 검사)
 appendScopeEvent(paths, {
