@@ -67,6 +67,20 @@ appendScopeEvent(paths, {
 
 방향과 범위를 확정합니다.
 
+**approve 처리 전 확인 절차 (필수):**
+
+`align.locked` 이벤트를 기록하기 전에, 에이전트는 사용자에게 확인 메시지를 반드시 표시해야 합니다:
+
+> "다음 방향과 범위로 확정하겠습니다:
+> - 방향: {interpreted_direction}
+> - 포함: {in 목록 요약}
+> - 제외: {out 목록 요약}
+>
+> 맞습니까?"
+
+사용자가 명시적으로 동의한 후에만 `align.locked` 이벤트를 기록합니다.
+이 절차는 자연어 verdict 파싱 시 revise를 approve로 오분류하는 위험을 방지합니다.
+
 ```typescript
 appendScopeEvent(paths, {
   type: "align.locked",

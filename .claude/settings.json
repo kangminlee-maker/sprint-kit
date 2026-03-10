@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(**/events.ndjson)",
+      "Write(**/events.ndjson)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '--- sprint-kit scope 상태 ---' && cat scopes/*/scope.md 2>/dev/null | head -20 || echo '활성 scope가 없습니다.'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q 'surface/preview'; then npx tsx scripts/visual-qa.ts --surface-path \"$(echo \"$TOOL_INPUT\" | jq -r '.file_path' | xargs dirname | xargs dirname)\" 2>/dev/null || true; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

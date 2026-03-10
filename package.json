@@ -20,6 +20,7 @@
   "homepage": "https://github.com/re-speak/sprint-kit#readme",
   "devDependencies": {
     "@types/node": "^25.3.5",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },

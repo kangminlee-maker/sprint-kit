@@ -340,10 +340,32 @@ async function handleResume(
   } else if (currentState === "align_proposed") {
     nextAction = "Align Packet이 대기 중입니다. /align으로 결정해 주세요.";
   } else {
-    // align_locked and beyond — provide state-specific guidance
+    // align_locked and beyond — provide state-specific guidance (PO-friendly language)
+    const undecidedCount = state.constraint_pool.constraints.filter(
+      c => c.status === "undecided" || c.status === "clarify_pending",
+    ).length;
+    const constraintInfo = undecidedCount > 0
+      ? ` 미결정 제약 ${undecidedCount}건이 있습니다.`
+      : "";
+
     switch (currentState) {
+      case "align_locked":
+        nextAction = `범위가 확정되었습니다.${constraintInfo} /draft로 Surface(화면 설계)를 생성해 주세요.`;
+        break;
+      case "surface_iterating":
+        nextAction = `Surface 피드백 반영 중입니다.${constraintInfo} 수정이 필요하면 피드백을, 이 모습이 맞으면 '확정합니다'라고 말씀해 주세요.`;
+        break;
+      case "surface_confirmed":
+        nextAction = `Surface가 확정되었습니다.${constraintInfo} /draft로 제약 탐색과 Draft Packet 생성을 진행해 주세요.`;
+        break;
+      case "constraints_resolved":
+        nextAction = "모든 제약이 결정되었습니다. /draft로 target 잠금과 compile을 진행해 주세요.";
+        break;
+      case "target_locked":
+        nextAction = "target이 잠겼습니다. /draft로 compile을 진행해 주세요.";
+        break;
       case "compiled":
-        nextAction = "compile이 완료되었습니다. apply를 진행해 주세요.";
+        nextAction = "compile이 완료되었습니다. Build Spec을 참고하여 apply를 진행해 주세요.";
         break;
       case "applied":
         nextAction = "apply가 완료되었습니다. validation을 진행해 주세요.";
@@ -352,7 +374,7 @@ async function handleResume(
         nextAction = "validation이 완료되었습니다. 결과를 확인하시고 종료하려면 '완료'라고 말씀해 주세요.";
         break;
       default:
-        nextAction = `현재 ${currentState} 상태입니다. /draft로 진행해 주세요.`;
+        nextAction = `/draft로 진행해 주세요.${constraintInfo}`;
         break;
     }
   }
