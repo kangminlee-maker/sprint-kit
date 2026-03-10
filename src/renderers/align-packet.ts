@@ -1,3 +1,4 @@
+import { isEvidenceUnverified } from "../kernel/types.js";
 import type { ScopeState, AlignPacketContent, EvidenceStatus } from "../kernel/types.js";
 import { findConstraint } from "../kernel/constraint-pool.js";
 import { formatPerspective } from "./format.js";
@@ -284,18 +285,31 @@ function renderUnverifiedAssumptions(
   lines: string[],
   state: ScopeState,
 ): void {
-  const unverified = state.constraint_pool.constraints.filter(
-    (c) =>
-      c.status !== "invalidated" &&
-      (c.evidence_status === "unverified" ||
-        c.evidence_status === "code_inferred" ||
-        c.evidence_status === "brief_claimed"),
+  const active = state.constraint_pool.constraints.filter(
+    (c) => c.status !== "invalidated",
+  );
+  const unverified = active.filter(
+    (c) => isEvidenceUnverified(c.evidence_status),
   );
 
   if (unverified.length === 0) return;
 
+  const ratio = active.length > 0 ? unverified.length / active.length : 0;
+
   lines.push("### 2.5 미검증 가정 (주의)");
   lines.push("");
+
+  // 80% 이상 미검증이면 단일 경고 문구로 대체
+  if (ratio >= 0.8) {
+    lines.push(
+      `> 현재 발견된 ${active.length}건의 제약 조건 중 **${unverified.length}건이 정책 문서에서 확인되지 않았습니다.** Approve 전에 정책 문서와 대조를 권장합니다.`,
+    );
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+    return;
+  }
+
   lines.push(
     "아래 항목은 정책 문서에서 확인되지 않은 가정입니다. Approve 전에 확인을 권장합니다.",
   );
@@ -305,7 +319,7 @@ function renderUnverifiedAssumptions(
   lines.push("|--------|----------|------|--------------|");
   for (const c of unverified) {
     const statusLabel = formatEvidenceStatus(c.evidence_status);
-    const note = c.evidence_note ?? "";
+    const note = c.evidence_note ?? generateFallbackNote(c);
     lines.push(
       `| ${c.constraint_id} | ${statusLabel} | ${c.summary} | ${note} |`,
     );
@@ -315,14 +329,21 @@ function renderUnverifiedAssumptions(
   lines.push("");
 }
 
+/** evidence_note가 없을 때 source_refs에서 fallback 텍스트 생성 */
+function generateFallbackNote(c: { source_refs: Array<{ source: string; detail: string }> }): string {
+  if (c.source_refs.length === 0) return "정책 문서에서 이 규칙의 근거를 확인해 주세요";
+  const ref = c.source_refs[0];
+  return `${ref.source}의 ${ref.detail}에서 확인 필요`;
+}
+
 function formatEvidenceStatus(status: EvidenceStatus): string {
   switch (status) {
     case "verified":
       return "정책 문서 확인됨";
     case "code_inferred":
-      return "코드 추론";
+      return "코드에서 파악, 문서 미확인";
     case "brief_claimed":
-      return "brief 주장";
+      return "요청자 주장, 별도 확인 필요";
     case "unverified":
       return "미확인";
   }

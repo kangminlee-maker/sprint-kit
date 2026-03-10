@@ -87,12 +87,14 @@ export interface CompileSuccess {
   validationPlanMd: string;
   validationPlanHash: string;
   validationPlan: ValidationPlanItem[];
+  warnings?: DefenseViolation[];
 }
 
 export interface CompileFailure {
   success: false;
   reason: string;
   violations?: DefenseViolation[];
+  warnings?: DefenseViolation[];
 }
 
 export type CompileOutput = CompileSuccess | CompileFailure;
@@ -136,8 +138,11 @@ export function compile(input: CompileInput): CompileOutput {
       success: false,
       reason: `Compile Defense failed: ${defenseResult.violations.length} violation(s)`,
       violations: defenseResult.violations,
+      warnings: defenseResult.warnings,
     };
   }
+
+  const defenseWarnings = defenseResult.warnings;
 
   // Step 5–6: Render + hash (2-pass for circular reference)
   // - coreHash = hash of Section 1-4 only (used in deltaSet.build_spec_hash)
@@ -181,6 +186,7 @@ export function compile(input: CompileInput): CompileOutput {
     validationPlanMd,
     validationPlanHash,
     validationPlan: valItems,
+    warnings: defenseWarnings,
   };
 }
 

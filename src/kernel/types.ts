@@ -387,6 +387,11 @@ export type EvidenceStatus =
   | "brief_claimed"  // brief/사용자 주장 (검증 필요)
   | "unverified";    // 출처 미확인
 
+/** EvidenceStatus가 정책 문서에서 검증되지 않은 상태인지 판별 */
+export function isEvidenceUnverified(status: EvidenceStatus): boolean {
+  return status !== "verified";
+}
+
 export interface ConstraintDiscoveredPayload {
   constraint_id: string;
   perspective: Perspective;

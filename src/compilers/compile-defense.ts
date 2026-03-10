@@ -1,3 +1,4 @@
+import { isEvidenceUnverified } from "../kernel/types.js";
 import type { ScopeState, ConstraintEntry, ValidationPlanEntry, ValidationPlanItem } from "../kernel/types.js";
 
 // Re-export for backward compatibility
@@ -46,7 +47,7 @@ export interface DefenseViolation {
 
 export type DefenseResult =
   | { passed: true; warnings?: DefenseViolation[] }
-  | { passed: false; violations: DefenseViolation[] };
+  | { passed: false; violations: DefenseViolation[]; warnings?: DefenseViolation[] };
 
 // ─── Main ───
 
@@ -66,18 +67,18 @@ export function compileDefense(
   validationPlan: ValidationPlanItem[],
 ): DefenseResult {
   const violations: DefenseViolation[] = [];
+  const warnings: DefenseViolation[] = [];
 
   checkLayer1(state, buildSpec, violations);
   checkLayer2(state, buildSpec, deltaSet, validationPlan, violations);
+  checkLayer3(state, warnings);
 
-  // Separate L3 warnings (non-blocking) from L1/L2 violations (blocking)
-  const warnings = violations.filter((v) => v.rule.startsWith("L3-"));
-  const errors = violations.filter((v) => !v.rule.startsWith("L3-"));
+  const errors = violations;
 
   if (errors.length === 0) {
     return { passed: true, warnings: warnings.length > 0 ? warnings : undefined };
   }
-  return { passed: false, violations: errors };
+  return { passed: false, violations: errors, warnings: warnings.length > 0 ? warnings : undefined };
 }
 
 // ─── Layer 1: Checklist ───
@@ -147,9 +148,6 @@ function checkLayer2(
 
   // inject constraints should have edge cases in validation plan
   checkInjectEdgeCases(state, validationPlan, violations);
-
-  // L3: warn when required+inject constraint has unverified evidence
-  checkUnverifiedInject(state, violations);
 }
 
 /** inject → must have IMPL, CHG referencing this CST, and VAL item */
@@ -291,12 +289,17 @@ function checkInjectEdgeCases(
   }
 }
 
-// ─── L3: Evidence Status Warnings ───
+// ─── Layer 3: Evidence Quality Warnings (non-blocking) ───
+
+function checkLayer3(
+  state: ScopeState,
+  warnings: DefenseViolation[],
+): void {
+  checkUnverifiedInject(state, warnings);
+}
 
 /**
  * Warn (not block) when a required+inject constraint has unverified evidence.
- * This is a L3 warning — does not fail compile, but is included in violations
- * so the agent can surface it to PO.
  */
 function checkUnverifiedInject(
   state: ScopeState,
@@ -307,11 +310,7 @@ function checkUnverifiedInject(
     if (c.decision !== "inject") continue;
     if (c.severity !== "required") continue;
 
-    if (
-      c.evidence_status === "unverified" ||
-      c.evidence_status === "brief_claimed" ||
-      c.evidence_status === "code_inferred"
-    ) {
+    if (isEvidenceUnverified(c.evidence_status)) {
       violations.push({
         rule: "L3-unverified-inject",
         detail: `${c.constraint_id} (required, inject) has evidence_status="${c.evidence_status}". 정책 문서에서 확인되지 않은 가정이 구현에 포함됩니다.${c.evidence_note ? ` Note: ${c.evidence_note}` : ""}`,

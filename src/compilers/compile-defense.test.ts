@@ -15,6 +15,7 @@ function makeEntry(id: string, overrides: Partial<ConstraintEntry> = {}): Constr
     constraint_id: id, perspective: "code", summary: `summary ${id}`,
     severity: "recommended", discovery_stage: "draft_phase2", decision_owner: "product_owner",
     impact_if_ignored: `impact ${id}`, source_refs: [{ source: "src/test.ts", detail: "d" }],
+    evidence_status: "unverified",
     status: "decided", decision: "inject", selected_option: "opt", discovered_at: 1, decided_at: 2,
     ...overrides,
   };
@@ -564,6 +565,71 @@ describe("compile-defense — additional edge cases", () => {
     if (!result.passed) {
       const implNoChg = result.violations.filter((v) => v.rule === "L2-impl-no-chg");
       expect(implNoChg).toHaveLength(2);
+    }
+  });
+});
+
+// ─── Layer 3: Evidence Status Warnings ───
+
+describe("Layer 3 — evidence status warnings", () => {
+  const bs: BuildSpecData = {
+    section3: [{ constraint_id: "CST-001", decision: "inject", severity: "required" }],
+    section4: [{ impl_id: "IMPL-001", summary: "s", related_cst: ["CST-001"], target: "t", detail: "d" }],
+  };
+  const ds = makeDeltaSet([{ action: "modify", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] }]);
+  const vp: ValidationPlanItem[] = [{
+    val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject",
+    target: "t", method: "m", pass_criteria: "p", fail_action: "f",
+    edge_cases: [{ scenario: "s", expected_result: "r" }],
+  }];
+
+  it("required + inject + unverified → passed:true with L3 warning", () => {
+    const pool = makePool(makeEntry("CST-001", { severity: "required", evidence_status: "unverified" }));
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings).toBeDefined();
+      expect(result.warnings!.some((w) => w.rule === "L3-unverified-inject")).toBe(true);
+    }
+  });
+
+  it("required + inject + verified → no L3 warning", () => {
+    const pool = makePool(makeEntry("CST-001", { severity: "required", evidence_status: "verified" }));
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings).toBeUndefined();
+    }
+  });
+
+  it("recommended + inject + unverified → no L3 warning (severity filter)", () => {
+    const pool = makePool(makeEntry("CST-001", { severity: "recommended", evidence_status: "unverified" }));
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings).toBeUndefined();
+    }
+  });
+
+  it("required + defer + unverified → no L3 warning (decision filter)", () => {
+    const pool = makePool(makeEntry("CST-001", { severity: "required", decision: "defer", evidence_status: "unverified" }));
+    const bs2: BuildSpecData = { section3: [{ constraint_id: "CST-001", decision: "defer", severity: "required" }], section4: [] };
+    const ds2 = makeDeltaSet([]);
+    const vp2: ValidationPlanItem[] = [];
+    const result = compileDefense(makeState(pool), bs2, ds2, vp2);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings).toBeUndefined();
+    }
+  });
+
+  it("required + inject + brief_claimed → L3 warning", () => {
+    const pool = makePool(makeEntry("CST-001", { severity: "required", evidence_status: "brief_claimed" }));
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings).toBeDefined();
+      expect(result.warnings![0].rule).toBe("L3-unverified-inject");
     }
   });
 });
