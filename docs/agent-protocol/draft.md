@@ -25,6 +25,26 @@ Align에서 확정된 방향을 바탕으로 surface를 생성합니다.
 - Contract diff 또는 API 명세 생성
 - `surface/contract-diff/` 디렉토리에 작성
 
+#### Surface 생성 전 소스 주입 (필수)
+
+Surface 생성 전에, `usage_hint: context` 또는 `usage_hint: full`로 태깅된 소스를 에이전트 컨텍스트에 주입해야 합니다.
+
+**주입 절차:**
+
+1. `.sprint-kit.yaml`의 `default_sources`에서 `usage_hint`가 `context` 또는 `full`인 소스를 필터링합니다.
+2. 해당 소스의 **원문(full text)**을 읽어 에이전트 컨텍스트에 포함합니다.
+   - `add-dir`: 파일 시스템에서 직접 읽기
+   - `github-tarball`: tarball에서 관련 파일 추출 (package.json, tailwind.config.*, src/components/ 구조 등)
+   - `figma-mcp`: MCP 서버를 통해 디자인 데이터 조회
+3. **디자인 온톨로지는 반드시 전문(full text)을 포함합니다.** 요약·발췌하면 컴포넌트 스펙, 토큰 값, 레이아웃 규칙, 패턴 간 연결이 끊어져서 올바른 UI를 생성할 수 없습니다.
+
+**서브 에이전트 위임 시 규칙:**
+- 서브 에이전트(Agent tool)에 Surface 생성을 위임하는 경우, 디자인 온톨로지 원문을 프롬프트에 직접 포함해야 합니다.
+- 온톨로지를 요약하거나 핵심 토큰만 발췌하여 전달하면 안 됩니다. 전문 포함이 불가능한 경우, 메인 에이전트가 직접 Surface를 생성해야 합니다.
+
+**target_stack 참조:**
+`.sprint-kit.yaml`의 `target_stack` 필드에 프로젝트의 기술 스택이 기록되어 있습니다. Surface 생성 시 이 스택 정보를 참조하여, PO가 실제 제품 맥락에서 판단할 수 있는 기술 선택을 해야 합니다. (예: 프로젝트가 Tailwind v3을 사용하면 v4 문법을 사용하지 않음)
+
 ```typescript
 appendScopeEvent(paths, {
   type: "surface.generated",
@@ -34,9 +54,26 @@ appendScopeEvent(paths, {
     surface_path: "surface/preview/",
     content_hash: contentHash(surfaceContent),
     based_on_snapshot: snapshotRevision,
+    ontology_sections_used: ["tokens", "components", "page_templates", ...],  // 참조한 섹션
   },
 });
 ```
+
+#### Surface 생성 후 시각적 검수 (필수)
+
+experience scope에서 Surface 생성 후, 사용자에게 제시하기 전에 에이전트가 직접 렌더링 결과를 확인해야 합니다.
+
+**검수 절차:**
+
+1. dev 서버를 시작합니다 (아래 "dev 서버 자동 시작" 참조).
+2. 서버가 기동되면 에이전트가 **빌드 오류가 없는지** 확인합니다 (`vite build` 또는 서버 로그 확인).
+3. 가능한 경우 **스크린샷을 촬영**하여 디자인 온톨로지의 핵심 규칙과 비교합니다:
+   - 레이아웃 패딩 (px-5 = 20px)
+   - 버튼 스타일 (3-layer press 구조)
+   - 타이포그래피 (font-size, weight, leading, tracking)
+   - 색상 토큰 일치
+4. 검수에서 발견된 문제는 즉시 수정한 뒤 사용자에게 제시합니다.
+5. 검수 불가능한 환경(스크린샷 촬영 불가)에서는 `vite build` 성공을 최소 기준으로 합니다.
 
 **Surface 생성 후 사용자에게 제시:**
 생성된 surface를 사용자에게 보여주고, 피드백을 요청합니다.
@@ -63,7 +100,7 @@ appendScopeEvent(paths, {
 - [ ] MSW mock 핸들러가 실제 API 엔드포인트와 응답 구조를 반영
 - [ ] UX Writing이 기존 플로우별 톤 & 매너 규칙을 준수
 
-미준수 항목이 있으면 `constraint.discovered` 이벤트로 기록하여 Draft Phase 2에서 처리합니다.
+미준수 항목이 있으면 `constraint.discovered` (`discovery_stage: "draft_surface_gen"`) 이벤트로 기록하여 Draft Phase 2에서 처리합니다.
 
 - interface scope: "`surface/contract-diff/`의 API 명세를 확인하세요"
 - "수정이 필요하면 피드백을 주세요. 이 모습이 맞으면 '확정합니다'라고 말씀해 주세요."
