@@ -12,6 +12,8 @@
 
 ## 1. 이 시스템은 무엇인가
 
+> **npm**: [`sprint-kit@0.1.0`](https://www.npmjs.com/package/sprint-kit) | **GitHub**: [`re-speak/sprint-kit`](https://github.com/re-speak/sprint-kit) | **AI 도구**: Claude Code (production), Codex/Cursor (planned)
+
 Sprint Kit은 **constraint-aware translation runtime**(제약 인식 번역 실행기)입니다.
 
 시스템이 하는 일:
