@@ -160,7 +160,8 @@ describe("align-packet — golden data structure", () => {
     expect(md).toContain("기술 상세 (Builder 참고용)");
 
     // Decision choices
-    expect(md).toContain("**Approve** / **Revise** / **Reject** / **Redirect**");
+    expect(md).toContain("**Approve**");
+    expect(md).toContain("자연어로 말씀해 주세요");
   });
 });
 
@@ -223,7 +224,7 @@ describe("align-packet — Section 2 As-is", () => {
     const md = renderAlignPacket(makeState(), makeContent({
       as_is: { experience: "e", policy: "p", code: "c" },
     }));
-    expect(md).not.toContain("<details>");
+    expect(md).not.toContain("기술 상세 (Builder 참고용)");
   });
 });
 

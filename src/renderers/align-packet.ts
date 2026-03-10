@@ -258,13 +258,18 @@ function renderDecision(
   }
   lines.push("");
 
-  lines.push("- **Approve**: 이 방향과 범위에 동의하며, Surface(화면 설계) 단계로 진행합니다.");
-  lines.push("- **Revise**: 피드백을 주시면 Align Packet을 수정하여 다시 보여드립니다.");
-  lines.push("- **Reject**: 이 scope를 거절하고 종료합니다.");
-  lines.push("- **Redirect**: 정보가 부족하여 소스를 재스캔한 뒤 해당 단계부터 재시작합니다.");
-  lines.push("- **Review**: 이 Packet 전체에 대해 6-Agent Panel Review를 요청합니다.");
+  lines.push("- **Approve** — 이 방향과 범위에 동의합니다. 다음 단계(Surface 화면 설계)로 진행합니다.");
+  lines.push("- **Revise** — Align Packet의 텍스트(범위, 충돌 설명 등)를 수정하고 싶습니다. 피드백을 주시면 수정 후 다시 보여드립니다. 소스는 다시 읽지 않습니다.");
+  lines.push("- **Reject** — 이 scope를 거절하고 종료합니다. 더 이상 진행하지 않습니다.");
+  lines.push("- **Redirect** — 코드·디자인·문서 소스 자체를 다시 읽은 뒤 처음부터 재분석합니다. 수집된 소스 정보가 오래되었거나 부족한 경우에 선택하세요.");
   lines.push("");
-  lines.push("선택: **Approve** / **Revise** / **Reject** / **Redirect** / **Review**");
+  lines.push("<details><summary>추가 선택지</summary>");
+  lines.push("");
+  lines.push("- **Review** — 이 Packet 전체에 대해 6-Agent Panel Review를 요청합니다. 전문가 6인이 각자의 관점에서 검토한 뒤 보강된 Packet을 다시 제시합니다.");
+  lines.push("");
+  lines.push("</details>");
+  lines.push("");
+  lines.push("위 선택지 중 하나를 자연어로 말씀해 주세요. (예: \"승인합니다\", \"범위를 수정하고 싶어요\", \"소스를 다시 읽어주세요\")");
   lines.push("");
 }
 

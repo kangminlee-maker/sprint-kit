@@ -658,6 +658,7 @@ export interface ScopeState {
   revision_count_align: number;
   revision_count_surface: number;
   retry_count_compile: number;
+  snapshot_revision: number; // revision of the latest grounding.completed event
   validation_plan_hash?: string;
   validation_result?: { result: ValidationResult; pass_count: number; fail_count: number; items: ValidationItemResult[] };
   last_backward_reason?: string;

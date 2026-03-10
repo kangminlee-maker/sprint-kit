@@ -246,6 +246,7 @@ export function reduce(events: Event[]): ScopeState {
     revision_count_align,
     revision_count_surface,
     retry_count_compile,
+    snapshot_revision: lastGroundingRev > 0 ? lastGroundingRev : 0,
     validation_plan_hash,
     validation_result,
     verdict_log,

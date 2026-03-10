@@ -307,8 +307,9 @@ function handleRecordDecision(
 }
 
 function handleLockTarget(paths: ScopePaths, state: ScopeState): DraftOutput {
+  // Filter: decided constraints only (matches gate-guard Rule 6 criteria)
   const activeConstraints = state.constraint_pool.constraints
-    .filter(c => c.status !== "invalidated" && c.decision !== undefined)
+    .filter(c => c.status === "decided")
     .map(c => ({ constraint_id: c.constraint_id, decision: c.decision! }));
 
   const result = appendScopeEvent(paths, {
@@ -351,7 +352,7 @@ function handleCompile(
     type: "compile.started",
     actor: "system",
     payload: {
-      snapshot_revision: 1,
+      snapshot_revision: state.snapshot_revision,
       surface_hash: state.surface_hash ?? "",
     },
   });
