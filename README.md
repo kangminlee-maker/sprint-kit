@@ -37,7 +37,7 @@ Brief → Align → Draft → Compile → Apply → Validate → Close
         Gate 1     Gate 2
 
 /start  → describe intent + scan sources → Align Packet
-/align  → confirm scope (to-be vs as-is vs tension) → lock scope
+/align  → confirm scope (to-be vs as-is + unverified assumptions vs tension) → lock scope
 /draft  → iterate mockup → confirm surface → resolve constraints → lock target
           compile → apply → validate → close
 ```

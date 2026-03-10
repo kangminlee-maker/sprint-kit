@@ -126,6 +126,7 @@ Grounding Function 상세
 - [GC-001] 각 소스의 content hash(내용 해시 — 내용이 바뀌면 달라지는 고유 값)를 기록한다
 - [GC-002] 발견된 각 Constraint에 CST-ID를 순차 부여한다
 - [GC-003] 각 Constraint에 severity(필수/권장)와 decision_owner(PO/Builder)를 판정한다
+- [GC-019] 발견된 각 Constraint에 대해 정책 문서 교차 대조(Policy Cross-Reference)를 수행하여 `evidence_status`를 판정한다 (verified / code_inferred / brief_claimed / unverified). 정책 문서 접근이 불가능한 환경에서는 `unverified`가 기본값이다
 
 **부분 실패 정책**: 일부 소스 접근에 실패하더라도 Grounding은 완료될 수 있습니다. 실패한 소스는 `failed_sources`로 기록되며, 해당 관점의 탐색이 불완전함을 사용자에게 알립니다.
 
@@ -159,6 +160,7 @@ Grounding 완료 후, 시스템은 Align Packet을 렌더링합니다.
 
 1. **To-be** — 사용자가 요청한 것. 시스템의 해석, 포함/제외 범위, 시나리오
 2. **As-is** — 현재 현실. 3개 관점별 현재 상태
+2.5. **미검증 가정** — 시스템이 소스에서 확인하지 못한 전제. 이 전제가 틀리면 아래 Tension의 분석이 달라질 수 있습니다. 미검증 constraint가 없으면 이 섹션은 표시되지 않습니다 (조건부)
 3. **Tension** — 충돌 지점. To-be와 As-is가 부딪히는 곳. Grounding에서 발견된 Constraint가 여기 표시됩니다
 4. **Decision** — 지금 결정할 것
 
@@ -297,7 +299,13 @@ Surface 관련 Function 상세
 |                    | `decided`         | 결정 완료                            |
 |                    | `clarify_pending` | 추가 정보 대기. 이 상태가 있으면 target 잠금 불가 |
 |                    | `invalidated`     | 방향 변경으로 더 이상 해당 없음 (시스템 자동 처리)   |
+| **evidence_status** | `verified`        | 정책 문서에서 확인됨                         |
+|                    | `code_inferred`   | 코드에서 추론됨 (문서 근거 없음)                |
+|                    | `brief_claimed`   | 사용자 주장 (별도 확인 필요)                  |
+|                    | `unverified`      | 출처 미확인 (기본값)                        |
 
+
+`evidence_status`는 이 제약의 근거가 정책 문서에서 확인되었는지를 나타냅니다. `status`가 "결정을 했는가"를 기록하는 것과 달리, `evidence_status`는 "근거가 확인되었는가"를 기록합니다. `constraint.discovered` 이벤트에서 `evidence_status`를 생략하면 기본값 `unverified`가 적용됩니다.
 
 `severity: required` + `decision: override` 조합에는 반드시 rationale(이유)이 필요합니다. 이유 없이 필수 제약을 무시하는 것은 시스템이 거부합니다.
 
@@ -308,11 +316,13 @@ Constraint Lifecycle 상세
 Constraint의 생애:
 
 ```
-Discover → Present → Decide → Inject → Verify
+Discover → Present → Evidence Verify (optional) → Decide → Inject → Verify
                         ↘ Invalidate (redirect 후 re-discovery 시)
 ```
 
 **Invalidation**(무효화): Align으로 되돌아간 후 re-discovery에서 시스템이 기존 Constraint를 재평가합니다. 방향 변경으로 더 이상 관련 없는 Constraint는 시스템이 자동으로 `invalidated` 처리합니다. 단, `severity: required`인 Constraint는 시스템 단독 무효화가 금지되며, Draft Packet에 "제외 제안"으로 표시하여 사용자 확인 후 확정합니다. [GC-017 — Gate Guard Rule 3b에서 구현됨]
+
+**Evidence 갱신**: PO가 정책 문서를 확인하여 constraint의 근거를 검증한 경우, `constraint.evidence_updated` 관찰 이벤트로 `evidence_status`를 `verified`로 변경할 수 있습니다. 이 이벤트는 상태 전이를 유발하지 않으며, 어떤 비터미널 상태에서든 기록 가능합니다. evidence 갱신이 없어도 워크플로우는 진행됩니다 — Compile 단계에서 미검증 가정에 대한 경고가 표시됩니다.
 
 **Clarify 흐름**: `clarify`를 선택하면 해당 Constraint는 `clarify_pending` 상태가 됩니다. 이 상태가 1건이라도 있으면 target 잠금이 불가합니다. 외부에서 정보를 확보한 뒤, 최종 결정(inject/defer/override)을 내려야 합니다.
 
@@ -359,12 +369,17 @@ Gate Guard: Draft 단계 검증 규칙
 
 - 입력: 확정된 Surface, Constraint Decisions, Reality Snapshot
 - 출력: Build Spec + Brownfield Detail + Delta Set + Validation Plan
+
+Compile이 성공하더라도 Layer 3 경고(`warnings`)가 반환될 수 있습니다. 에이전트는 이 경고를 PO에게 자연어로 안내합니다. Compile이 실패한 경우에도 Layer 3 경고는 함께 반환됩니다.
+
 - [GC-010] Compile은 새로운 제품 결정을 하지 않는다. 모호함을 발견하면 Draft로 되돌린다
 - [GC-011] 모든 inject 결정은 CST → IMPL → CHG → VAL 추적 체인(추적 가능한 연결 고리)이 완전해야 한다
 
 **Build Spec**(구현 명세)은 Builder가 구현에 필요한 모든 정보를 담은 문서입니다. 모호함이 남아 있으면 안 됩니다. `interface` scope에서는 전체 brownfield 스캔 결과 + guardrail(구현 시 반드시 지켜야 할 조건) + Align에서 잠긴 정책 결정이 Builder에게 제공됩니다.
 
 **Brownfield Detail**(기존 시스템 상세)은 전체 스캔 결과를 소스별/항목별로 구조화한 문서입니다. Build Spec에서 참조합니다.
+
+`BrownfieldDetail`에는 기존 시스템의 열거형 값을 기록하는 `enums` 필드가 포함될 수 있습니다. 이 필드는 Compile Defense Layer 3의 상태 완전성 검사(`L3-state-completeness`)에서, 기존 시스템에 정의된 상태값이 구현 계획에서 빠지지 않았는지 감지하는 데 사용됩니다.
 
 **Delta Set**(변경 목록)은 현재 상태에서 목표 상태로의 파일 수준 변경 목록입니다. 각 변경에 `CHG-ID`가 부여됩니다.
 
@@ -374,10 +389,17 @@ Gate Guard: Draft 단계 검증 규칙
 - defer → 구현이 이 제약에 간섭하지 않는가
 - override → 의도적으로 반영하지 않았는가
 
-**Compile Defense**(컴파일 방어)는 Compile 출력의 정합성을 검증하는 2단계 메커니즘입니다:
+**Compile Defense**(컴파일 방어)는 Compile 출력의 정합성을 검증하는 3단계 메커니즘입니다:
 
-1. **Checklist**: 모든 Constraint 결정이 Build Spec에 참조되어 있는지 확인
-2. **Audit Pass**: inject 반영, defer 비간섭, override 비반영, 추적 체인 완전성 검증
+1. **Layer 1 — Checklist**: 모든 Constraint 결정이 Build Spec에 참조되어 있는지 확인
+2. **Layer 2 — Audit Pass**: inject 반영, defer 비간섭, override 비반영, 추적 체인 완전성 검증
+3. **Layer 3 — Evidence Quality Warnings (비차단)**: 미검증 가정과 상태 누락 경고. Layer 1/2와 달리 Compile을 차단하지 않고 경고만 반환합니다
+
+Layer 3의 2가지 규칙:
+- **L3-unverified-inject**: `required` + `inject`인데 `evidence_status`가 `verified`가 아닌 경우 경고
+- **L3-state-completeness**: `BrownfieldDetail.enums`에 정의된 값이 구현 계획에서 언급되지 않은 경우 경고 (예: NOSHOW_BOTH 누락)
+
+Layer 3 검사에는 `brownfieldDetail`이 입력으로 필요합니다. 제공되지 않으면 상태 완전성 검사가 건너뛰어집니다.
 
 Compile Function 상세
 
@@ -599,7 +621,7 @@ scopes/{scope-id}/
 ```json
 {
   "event_id": "evt_001",
-  "scope_id": "SC-2026-001",
+  "scope_id": "tutor-block-20260309-001",
   "type": "align.proposed",
   "ts": "2026-03-07T10:30:00Z",
   "revision": 7,
@@ -614,7 +636,7 @@ scopes/{scope-id}/
 
 - **전이**: 상태를 변경. State × Event 매트릭스에 정의된 조합만 허용
 - **전역**: 모든 비터미널 상태에서 터미널로 전이 (`scope.deferred`, `scope.rejected`)
-- **관찰**: 상태 변경 없음 (`feedback.classified`, `convergence.`*, `draft_packet.rendered`)
+- **관찰**: 상태 변경 없음 (`feedback.classified`, `convergence.*`, `draft_packet.rendered`, `constraint.evidence_updated`)
 
 이벤트 유형 전체 목록과 payload 상세는 `docs/event-state-contract.md`에 명세되어 있습니다.
 
@@ -646,7 +668,7 @@ scopes/{scope-id}/
 | `scanners/`   | 소스 스캔, 패턴 탐지, 온톨로지 인덱스                                           | ScanResult, OntologyIndex                                                       |
 | `commands/`   | `/start`, `/align`, `/draft` 진입점, Reality Snapshot 작성            | Scope, Intent                                                                   |
 | `renderers/`  | scope.md, Align Packet, Draft Packet 렌더링                         | —                                                                               |
-| `compilers/`  | Compile, Build Spec, Compile Defense                             | Delta Set, Build Spec                                                           |
+| `compilers/`  | Compile, Build Spec, Compile Defense (3-layer)                   | Delta Set, Build Spec                                                           |
 | `validators/` | 검증 실행, 결과 기록                                                     | —                                                                               |
 
 
@@ -708,6 +730,7 @@ validators/ → kernel/
 | GC-003 | Constraint에 severity + decision_owner 판정                    | Constraint Pool, 렌더러      | Grounding, Deep Discovery | §3.1  |
 | GC-017 | `severity: required` Constraint는 시스템 단독 무효화 금지              | Gate Guard 규칙 추가          | Gate Guard                | §3.4  |
 | GC-018 | Compile 재시도 상한: gap_found 누적이 임계값 이상이면 compile.started 거부   | Gate Guard 규칙만 수정         | Gate Guard, Compile       | §3.5  |
+| GC-019 | Grounding 시 각 Constraint에 대해 정책 문서 교차 대조(`evidence_status` 판정) 수행 | Grounding + Align Packet 렌더링 | Grounding, Align Packet | §3.1 |
 
 
 ---
@@ -742,5 +765,7 @@ validators/ → kernel/
 | Grounding           | 소스 탐색. Reality Snapshot + Constraint 발견     | 방향 수준 깊이. 부분 실패 허용(failed_sources)                  | Reality Snapshot, Constraint | §3.1       |
 | Deep Discovery      | 확정 Surface 기준 정밀 재탐색                        | 대상 수준 깊이. interface scope에서는 Code/Policy 중심         | Constraint, Draft Packet     | §3.4       |
 | Stale Detection     | 소스 변경 감지 메커니즘                               | Gate 전이 시(필수, 전체 소스) + 명령 시작 시(경량, 로컬만)             | Reality Snapshot, Gate Guard | §4         |
+| EvidenceStatus      | Constraint 근거의 현재 검증 상태                    | status(결정 여부)와 별도. 근거가 확인됨/미확인을 구분하여 PO가 제약의 신뢰도를 판단 | Constraint, Compile Defense  | §3.4       |
+| Policy Cross-Reference | Grounding 시 정책 문서와 교차 대조하는 단계             | Step 2.5. evidence_status를 판정하여 미검증 가정을 식별                | Grounding, EvidenceStatus    | §3.1       |
 
 
