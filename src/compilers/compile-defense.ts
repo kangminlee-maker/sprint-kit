@@ -45,7 +45,7 @@ export interface DefenseViolation {
 }
 
 export type DefenseResult =
-  | { passed: true }
+  | { passed: true; warnings?: DefenseViolation[] }
   | { passed: false; violations: DefenseViolation[] };
 
 // ─── Main ───
@@ -70,10 +70,14 @@ export function compileDefense(
   checkLayer1(state, buildSpec, violations);
   checkLayer2(state, buildSpec, deltaSet, validationPlan, violations);
 
-  if (violations.length === 0) {
-    return { passed: true };
+  // Separate L3 warnings (non-blocking) from L1/L2 violations (blocking)
+  const warnings = violations.filter((v) => v.rule.startsWith("L3-"));
+  const errors = violations.filter((v) => !v.rule.startsWith("L3-"));
+
+  if (errors.length === 0) {
+    return { passed: true, warnings: warnings.length > 0 ? warnings : undefined };
   }
-  return { passed: false, violations };
+  return { passed: false, violations: errors };
 }
 
 // ─── Layer 1: Checklist ───
@@ -143,6 +147,9 @@ function checkLayer2(
 
   // inject constraints should have edge cases in validation plan
   checkInjectEdgeCases(state, validationPlan, violations);
+
+  // L3: warn when required+inject constraint has unverified evidence
+  checkUnverifiedInject(state, violations);
 }
 
 /** inject → must have IMPL, CHG referencing this CST, and VAL item */
@@ -279,6 +286,35 @@ function checkInjectEdgeCases(
       violations.push({
         rule: "L2-inject-edge-case",
         detail: `${c.constraint_id} (inject) has no edge_cases in validation plan item ${valItem.val_id}`,
+      });
+    }
+  }
+}
+
+// ─── L3: Evidence Status Warnings ───
+
+/**
+ * Warn (not block) when a required+inject constraint has unverified evidence.
+ * This is a L3 warning — does not fail compile, but is included in violations
+ * so the agent can surface it to PO.
+ */
+function checkUnverifiedInject(
+  state: ScopeState,
+  violations: DefenseViolation[],
+): void {
+  for (const c of state.constraint_pool.constraints) {
+    if (c.status === "invalidated") continue;
+    if (c.decision !== "inject") continue;
+    if (c.severity !== "required") continue;
+
+    if (
+      c.evidence_status === "unverified" ||
+      c.evidence_status === "brief_claimed" ||
+      c.evidence_status === "code_inferred"
+    ) {
+      violations.push({
+        rule: "L3-unverified-inject",
+        detail: `${c.constraint_id} (required, inject) has evidence_status="${c.evidence_status}". 정책 문서에서 확인되지 않은 가정이 구현에 포함됩니다.${c.evidence_note ? ` Note: ${c.evidence_note}` : ""}`,
       });
     }
   }

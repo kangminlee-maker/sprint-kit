@@ -1,0 +1,198 @@
+{
+  "scope_id": "homeui-20260310-001",
+  "surface_hash": "77da10f9430394889fec28f1607ae71d782c3c0559ab291df470f06c50c062e8",
+  "build_spec_hash": "ce66eaea9c4df04a3928b82f317d10350682a1d593a0b7cdfbea7cdc762e4160",
+  "changes": [
+    {
+      "change_id": "CHG-001",
+      "action": "modify",
+      "file_path": "apps/web/src/widgets/greeting/model/status.ts",
+      "description": "greetingStatusSchema Zod enum 4→8개 확장",
+      "related_impl": [
+        "IMPL-001"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-008"
+      ]
+    },
+    {
+      "change_id": "CHG-002",
+      "action": "modify",
+      "file_path": "apps/web/src/widgets/greeting/hooks/use-greeting-status.ts",
+      "description": "상태 판정 로직 재구현 (4 boolean → 다중 필드 조합)",
+      "related_impl": [
+        "IMPL-002"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-003",
+        "CST-008"
+      ]
+    },
+    {
+      "change_id": "CHG-003",
+      "action": "modify",
+      "file_path": "apps/web/src/widgets/greeting/ui/greeting-content.tsx",
+      "description": "ts-pattern match에 8상태 분기 추가",
+      "related_impl": [
+        "IMPL-002"
+      ],
+      "related_cst": [
+        "CST-001"
+      ]
+    },
+    {
+      "change_id": "CHG-004",
+      "action": "modify",
+      "file_path": "apps/web/src/features/home-redirection/ui/home-redirection.tsx",
+      "description": "AUTO_REDIRECT 조건 제거",
+      "related_impl": [
+        "IMPL-003"
+      ],
+      "related_cst": [
+        "CST-002"
+      ]
+    },
+    {
+      "change_id": "CHG-005",
+      "action": "modify",
+      "file_path": "apps/web/src/app/(internal)/home/page.tsx",
+      "description": "SSR prefetch에 getTrialStepInfo + getNextLectureList 추가",
+      "related_impl": [
+        "IMPL-004"
+      ],
+      "related_cst": [
+        "CST-009"
+      ]
+    },
+    {
+      "change_id": "CHG-006",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/trial-idle-state.tsx",
+      "description": "미신청 상태 컴포넌트 (StepTabs + VideoCard + FeatureListCard)",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-001"
+      ]
+    },
+    {
+      "change_id": "CHG-007",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/trial-booked-state.tsx",
+      "description": "예약 대기 상태 컴포넌트 (카운트다운 + 예습 진행률)",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-001"
+      ]
+    },
+    {
+      "change_id": "CHG-008",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/lesson-imminent-state.tsx",
+      "description": "레슨 임박 상태 컴포넌트 (실시간 카운트다운)",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-001"
+      ]
+    },
+    {
+      "change_id": "CHG-009",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/trial-completed-state.tsx",
+      "description": "체험 완료 상태 컴포넌트 (혜택 카드 + 결제 CTA)",
+      "related_impl": [
+        "IMPL-005",
+        "IMPL-006"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-004"
+      ]
+    },
+    {
+      "change_id": "CHG-010",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/student-noshow-state.tsx",
+      "description": "학생 노쇼 상태 컴포넌트 (red 경고 + 패널티)",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-005"
+      ]
+    },
+    {
+      "change_id": "CHG-011",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/tutor-noshow-state.tsx",
+      "description": "튜터 노쇼 상태 컴포넌트 (blue 안내 + 복구)",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-005"
+      ]
+    },
+    {
+      "change_id": "CHG-012",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/trial-exhausted-state.tsx",
+      "description": "전체 소진 상태 컴포넌트 (유료 체험 + 정규 수강권)",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-001"
+      ]
+    },
+    {
+      "change_id": "CHG-013",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/cancelled-state.tsx",
+      "description": "취소 상태 컴포넌트 (무료 취소 안내)",
+      "related_impl": [
+        "IMPL-005",
+        "IMPL-008"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-006"
+      ]
+    },
+    {
+      "change_id": "CHG-014",
+      "action": "modify",
+      "file_path": "apps/web/src/views/home/view.tsx",
+      "description": "StickyBottom 조건부 배치 + 디버그 UI dev-only 감싸기",
+      "related_impl": [
+        "IMPL-007",
+        "IMPL-010"
+      ],
+      "related_cst": [
+        "CST-010",
+        "CST-012"
+      ]
+    },
+    {
+      "change_id": "CHG-015",
+      "action": "modify",
+      "file_path": "apps/web/src/features/home-greeting/lib/hooks/use-scheduled-class-handlers.ts",
+      "description": "예약 CTA 활성/비활성 조건 + disabled Toast 안내 추가",
+      "related_impl": [
+        "IMPL-009"
+      ],
+      "related_cst": [
+        "CST-011"
+      ]
+    }
+  ]
+}

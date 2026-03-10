@@ -1,0 +1,104 @@
+[
+  {
+    "type": "align.locked",
+    "revision": 17,
+    "ts": "2026-03-10T07:44:13.570Z",
+    "locked_direction": "홈 화면을 현재 4상태 정적 분기에서, 체험 여정 전체(미신청/대기/레슨 중/완료/예외)를 커버하는 상태 기반 동적 전환 구조로 확장하고, 모든 상태에서 결제 전환 접점을 확보한다."
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 21,
+    "ts": "2026-03-10T13:00:48.067Z",
+    "constraint_id": "CST-001",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 22,
+    "ts": "2026-03-10T13:00:48.069Z",
+    "constraint_id": "CST-002",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 23,
+    "ts": "2026-03-10T13:00:48.070Z",
+    "constraint_id": "CST-003",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 24,
+    "ts": "2026-03-10T13:00:48.070Z",
+    "constraint_id": "CST-004",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 25,
+    "ts": "2026-03-10T13:00:48.070Z",
+    "constraint_id": "CST-005",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 26,
+    "ts": "2026-03-10T13:00:48.070Z",
+    "constraint_id": "CST-006",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 27,
+    "ts": "2026-03-10T13:00:48.071Z",
+    "constraint_id": "CST-007",
+    "decision": "defer",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 28,
+    "ts": "2026-03-10T13:00:48.071Z",
+    "constraint_id": "CST-008",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 29,
+    "ts": "2026-03-10T13:00:48.071Z",
+    "constraint_id": "CST-009",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 30,
+    "ts": "2026-03-10T13:00:48.072Z",
+    "constraint_id": "CST-010",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 31,
+    "ts": "2026-03-10T13:00:48.072Z",
+    "constraint_id": "CST-011",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 32,
+    "ts": "2026-03-10T13:00:48.073Z",
+    "constraint_id": "CST-012",
+    "decision": "inject",
+    "decision_owner": "builder"
+  }
+]

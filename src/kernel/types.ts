@@ -212,9 +212,16 @@ export interface BrownfieldContext {
   config_env?: BrownfieldConfigEntry[];
 }
 
+export interface BrownfieldEnumDef {
+  name: string;
+  source: string;
+  values: string[];
+}
+
 export interface BrownfieldDetail {
   scope_id: string;
   sections: BrownfieldDetailSection[];
+  enums?: BrownfieldEnumDef[];
 }
 
 export interface BrownfieldDetailSection {
@@ -374,6 +381,12 @@ export interface SurfaceConfirmedPayload {
   total_revisions: number;
 }
 
+export type EvidenceStatus =
+  | "verified"       // 정책 문서에서 확인됨 (문서명+섹션 인용)
+  | "code_inferred"  // 코드에서 추론됨 (문서 근거 없음)
+  | "brief_claimed"  // brief/사용자 주장 (검증 필요)
+  | "unverified";    // 출처 미확인
+
 export interface ConstraintDiscoveredPayload {
   constraint_id: string;
   perspective: Perspective;
@@ -383,6 +396,8 @@ export interface ConstraintDiscoveredPayload {
   decision_owner: DecisionOwner;
   impact_if_ignored: string;
   source_refs: Array<{ source: string; detail: string }>;
+  evidence_status?: EvidenceStatus;
+  evidence_note?: string;
 }
 
 export interface ConstraintDecisionRecordedPayload {
@@ -591,6 +606,8 @@ export interface ConstraintEntry {
   decision_owner: DecisionOwner;
   impact_if_ignored: string;
   source_refs: Array<{ source: string; detail: string }>;
+  evidence_status: EvidenceStatus;
+  evidence_note?: string;
   status: ConstraintStatus;
   invalidation_reason?: string;
   decision?: ConstraintDecision;

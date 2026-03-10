@@ -52,6 +52,8 @@ export function buildConstraintPool(events: Event[]): ConstraintPool {
           decision_owner: p.decision_owner,
           impact_if_ignored: p.impact_if_ignored,
           source_refs: p.source_refs,
+          evidence_status: p.evidence_status ?? "unverified",
+          evidence_note: p.evidence_note,
           status: "undecided",
           discovered_at: evt.revision,
         });

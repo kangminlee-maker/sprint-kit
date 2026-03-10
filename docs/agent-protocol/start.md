@@ -307,6 +307,45 @@ appendScopeEvent(paths, {
 
 Grounding 단계는 **방향 수준**입니다. "이 방향으로 가면 어떤 큰 충돌이 있는가?"를 찾습니다. 구체적 surface가 없으므로 세부 구현 제약은 Draft에서 발견합니다.
 
+### 2.5. 정책 대조 (Policy Cross-Reference)
+
+발견된 각 constraint에 대해, 해당 내용이 정책 문서(ontology)에서 뒷받침되는지 교차 확인합니다.
+
+**절차:**
+
+1. constraint가 주장하는 비즈니스 규칙을 추출합니다 (예: "체험 수업은 항상 무료 취소")
+2. 해당 규칙이 정의된 정책 문서를 소스에서 검색합니다 (온톨로지, 이용약관, 비즈니스 규칙 문서)
+3. 검색 결과에 따라 `evidence_status`를 설정합니다:
+   - `verified` — 정책 문서에서 확인됨. `source_refs`에 문서명과 섹션을 인용합니다.
+   - `code_inferred` — 코드에서 추론됨. 정책 문서에 명시적 근거 없음. `evidence_note`에 추론 출처를 기록합니다.
+   - `brief_claimed` — brief 또는 사용자 주장. 정책 문서와 대조하지 못함. `evidence_note`에 "확인 필요" 사유를 기록합니다.
+   - `unverified` — 출처 미확인. `evidence_note`에 "정책 문서 검색 결과 없음"을 기록합니다.
+4. `constraint.discovered` 이벤트의 payload에 `evidence_status`와 `evidence_note`를 포함합니다.
+
+**규칙:**
+- `severity: required` + `evidence_status: unverified`인 constraint는 Align Packet에서 "미검증 가정" 섹션에 별도 표시됩니다.
+- 이 단계는 constraint의 severity나 decision_owner를 변경하지 않습니다. evidence_status만 추가합니다.
+- 정책 문서 접근이 불가능한 환경(온톨로지 소스 없음)에서는 모든 constraint의 `evidence_status`를 `unverified`로 설정합니다.
+
+```typescript
+appendScopeEvent(paths, {
+  type: "constraint.discovered",
+  actor: "system",
+  payload: {
+    constraint_id: "CST-001",
+    perspective: "experience",
+    summary: "...",
+    severity: "required",
+    discovery_stage: "grounding",
+    decision_owner: "product_owner",
+    impact_if_ignored: "...",
+    source_refs: [{ source: "...", detail: "..." }],
+    evidence_status: "verified",           // 정책 대조 결과
+    evidence_note: "schedule/policies.md 섹션 3.2에서 확인",  // 인용 또는 미확인 사유
+  },
+});
+```
+
 ### 3. Grounding 완료 기록
 
 ```typescript

@@ -1,4 +1,4 @@
-import type { ScopeState, AlignPacketContent } from "../kernel/types.js";
+import type { ScopeState, AlignPacketContent, EvidenceStatus } from "../kernel/types.js";
 import { findConstraint } from "../kernel/constraint-pool.js";
 import { formatPerspective } from "./format.js";
 
@@ -31,6 +31,9 @@ export function renderAlignPacket(
 
   // ── Section 2: As-is ──
   renderAsIs(lines, content);
+
+  // ── Section 2.5: Unverified assumptions ──
+  renderUnverifiedAssumptions(lines, state);
 
   // ── Section 3: Tension ──
   renderTension(lines, state, content);
@@ -273,6 +276,56 @@ function renderDecision(
   lines.push("");
   lines.push("번호(1~4) 또는 자연어로 말씀해 주세요.");
   lines.push("");
+}
+
+// ─── Section 2.5: Unverified Assumptions ───
+
+function renderUnverifiedAssumptions(
+  lines: string[],
+  state: ScopeState,
+): void {
+  const unverified = state.constraint_pool.constraints.filter(
+    (c) =>
+      c.status !== "invalidated" &&
+      (c.evidence_status === "unverified" ||
+        c.evidence_status === "code_inferred" ||
+        c.evidence_status === "brief_claimed"),
+  );
+
+  if (unverified.length === 0) return;
+
+  lines.push("### 2.5 미검증 가정 (주의)");
+  lines.push("");
+  lines.push(
+    "아래 항목은 정책 문서에서 확인되지 않은 가정입니다. Approve 전에 확인을 권장합니다.",
+  );
+  lines.push("");
+
+  lines.push("| CST-ID | 가정 출처 | 요약 | 확인 필요 사항 |");
+  lines.push("|--------|----------|------|--------------|");
+  for (const c of unverified) {
+    const statusLabel = formatEvidenceStatus(c.evidence_status);
+    const note = c.evidence_note ?? "";
+    lines.push(
+      `| ${c.constraint_id} | ${statusLabel} | ${c.summary} | ${note} |`,
+    );
+  }
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+}
+
+function formatEvidenceStatus(status: EvidenceStatus): string {
+  switch (status) {
+    case "verified":
+      return "정책 문서 확인됨";
+    case "code_inferred":
+      return "코드 추론";
+    case "brief_claimed":
+      return "brief 주장";
+    case "unverified":
+      return "미확인";
+  }
 }
 
 // ─── Helpers ───

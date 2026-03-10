@@ -1,0 +1,301 @@
+{
+  "constraints": [
+    {
+      "constraint_id": "CST-001",
+      "perspective": "experience",
+      "summary": "현재 홈 Greeting은 4상태(NO_TICKET/RECOMMEND_BOOKING_TRIAL/RECOMMEND_BOOKING_REGULAR/SCHEDULED_CLASS)만 분기하며, 체험 완료·노쇼·취소 상태가 누락되어 있다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "체험 완료 후 미결제 사용자는 홈을 볼 수 없이 결제 페이지로 강제 이동되어 이탈률 증가. 노쇼/취소 사용자는 홈에서 어떤 안내도 받지 못하고 다음 행동을 알 수 없음",
+      "source_refs": [
+        {
+          "source": "podo-app",
+          "detail": "widgets/greeting/model/status.ts — greetingStatusSchema에 4개 enum만 정의"
+        },
+        {
+          "source": "podo-app",
+          "detail": "widgets/greeting/hooks/use-greeting-status.ts — match 로직에 체험완료/노쇼/취소 분기 없음"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 4,
+      "decision": "inject",
+      "selected_option": "8상태 전체 도입",
+      "rationale": "확정된 Surface에서 8상태 모두 구현되었으므로 전체 도입",
+      "decided_at": 21
+    },
+    {
+      "constraint_id": "CST-002",
+      "perspective": "experience",
+      "summary": "체험 완료 미결제 사용자는 홈 진입 시 /subscribes/tickets로 자동 리다이렉트되어 홈 화면 자체를 볼 수 없다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "홈 화면에 결제 전환 접점을 배치해도 해당 사용자에게 노출되지 않음. 리다이렉트 정책 변경이 선행되지 않으면 홈 재설계의 핵심 목표(결제 전환 유도)를 달성할 수 없음",
+      "source_refs": [
+        {
+          "source": "podo-app",
+          "detail": "features/home-redirection/ui/home-redirection.tsx:128 — trialClassCompYn=Y && paymentYn=N이면 강제 리다이렉트"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 5,
+      "decision": "inject",
+      "selected_option": "리다이렉트 제거 + 홈 내 결제 전환 상태 표시",
+      "rationale": "체험 완료 사용자가 홈에서 결제 전환 화면을 볼 수 있도록 함",
+      "decided_at": 22
+    },
+    {
+      "constraint_id": "CST-003",
+      "perspective": "experience",
+      "summary": "예외 상태(학생 노쇼·튜터 노쇼·취소)는 홈이 아닌 레슨 탭의 lesson-card 위젯에서만 표시되어, 홈에서는 완전히 보이지 않는다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "노쇼나 취소 발생 시 홈에 아무 안내가 없어 사용자가 상황을 인지하지 못하고, 재신청/재예약으로의 복귀 경로가 끊김",
+      "source_refs": [
+        {
+          "source": "podo-app",
+          "detail": "entities/lesson/model/enums/status.ts — NOSHOW_S, CANCEL_NOSHOW_T 등 6개 상태가 정의되어 있으나 홈에서 미사용"
+        },
+        {
+          "source": "podo-app",
+          "detail": "widgets/lesson-card/ui/absent-lesson-card — 결석 카드가 레슨 탭 전용"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 6,
+      "decision": "inject",
+      "selected_option": "3개 예외 상태 화면 도입",
+      "rationale": "노쇼/취소 사용자에게 복귀 경로를 제공",
+      "decided_at": 23
+    },
+    {
+      "constraint_id": "CST-004",
+      "perspective": "policy",
+      "summary": "체험→정규 전환 실패율이 36.1%(1,276명 중 461명)이며, 실패 시나리오(결제 실패·PG 이탈·예약 단계 이탈)가 온톨로지에 정의되어 있지 않다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "전환 퍼널 최대 누수 지점. 홈 화면에서 전환 실패 사용자의 재진입 경로를 설계하지 않으면 36%의 잠재 전환 기회를 계속 놓침",
+      "source_refs": [
+        {
+          "source": "podo-ontology",
+          "detail": "generated/event-edge-case-audit.yaml — pattern_9_trial_conversion_failure: 36.1% 실패율"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 7,
+      "decision": "inject",
+      "selected_option": "체험 완료 상태에서 결제 CTA 상시 노출 (간접 대응)",
+      "rationale": "CST-002와 결합하여 36.1% 이탈 사용자에게 결제 CTA 노출",
+      "decided_at": 24
+    },
+    {
+      "constraint_id": "CST-005",
+      "perspective": "policy",
+      "summary": "학생 노쇼(NOSHOW_S)는 종료 상태+72시간 예약 금지 패널티, 튜터 노쇼(CANCEL_NOSHOW_T)는 비종료 상태+체험 완료로 판정+대체 튜터 자동 매칭 — 두 상황의 홈 화면 안내가 완전히 달라야 한다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "학생 노쇼 후 72시간 내 예약 CTA를 표시하면 예약 실패 반복. 튜터 노쇼 후 안내 없이 수업이 사라지면 사용자가 이탈",
+      "source_refs": [
+        {
+          "source": "podo-ontology",
+          "detail": "state-transitions.yaml — NOSHOW_S: is_terminal=true, CANCEL_NOSHOW_T: is_terminal=false"
+        },
+        {
+          "source": "podo-backend",
+          "detail": "PodoScheduleServiceImplV2.java — cancelAndReassign() 대체 튜터 매칭, SCH-8 패널티 생성"
+        },
+        {
+          "source": "terms-of-service.md",
+          "detail": "제14조 — 학생 노쇼: 회차권 미복구, 무제한권 72시간 예약 금지"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 8,
+      "decision": "inject",
+      "selected_option": "2개 독립 화면 구현",
+      "rationale": "학생 노쇼(패널티)와 튜터 노쇼(복구)의 비대칭 처리 반영",
+      "decided_at": 25
+    },
+    {
+      "constraint_id": "CST-006",
+      "perspective": "policy",
+      "summary": "취소 정책은 수업 시작까지 남은 시간에 따라 3단계(2시간+:무료/1~2시간:수강권 차감/1시간 이내:유료 취소)로 나뉘지만, 체험 수업 취소는 항상 무료이다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "체험 사용자에게 정규 수업의 위약금 경고를 표시하면 불필요한 이탈 발생. 반대로 정규 사용자에게 무료 취소로 오인시키면 예상치 못한 수강권 차감",
+      "source_refs": [
+        {
+          "source": "podo-backend",
+          "detail": "PodoScheduleServiceImplV2.java:1220-1365 — 3단계 취소 정책 구현"
+        },
+        {
+          "source": "podo-ontology",
+          "detail": "event-log-audit.yaml — trial(303건) 별도 무료 취소 경로"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 9,
+      "decision": "inject",
+      "selected_option": "수강권 유형별 취소 경고 분기",
+      "rationale": "체험 무료 취소에 위약금 경고 표시 방지",
+      "decided_at": 26
+    },
+    {
+      "constraint_id": "CST-007",
+      "perspective": "policy",
+      "summary": "체험권은 유료(TRIAL, 금액은 Subscribe 상품 레코드 기준)와 무료(TRIAL_FREE)로 구분되며, 체험 미이용 사용자만 결제 가능하다. 온톨로지에는 유료 체험 3회 상품 정보가 없다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "무료 체험 3회 소진 후 유료 체험 안내 화면을 설계하려면, 유료 체험 상품(가격·횟수)의 정의가 필요한데 현재 온톨로지에 이 정보가 부재. 잘못된 가격/횟수를 표시할 위험",
+      "source_refs": [
+        {
+          "source": "podo-backend",
+          "detail": "PaymentType.java — TRIAL(유료)/TRIAL_FREE(무료) 구분"
+        },
+        {
+          "source": "podo-ontology",
+          "detail": "ontology.yaml — Subscribe.freeTrial 필드만 존재, 구체적 횟수·금액 미기록"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 10,
+      "decision": "defer",
+      "selected_option": "상품 정보 확인 후 구현",
+      "rationale": "유료 체험 가격/횟수가 백엔드 상품 설정과 일치하는지 확인 필요. 나머지 7개 상태에 영향 없음",
+      "decided_at": 27
+    },
+    {
+      "constraint_id": "CST-008",
+      "perspective": "code",
+      "summary": "greetingStatusSchema(Zod enum 4개) + useGreetingStatus()(4개 boolean 기반 match) 확장이 필수 — ts-pattern exhaustive match로 보호되어 새 상태 누락 시 컴파일 에러",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "새 상태를 enum에 추가하지 않으면 컴파일 에러, 컴포넌트 없이 enum만 추가하면 런타임 에러",
+      "source_refs": [
+        {
+          "source": "podo-app",
+          "detail": "widgets/greeting/model/status.ts — z.enum 4개"
+        },
+        {
+          "source": "podo-app",
+          "detail": "widgets/greeting/hooks/use-greeting-status.ts — 4개 boolean만으로 분기"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 11,
+      "decision": "inject",
+      "selected_option": "greetingStatusSchema 8개 enum 확장",
+      "rationale": "ts-pattern exhaustive match로 타입 안전성 보장",
+      "decided_at": 28
+    },
+    {
+      "constraint_id": "CST-009",
+      "perspective": "code",
+      "summary": "홈 page.tsx의 SSR prefetch에 subscribeMappList만 포함 — invoiceStatus·trialStepInfo 등 새 상태 판정에 필요한 데이터 미조회로, 추가 prefetch 또는 API 통합 필요",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "prefetch 없이 클라이언트에서만 조회하면 홈 화면 로딩 시 waterfall 발생, 초기 렌더링 지연",
+      "source_refs": [
+        {
+          "source": "podo-app",
+          "detail": "app/(internal)/home/page.tsx:31-36 — getCurrentUser + getSubscribeMappList만 prefetch"
+        },
+        {
+          "source": "podo-backend",
+          "detail": "UserController.java:274 — getTrialStepInfo 별도 엔드포인트"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 12,
+      "decision": "inject",
+      "selected_option": "SSR prefetch에 getTrialStepInfo + getNextLectureList 추가",
+      "rationale": "Promise.all 병렬 호출로 waterfall 방지",
+      "decided_at": 29
+    },
+    {
+      "constraint_id": "CST-010",
+      "perspective": "experience",
+      "summary": "홈 화면에 Floating CTA 버튼이 없다 — 결제 전환용 플로팅 배너는 subscribes-tickets 뷰에만 존재한다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "홈에서 결제 전환 접점을 상시 확보하려면 StickyBottom 패턴의 플로팅 CTA 신규 도입이 필요. 미도입 시 결제 유도가 GNB 상단 버튼에만 의존",
+      "source_refs": [
+        {
+          "source": "podo-app",
+          "detail": "views/home/view.tsx — 홈 뷰에 floating 요소 없음"
+        },
+        {
+          "source": "design-ontology.yaml",
+          "detail": "components.StickyBottom — fixed bottom-0, max-w-480px 패턴 정의됨"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 13,
+      "decision": "inject",
+      "selected_option": "결제 전환 목적 상태에만 StickyBottom 적용",
+      "rationale": "상태 1, 4, 7에만 StickyBottom CTA 배치",
+      "decided_at": 30
+    },
+    {
+      "constraint_id": "CST-011",
+      "perspective": "policy",
+      "summary": "수강권 유형별 예약 제한이 다르다 — 회차권: 매일 1회, 무제한권: 동시 1회(수업 종료 후 다음 예약), 스마트토크: AI챗 6회 완료 후 레슨 1회 오픈",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "홈 화면 예약 CTA의 활성/비활성 조건이 수강권 유형을 반영하지 않으면, 예약 시도 → 실패의 반복으로 사용자 불만 발생",
+      "source_refs": [
+        {
+          "source": "terms-of-service.md",
+          "detail": "제13조 — 회차권/무제한권/스마트토크권별 예약 규칙"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 14,
+      "decision": "inject",
+      "selected_option": "홈 CTA는 예약하기만 표시, 상세 제한은 예약 플로우 내부에서 안내",
+      "rationale": "홈의 역할은 다음 행동 유도, 세부 규칙은 예약 플로우에서 처리",
+      "decided_at": 31
+    },
+    {
+      "constraint_id": "CST-012",
+      "perspective": "experience",
+      "summary": "상태 분기가 있는 페이지에는 디버그 UI(시나리오 전환 버튼) 포함 필수 — 홈 화면은 5개 이상 상태 분기가 있으므로 반드시 포함해야 PO가 각 상태를 검증할 수 있다",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "디버그 UI 없이는 PO가 각 상태를 확인할 수 없어, Surface의 존재 목적인 디자인 검증이 불가",
+      "source_refs": [
+        {
+          "source": "design-ontology.yaml",
+          "detail": "premises.purpose — design-verification, patterns.scenario_branching"
+        }
+      ],
+      "status": "decided",
+      "discovered_at": 15,
+      "decision": "inject",
+      "selected_option": "디버그 UI를 dev 환경에서만 표시",
+      "rationale": "Surface의 ScenarioControl을 NODE_ENV 조건으로 감싸기",
+      "decided_at": 32
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "required": 12,
+    "recommended": 0,
+    "decided": 12,
+    "clarify_pending": 0,
+    "invalidated": 0,
+    "undecided": 0
+  }
+}
