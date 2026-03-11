@@ -219,10 +219,19 @@ export interface BrownfieldEnumDef {
   values: string[];
 }
 
+export interface BrownfieldInvariant {
+  name: string;
+  source: string;
+  description: string;
+  type: "schema" | "business_rule" | "api_contract" | "state_machine";
+  affected_files?: string[];
+}
+
 export interface BrownfieldDetail {
   scope_id: string;
   sections: BrownfieldDetailSection[];
   enums?: BrownfieldEnumDef[];
+  invariants?: BrownfieldInvariant[];
 }
 
 export interface BrownfieldDetailSection {

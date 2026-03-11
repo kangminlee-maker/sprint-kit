@@ -752,3 +752,175 @@ describe("compile-defense — warnings always array", () => {
     }
   });
 });
+
+// ─── Layer 3: L3-invariant-uncovered ───
+
+describe("compile-defense — L3-invariant-uncovered", () => {
+  it("warns when invariant affected_files are in delta-set but invariant is not mentioned", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject", summary: "Add feature X" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/schema.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const brownfieldDetail = {
+      scope_id: "SC-TEST",
+      sections: [],
+      invariants: [{
+        name: "UserSchema",
+        source: "src/schema.ts",
+        description: "User 테이블 스키마 제약",
+        type: "schema" as const,
+        affected_files: ["src/schema.ts"],
+      }],
+    };
+    const result = compileDefense(makeState(pool), bs, ds, vp, brownfieldDetail);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-invariant-uncovered" && w.detail.includes("UserSchema"))).toBe(true);
+    }
+  });
+
+  it("no warning when invariant affected_files are NOT in delta-set", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "src/feature.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const brownfieldDetail = {
+      scope_id: "SC-TEST",
+      sections: [],
+      invariants: [{
+        name: "UserSchema",
+        source: "src/schema.ts",
+        description: "User 테이블 스키마 제약",
+        type: "schema" as const,
+        affected_files: ["src/schema.ts"],
+      }],
+    };
+    const result = compileDefense(makeState(pool), bs, ds, vp, brownfieldDetail);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-invariant-uncovered")).toBe(false);
+    }
+  });
+
+  it("no warning when invariant is mentioned in constraint summary", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject", summary: "UserSchema migration" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/schema.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const brownfieldDetail = {
+      scope_id: "SC-TEST",
+      sections: [],
+      invariants: [{
+        name: "UserSchema",
+        source: "src/schema.ts",
+        description: "User 테이블 스키마 제약",
+        type: "schema" as const,
+        affected_files: ["src/schema.ts"],
+      }],
+    };
+    const result = compileDefense(makeState(pool), bs, ds, vp, brownfieldDetail);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-invariant-uncovered")).toBe(false);
+    }
+  });
+
+  it("no warning when invariants is undefined", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "src/feature.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const brownfieldDetail = {
+      scope_id: "SC-TEST",
+      sections: [],
+      // no invariants field
+    };
+    const result = compileDefense(makeState(pool), bs, ds, vp, brownfieldDetail);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-invariant-uncovered")).toBe(false);
+    }
+  });
+
+  it("no warning when invariants is empty array", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "src/feature.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const brownfieldDetail = {
+      scope_id: "SC-TEST",
+      sections: [],
+      invariants: [],
+    };
+    const result = compileDefense(makeState(pool), bs, ds, vp, brownfieldDetail);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-invariant-uncovered")).toBe(false);
+    }
+  });
+
+  it("warns for invariant without affected_files when no match", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject", summary: "Add feature X" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/schema.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const brownfieldDetail = {
+      scope_id: "SC-TEST",
+      sections: [],
+      invariants: [{
+        name: "PaymentFlow",
+        source: "src/payment.ts",
+        description: "결제 흐름 불변 규칙",
+        type: "business_rule" as const,
+        // no affected_files → affected check returns false → no warning
+      }],
+    };
+    const result = compileDefense(makeState(pool), bs, ds, vp, brownfieldDetail);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-invariant-uncovered")).toBe(false);
+    }
+  });
+});

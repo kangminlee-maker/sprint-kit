@@ -30,6 +30,7 @@ export interface ImplementationItem {
   guardrail?: string;
   pseudocode?: string;
   test_strategy?: string;
+  assumptions?: string[];
 }
 
 export interface ChangeItem {
@@ -235,18 +236,16 @@ function validateInput(input: CompileInput): string | null {
       .map((c) => c.constraint_id),
   );
   const coveredCsts = new Set(input.injectValidations.map((v) => v.related_cst));
-  for (const cstId of injectCsts) {
-    if (!coveredCsts.has(cstId)) {
-      return `inject constraint ${cstId} has no matching injectValidation entry`;
-    }
+  const missingValidations = [...injectCsts].filter(id => !coveredCsts.has(id));
+  if (missingValidations.length > 0) {
+    return `inject constraints missing injectValidation: ${missingValidations.join(", ")}`;
   }
 
   // Validate inject constraints have at least one CHG
   const chgCsts = new Set(input.changes.flatMap((c) => c.related_cst));
-  for (const cstId of injectCsts) {
-    if (!chgCsts.has(cstId)) {
-      return `inject constraint ${cstId} has no matching CHG entry in changes — every inject constraint must have at least one CHG with related_cst including this ID`;
-    }
+  const missingChanges = [...injectCsts].filter(id => !chgCsts.has(id));
+  if (missingChanges.length > 0) {
+    return `inject constraints missing CHG in changes: ${missingChanges.join(", ")}`;
   }
 
   // Validate every IMPL has at least one CHG referencing it
@@ -540,6 +539,12 @@ function renderSection4(implItems: ImplWithId[]): string[] {
     }
     if (item.test_strategy) {
       lines.push(`- **test strategy:** ${item.test_strategy}`);
+    }
+    if (item.assumptions && item.assumptions.length > 0) {
+      lines.push("- **전제 가정:**");
+      for (const a of item.assumptions) {
+        lines.push(`  - ${a}`);
+      }
     }
     lines.push("");
   }

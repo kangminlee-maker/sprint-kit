@@ -1,5 +1,5 @@
 import { isEvidenceUnverified } from "../kernel/types.js";
-import type { ScopeState, ConstraintEntry, ValidationPlanEntry, ValidationPlanItem, BrownfieldDetail } from "../kernel/types.js";
+import type { ScopeState, ConstraintEntry, ValidationPlanEntry, ValidationPlanItem, BrownfieldDetail, BrownfieldInvariant } from "../kernel/types.js";
 
 // Re-export for backward compatibility
 export type { ValidationPlanEntry, ValidationPlanItem } from "../kernel/types.js";
@@ -96,7 +96,7 @@ function checkLayer1(
     if (!section3Ids.has(c.constraint_id)) {
       violations.push({
         rule: "L1-checklist",
-        detail: `${c.constraint_id} is not referenced in Build Spec Section 3`,
+        detail: `${c.constraint_id ?? "UNKNOWN-CST"} is not referenced in Build Spec Section 3`,
       });
     }
   }
@@ -135,7 +135,7 @@ function checkLayer2(
       default:
         violations.push({
           rule: "L2-decision-unexpected",
-          detail: `${c.constraint_id} has unexpected decision "${decision}" at compile time`,
+          detail: `${c.constraint_id ?? "UNKNOWN-CST"} has unexpected decision "${decision ?? "UNKNOWN"}" at compile time`,
         });
         break;
     }
@@ -167,7 +167,7 @@ function checkInjectReflected(
   if (relatedImpls.length === 0) {
     violations.push({
       rule: "L2-inject-impl",
-      detail: `${c.constraint_id} (inject) has no IMPL in Section 4`,
+      detail: `${c.constraint_id ?? "UNKNOWN-CST"} (inject) has no IMPL in Section 4`,
     });
   }
 
@@ -175,7 +175,7 @@ function checkInjectReflected(
   if (!changeCstIds.has(c.constraint_id)) {
     violations.push({
       rule: "L2-inject-chg",
-      detail: `${c.constraint_id} (inject) has no CHG in delta-set`,
+      detail: `${c.constraint_id ?? "UNKNOWN-CST"} (inject) has no CHG in delta-set`,
     });
   }
 
@@ -183,7 +183,7 @@ function checkInjectReflected(
   if (!valCstIds.has(c.constraint_id)) {
     violations.push({
       rule: "L2-inject-val",
-      detail: `${c.constraint_id} (inject) has no VAL in validation-plan`,
+      detail: `${c.constraint_id ?? "UNKNOWN-CST"} (inject) has no VAL in validation-plan`,
     });
   }
 }
@@ -199,7 +199,7 @@ function checkDeferNonInterfering(
     if (changeFilePaths.has(ref.source)) {
       violations.push({
         rule: "L2-defer-interfere",
-        detail: `${c.constraint_id} (defer) source_ref "${ref.source}" is modified in delta-set. 간섭 여부를 확인하세요.`,
+        detail: `${c.constraint_id ?? "UNKNOWN-CST"} (defer) source_ref "${ref.source ?? "UNKNOWN"}" is modified in delta-set. 간섭 여부를 확인하세요.`,
       });
     }
   }
@@ -219,7 +219,7 @@ function checkOverrideNonReflected(
     ) {
       violations.push({
         rule: "L2-override-reflected",
-        detail: `${c.constraint_id} (override) is reflected in delta-set change ${change.change_id}`,
+        detail: `${c.constraint_id ?? "UNKNOWN-CST"} (override) is reflected in delta-set change ${change.change_id ?? "UNKNOWN-CHG"}`,
       });
     }
   }
@@ -240,7 +240,7 @@ function checkChangesReferenceValidImpls(
       if (!implIds.has(implId)) {
         violations.push({
           rule: "L2-chg-orphan-impl",
-          detail: `${change.change_id} references ${implId} which does not exist in Section 4`,
+          detail: `${change.change_id ?? "UNKNOWN-CHG"} references ${implId ?? "UNKNOWN-IMPL"} which does not exist in Section 4`,
         });
       }
     }
@@ -261,7 +261,7 @@ function checkImplHasChanges(
     if (!implsWithChanges.has(impl.impl_id)) {
       violations.push({
         rule: "L2-impl-no-chg",
-        detail: `${impl.impl_id} has no CHG in delta-set`,
+        detail: `${impl.impl_id ?? "UNKNOWN-IMPL"} has no CHG in delta-set`,
       });
     }
   }
@@ -284,7 +284,7 @@ function checkInjectEdgeCases(
     if (valItem && (!valItem.edge_cases || valItem.edge_cases.length === 0)) {
       violations.push({
         rule: "L2-inject-edge-case",
-        detail: `${c.constraint_id} (inject) has no edge_cases in validation plan item ${valItem.val_id}`,
+        detail: `${c.constraint_id ?? "UNKNOWN-CST"} (inject) has no edge_cases in validation plan item ${valItem.val_id ?? "UNKNOWN-VAL"}`,
       });
     }
   }
@@ -302,6 +302,7 @@ function checkLayer3(
   checkUnverifiedInject(state, warnings);
   checkStateCompleteness(state, buildSpec, brownfieldDetail, warnings);
   checkSharedResource(deltaSet, warnings);
+  checkInvariantCoverage(state, buildSpec, deltaSet, brownfieldDetail, warnings);
 }
 
 /**
@@ -401,6 +402,46 @@ function checkSharedResource(
       warnings.push({
         rule: "L3-shared-resource",
         detail: `${filePath}을(를) ${cstIds.length}개 CST가 별개의 변경으로 동시에 수정합니다: ${cstIds.join(", ")}. 조합 충돌 여부를 확인하세요.`,
+      });
+    }
+  }
+}
+
+/**
+ * Warn when delta-set changes modify files listed in brownfieldDetail.invariants
+ * but the invariant is not mentioned in any constraint or IMPL.
+ */
+function checkInvariantCoverage(
+  state: ScopeState,
+  buildSpec: BuildSpecData,
+  deltaSet: DeltaSet,
+  brownfieldDetail: BrownfieldDetail | undefined,
+  warnings: DefenseViolation[],
+): void {
+  if (!brownfieldDetail?.invariants || brownfieldDetail.invariants.length === 0) return;
+
+  const changeFilePaths = new Set(deltaSet.changes.map(c => c.file_path));
+
+  // Build search text from constraints + IMPL references in buildSpec
+  const constraintText = state.constraint_pool.constraints
+    .map(c => `${c.constraint_id} ${c.summary} ${c.selected_option ?? ""} ${c.decision ?? ""}`)
+    .join(" ");
+  const implText = buildSpec.section4
+    .map(impl => `${impl.impl_id} ${impl.related_cst.join(" ")}`)
+    .join(" ");
+  const searchText = `${constraintText} ${implText}`;
+
+  for (const inv of brownfieldDetail.invariants) {
+    // Check if any affected_files are in the delta-set changes
+    const affected = inv.affected_files?.some(f => changeFilePaths.has(f)) ?? false;
+    if (!affected) continue;
+
+    // Check if the invariant is mentioned in constraints or IMPL
+    const mentioned = searchText.includes(inv.name) || searchText.includes(inv.description.slice(0, 30));
+    if (!mentioned) {
+      warnings.push({
+        rule: "L3-invariant-uncovered",
+        detail: `불변 제약 "${inv.name}" (${inv.description})의 영향 파일이 delta-set에서 변경되지만, 구현 계획에서 언급되지 않습니다.`,
       });
     }
   }

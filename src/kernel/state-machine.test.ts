@@ -84,6 +84,12 @@ describe("state-machine — transition events exhaustive", () => {
       next: "grounded",
       kind: "forward",
     },
+    {
+      state: "draft",
+      event: "constraint.discovered",
+      next: "draft",
+      kind: "self",
+    },
 
     // grounded
     {
@@ -582,7 +588,8 @@ describe("state-machine — allowedTransitionEvents", () => {
     expect(events).toContain("input.attached");
     expect(events).toContain("grounding.started");
     expect(events).toContain("grounding.completed");
-    expect(events).toHaveLength(3);
+    expect(events).toContain("constraint.discovered");
+    expect(events).toHaveLength(4);
   });
 
   it("returns empty for terminal states", () => {

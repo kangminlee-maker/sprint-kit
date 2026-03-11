@@ -616,6 +616,44 @@ describe("compile — additional edge cases", () => {
     }
   });
 
+  it("implementation with assumptions shows in Section 4", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const input = makeFullInput({
+      state: makeState(pool),
+      implementations: [
+        { summary: "A", related_cst: ["CST-001"], target: "a.ts", detail: "d", assumptions: ["DB 스키마 변경 없음", "API 하위 호환 유지"] },
+      ],
+      changes: [
+        { action: "create", file_path: "a.ts", description: "d", related_impl_indices: [0], related_cst: ["CST-001"] },
+      ],
+    });
+    const result = compile(input);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.buildSpecMd).toContain("**전제 가정:**");
+      expect(result.buildSpecMd).toContain("DB 스키마 변경 없음");
+      expect(result.buildSpecMd).toContain("API 하위 호환 유지");
+    }
+  });
+
+  it("implementation without assumptions does not render assumptions section", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const input = makeFullInput({
+      state: makeState(pool),
+      implementations: [
+        { summary: "A", related_cst: ["CST-001"], target: "a.ts", detail: "d" },
+      ],
+      changes: [
+        { action: "create", file_path: "a.ts", description: "d", related_impl_indices: [0], related_cst: ["CST-001"] },
+      ],
+    });
+    const result = compile(input);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.buildSpecMd).not.toContain("**전제 가정:**");
+    }
+  });
+
   it("Section 5 action counts format (create 2건 + modify 3건)", () => {
     const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
     const input = makeFullInput({

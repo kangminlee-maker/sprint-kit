@@ -414,12 +414,17 @@ appendScopeEvent(paths, {
 target이 잠기면 compile 단계로 진행합니다.
 사용자에게 안내: "모든 결정이 완료되었습니다. compile을 시작합니다."
 
-**compile 입력 체크리스트 (필수, compile 호출 전 확인):**
+**compile 입력 구성 체크리스트 (필수):**
 
-compile()을 호출하기 전에 에이전트는 다음을 확인합니다:
-- [ ] 모든 inject 결정 CST에 대해 `changes` 배열에 최소 1개 CHG가 `related_cst`에 해당 CST-ID를 포함하는가
-- [ ] 모든 inject 결정 CST에 대해 `injectValidations` 배열에 최소 1개 항목이 `related_cst`에 해당 CST-ID를 포함하는가
-- [ ] 모든 IMPL에 최소 1개 CHG가 `related_impl_indices`로 참조하는가
+compile() 호출 전에 다음을 확인합니다:
+
+1. 모든 inject CST에 대해 최소 1건의 `ImplementationItem`이 `related_cst`에 해당 CST-ID를 포함하는지
+2. 모든 inject CST에 대해 최소 1건의 `ChangeItem`이 `related_cst`에 해당 CST-ID를 포함하는지
+3. 모든 inject CST에 대해 `InjectValidation` 항목이 존재하는지
+4. file_path는 일관된 형식(프로젝트 루트 기준 상대 경로)으로 기입하는지
+5. 모든 IMPL에 최소 1개 CHG가 `related_impl_indices`로 참조하는지
+
+누락 발견 시 compile()을 호출하지 않고 즉시 보완합니다.
 
 누락 시 compile-defense가 L2 violation으로 거부합니다. violation 구조는 `{ rule: string, detail: string }` 형태입니다 (`DefenseViolation` 타입). `message` 필드는 없으므로 `violation.detail`을 참조하세요.
 

@@ -31,6 +31,7 @@ const MATRIX: Partial<
     "input.attached": { next: "draft", kind: "self" },
     "grounding.started": { next: "draft", kind: "self" },
     "grounding.completed": { next: "grounded", kind: "forward" },
+    "constraint.discovered": { next: "draft", kind: "self" },
   },
 
   // ── grounded ──

@@ -493,17 +493,15 @@ describe("event-pipeline — structured rejection fields", () => {
       title: "T", description: "d", entry_mode: "experience",
     }, "user"));
 
-    // draft does not allow constraint.discovered
-    const result = appendScopeEvent(paths, input("constraint.discovered", {
-      constraint_id: "CST-001", perspective: "code", summary: "test",
-      severity: "required", discovery_stage: "draft_phase2",
-      decision_owner: "builder", impact_if_ignored: "bad", source_refs: [],
-    }));
+    // draft does not allow align.locked
+    const result = appendScopeEvent(paths, input("align.locked", {
+      locked_direction: "dir", locked_scope_boundaries: { in: [], out: [] }, locked_in_out: true,
+    }, "user"));
 
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.current_state).toBe("draft");
-      expect(result.rejected_type).toBe("constraint.discovered");
+      expect(result.rejected_type).toBe("align.locked");
       expect(result.reason).toContain("Transition denied");
     }
   });
