@@ -1,5 +1,5 @@
 import { isEvidenceUnverified } from "../kernel/types.js";
-import type { ScopeState, ConstraintEntry, ValidationPlanEntry, ValidationPlanItem, BrownfieldDetail, BrownfieldInvariant } from "../kernel/types.js";
+import type { ScopeState, ConstraintEntry, ValidationPlanEntry, ValidationPlanItem, BrownfieldDetail, BrownfieldInvariant, BrownfieldContext } from "../kernel/types.js";
 
 // Re-export for backward compatibility
 export type { ValidationPlanEntry, ValidationPlanItem } from "../kernel/types.js";
@@ -66,13 +66,14 @@ export function compileDefense(
   deltaSet: DeltaSet,
   validationPlan: ValidationPlanItem[],
   brownfieldDetail?: BrownfieldDetail,
+  brownfieldContext?: BrownfieldContext,
 ): DefenseResult {
   const violations: DefenseViolation[] = [];
   const warnings: DefenseViolation[] = [];
 
   checkLayer1(state, buildSpec, violations);
   checkLayer2(state, buildSpec, deltaSet, validationPlan, violations);
-  checkLayer3(state, buildSpec, deltaSet, brownfieldDetail, warnings);
+  checkLayer3(state, buildSpec, deltaSet, brownfieldDetail, brownfieldContext, warnings);
 
   const errors = violations;
 
@@ -113,7 +114,7 @@ function checkLayer2(
 ): void {
   const implIds = new Set(buildSpec.section4.map((e) => e.impl_id));
   const changeCstIds = new Set(deltaSet.changes.flatMap((c) => c.related_cst));
-  const changeFilePaths = new Set(deltaSet.changes.map((c) => c.file_path));
+  const changeFilePaths = new Set(deltaSet.changes.map((c) => normalizeFilePath(c.file_path)));
   const valCstIds = new Set(validationPlan.map((v) => v.related_cst));
 
   for (const c of state.constraint_pool.constraints) {
@@ -196,7 +197,7 @@ function checkDeferNonInterfering(
   violations: DefenseViolation[],
 ): void {
   for (const ref of c.source_refs) {
-    if (changeFilePaths.has(ref.source)) {
+    if (changeFilePaths.has(normalizeFilePath(ref.source))) {
       violations.push({
         rule: "L2-defer-interfere",
         detail: `${c.constraint_id ?? "UNKNOWN-CST"} (defer) source_ref "${ref.source ?? "UNKNOWN"}" is modified in delta-set. 간섭 여부를 확인하세요.`,
@@ -215,7 +216,7 @@ function checkOverrideNonReflected(
   for (const change of deltaSet.changes) {
     if (
       change.related_cst.includes(c.constraint_id) &&
-      c.source_refs.some((ref) => ref.source === change.file_path)
+      c.source_refs.some((ref) => normalizeFilePath(ref.source) === normalizeFilePath(change.file_path))
     ) {
       violations.push({
         rule: "L2-override-reflected",
@@ -297,6 +298,7 @@ function checkLayer3(
   buildSpec: BuildSpecData,
   deltaSet: DeltaSet,
   brownfieldDetail: BrownfieldDetail | undefined,
+  brownfieldContext: BrownfieldContext | undefined,
   warnings: DefenseViolation[],
 ): void {
   checkUnverifiedInject(state, warnings);
@@ -304,6 +306,7 @@ function checkLayer3(
   checkStateCompleteness(state, buildSpec, brownfieldDetail, warnings);
   checkSharedResource(deltaSet, warnings);
   checkInvariantCoverage(state, buildSpec, deltaSet, brownfieldDetail, warnings);
+  checkBrownfieldCoverage(deltaSet, brownfieldContext, warnings);
 }
 
 /**
@@ -440,7 +443,7 @@ function checkInvariantCoverage(
 ): void {
   if (!brownfieldDetail?.invariants || brownfieldDetail.invariants.length === 0) return;
 
-  const changeFilePaths = new Set(deltaSet.changes.map(c => c.file_path));
+  const changeFilePaths = new Set(deltaSet.changes.map(c => normalizeFilePath(c.file_path)));
 
   // Build search text from constraints + IMPL references in buildSpec
   const constraintText = state.constraint_pool.constraints
@@ -453,7 +456,7 @@ function checkInvariantCoverage(
 
   for (const inv of brownfieldDetail.invariants) {
     // Check if any affected_files are in the delta-set changes
-    const affected = inv.affected_files?.some(f => changeFilePaths.has(f)) ?? false;
+    const affected = inv.affected_files?.some(f => changeFilePaths.has(normalizeFilePath(f))) ?? false;
     if (!affected) continue;
 
     // Check if the invariant is mentioned in constraints or IMPL
@@ -462,6 +465,52 @@ function checkInvariantCoverage(
       warnings.push({
         rule: "L3-invariant-uncovered",
         detail: `불변 제약 "${inv.name}" (${inv.description})의 영향 파일이 delta-set에서 변경되지만, 구현 계획에서 언급되지 않습니다.`,
+      });
+    }
+  }
+}
+
+// ─── Path normalization for compile-defense ───
+
+/**
+ * Normalize a file path for string comparison.
+ * Removes leading ./, trailing /, and collapses consecutive /.
+ * Does NOT resolve to absolute paths — keeps relative paths as-is.
+ */
+export function normalizeFilePath(p: string): string {
+  return p
+    .replace(/^\.\//, "")
+    .replace(/\/+/g, "/")
+    .replace(/\/$/, "");
+}
+
+// ─── Layer 3: Brownfield Coverage ───
+
+/**
+ * Warn when delta-set modify/delete targets a file not in brownfield.related_files.
+ * This indicates the agent planned a change without scanning the existing code.
+ */
+function checkBrownfieldCoverage(
+  deltaSet: DeltaSet,
+  brownfieldContext: BrownfieldContext | undefined,
+  warnings: DefenseViolation[],
+): void {
+  if (!brownfieldContext?.related_files || brownfieldContext.related_files.length === 0) return;
+
+  const brownfieldPaths = new Set(
+    brownfieldContext.related_files.map((f) => normalizeFilePath(f.path)),
+  );
+
+  const modifyDeleteChanges = deltaSet.changes.filter(
+    (c) => c.action === "modify" || c.action === "delete",
+  );
+
+  for (const chg of modifyDeleteChanges) {
+    const normalized = normalizeFilePath(chg.file_path);
+    if (!brownfieldPaths.has(normalized)) {
+      warnings.push({
+        rule: "L3-modify-not-in-brownfield",
+        detail: `${chg.file_path} (${chg.action})가 brownfield.related_files에 등록되지 않았습니다. 기존 코드 구조를 확인했는지 검증하세요.`,
       });
     }
   }

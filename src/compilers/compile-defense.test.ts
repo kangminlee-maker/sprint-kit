@@ -981,3 +981,150 @@ describe("compile-defense — L3-invariant-uncovered", () => {
     }
   });
 });
+
+// ─── Layer 3: L3-modify-not-in-brownfield ───
+
+describe("compile-defense — L3-modify-not-in-brownfield", () => {
+  function makeBasicInput() {
+    const pool = makePool(makeEntry("CST-001"));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    return { state: makeState(pool), bs, vp };
+  }
+
+  it("no warning when modify file exists in brownfield.related_files", () => {
+    const { state, bs, vp } = makeBasicInput();
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/app.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const brownfieldContext = {
+      related_files: [{ path: "src/app.ts", role: "source", detail_anchor: "#app" }],
+      module_dependencies: [],
+    };
+    const result = compileDefense(state, bs, ds, vp, undefined, brownfieldContext);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-modify-not-in-brownfield")).toBe(false);
+    }
+  });
+
+  it("warns when modify file is NOT in brownfield.related_files", () => {
+    const { state, bs, vp } = makeBasicInput();
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/app.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const brownfieldContext = {
+      related_files: [{ path: "src/other.ts", role: "source", detail_anchor: "#other" }],
+      module_dependencies: [],
+    };
+    const result = compileDefense(state, bs, ds, vp, undefined, brownfieldContext);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-modify-not-in-brownfield" && w.detail.includes("src/app.ts"))).toBe(true);
+    }
+  });
+
+  it("warns when delete file is NOT in brownfield.related_files", () => {
+    const { state, bs, vp } = makeBasicInput();
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "delete", file_path: "src/old.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const brownfieldContext = {
+      related_files: [{ path: "src/other.ts", role: "source", detail_anchor: "#other" }],
+      module_dependencies: [],
+    };
+    const result = compileDefense(state, bs, ds, vp, undefined, brownfieldContext);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-modify-not-in-brownfield" && w.detail.includes("src/old.ts"))).toBe(true);
+    }
+  });
+
+  it("no warning for create action even if not in brownfield", () => {
+    const { state, bs, vp } = makeBasicInput();
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "src/new.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const brownfieldContext = {
+      related_files: [{ path: "src/other.ts", role: "source", detail_anchor: "#other" }],
+      module_dependencies: [],
+    };
+    const result = compileDefense(state, bs, ds, vp, undefined, brownfieldContext);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-modify-not-in-brownfield")).toBe(false);
+    }
+  });
+
+  it("no warning when brownfieldContext is undefined", () => {
+    const { state, bs, vp } = makeBasicInput();
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/app.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const result = compileDefense(state, bs, ds, vp, undefined, undefined);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-modify-not-in-brownfield")).toBe(false);
+    }
+  });
+
+  it("no warning when brownfield.related_files is empty", () => {
+    const { state, bs, vp } = makeBasicInput();
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/app.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const brownfieldContext = { related_files: [], module_dependencies: [] };
+    const result = compileDefense(state, bs, ds, vp, undefined, brownfieldContext);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-modify-not-in-brownfield")).toBe(false);
+    }
+  });
+
+  it("path normalization: ./src/app.ts matches src/app.ts", () => {
+    const { state, bs, vp } = makeBasicInput();
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "./src/app.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const brownfieldContext = {
+      related_files: [{ path: "src/app.ts", role: "source", detail_anchor: "#app" }],
+      module_dependencies: [],
+    };
+    const result = compileDefense(state, bs, ds, vp, undefined, brownfieldContext);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some(w => w.rule === "L3-modify-not-in-brownfield")).toBe(false);
+    }
+  });
+});
+
+// ─── normalizeFilePath ───
+
+import { normalizeFilePath } from "./compile-defense.js";
+
+describe("normalizeFilePath", () => {
+  it("removes leading ./", () => {
+    expect(normalizeFilePath("./src/app.ts")).toBe("src/app.ts");
+  });
+
+  it("removes trailing /", () => {
+    expect(normalizeFilePath("src/components/")).toBe("src/components");
+  });
+
+  it("collapses consecutive /", () => {
+    expect(normalizeFilePath("src//components///app.ts")).toBe("src/components/app.ts");
+  });
+
+  it("handles combination of all normalizations", () => {
+    expect(normalizeFilePath("./src//app.ts/")).toBe("src/app.ts");
+  });
+
+  it("returns unchanged for already normalized path", () => {
+    expect(normalizeFilePath("src/app.ts")).toBe("src/app.ts");
+  });
+});

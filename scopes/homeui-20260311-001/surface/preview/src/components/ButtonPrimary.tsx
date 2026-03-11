@@ -1,64 +1,44 @@
-import type { ReactNode, ButtonHTMLAttributes } from "react";
-
-interface ButtonPrimaryProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  children: ReactNode;
-  variant?: "green" | "blue";
-  fullWidth?: boolean;
+type Props = {
+  text: string
+  disabled?: boolean
+  pulsing?: boolean
+  onClick?: () => void
 }
 
-/**
- * ButtonPrimary — 3레이어 3D 프레스 구조
- * 외부 button(52px) → 그림자 div → 표면 div(48px)
- * podo-green 배경, border-[1.5px] border-gray-900
- */
-export function ButtonPrimary({
-  children,
-  variant = "green",
-  fullWidth = true,
-  disabled,
-  ...props
-}: ButtonPrimaryProps) {
-  const bgColor = variant === "green" ? "var(--podo-green)" : "var(--blue-500)";
-  const shadowColor = variant === "green" ? "var(--green-500)" : "#4A6BD4";
-  const textColor = variant === "green" ? "var(--gray-900)" : "white";
+export default function ButtonPrimary({ text, disabled = false, pulsing = false, onClick }: Props) {
+  if (disabled) {
+    return (
+      <button
+        className="w-full h-[52px] bg-transparent border-none p-0 cursor-not-allowed group"
+        disabled
+      >
+        <div className="w-full rounded-lg pb-1 bg-[#E8E8E8]">
+          <div className="w-full h-12 rounded-lg border-[1.5px] border-[#E8E8E8] bg-[#F5F5F5] flex items-center justify-center">
+            <span className="text-base font-bold leading-6 tracking-[-0.48px] text-[#D6D6D6]">
+              {text}
+            </span>
+          </div>
+        </div>
+      </button>
+    )
+  }
 
   return (
     <button
-      className="relative border-none bg-transparent p-0 cursor-pointer"
-      style={{
-        width: fullWidth ? "100%" : "auto",
-        height: "52px",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.4 : 1,
-      }}
-      disabled={disabled}
-      {...props}
+      className="w-full h-[52px] bg-transparent border-none p-0 cursor-pointer group"
+      onClick={onClick}
     >
-      {/* Shadow layer */}
       <div
-        className="absolute inset-0 rounded-2xl"
-        style={{
-          backgroundColor: shadowColor,
-          border: "1.5px solid var(--gray-900)",
-        }}
-      />
-      {/* Surface layer */}
-      <div
-        className="relative flex items-center justify-center rounded-2xl"
-        style={{
-          height: "48px",
-          backgroundColor: bgColor,
-          border: "1.5px solid var(--gray-900)",
-          fontSize: "16px",
-          fontWeight: 700,
-          lineHeight: "24px",
-          letterSpacing: "-0.48px",
-          color: textColor,
-          transition: "transform 100ms",
-        }}
+        className={`w-full rounded-lg pb-1 bg-[#1C1C1C] transition-all duration-100 group-hover:translate-y-[2px] group-hover:pb-[2px] group-active:translate-y-1 group-active:pb-0 ${
+          pulsing ? 'animate-pulse-border rounded-lg' : ''
+        }`}
       >
-        {children}
+        <div className="w-full h-12 rounded-lg border-[1.5px] border-[#1C1C1C] bg-[#B5FD4C] flex items-center justify-center transition-colors duration-100 group-hover:bg-[#9BEB26] group-active:bg-[#9BEB26]">
+          <span className="text-base font-bold leading-6 tracking-[-0.48px] text-[#1C1C1C]">
+            {text}
+          </span>
+        </div>
       </div>
     </button>
-  );
+  )
 }
