@@ -20,7 +20,8 @@
       "discovered_at": 4,
       "decided_at": 19,
       "rationale": "이것 없이 기능 작동 안 함",
-      "evidence_status": "unverified"
+      "evidence_status": "unverified",
+      "requires_policy_change": false
     },
     {
       "constraint_id": "CST-002",
@@ -42,7 +43,8 @@
       "discovered_at": 5,
       "decided_at": 20,
       "rationale": "법무팀 확인 완료",
-      "evidence_status": "unverified"
+      "evidence_status": "unverified",
+      "requires_policy_change": false
     },
     {
       "constraint_id": "CST-003",
@@ -64,7 +66,8 @@
       "discovered_at": 6,
       "decided_at": 21,
       "rationale": "오터치 방지",
-      "evidence_status": "unverified"
+      "evidence_status": "unverified",
+      "requires_policy_change": false
     },
     {
       "constraint_id": "CST-004",
@@ -86,7 +89,8 @@
       "discovered_at": 14,
       "decided_at": 22,
       "rationale": "차단 관리는 자주 쓰는 기능이 아님",
-      "evidence_status": "unverified"
+      "evidence_status": "unverified",
+      "requires_policy_change": false
     },
     {
       "constraint_id": "CST-005",
@@ -108,7 +112,8 @@
       "discovered_at": 15,
       "decided_at": 23,
       "rationale": "저장 공간 없이 기능 불가",
-      "evidence_status": "unverified"
+      "evidence_status": "unverified",
+      "requires_policy_change": false
     },
     {
       "constraint_id": "CST-006",
@@ -130,7 +135,8 @@
       "discovered_at": 16,
       "decided_at": 24,
       "rationale": "기존 API 호환성 유지",
-      "evidence_status": "unverified"
+      "evidence_status": "unverified",
+      "requires_policy_change": false
     },
     {
       "constraint_id": "CST-007",
@@ -152,7 +158,8 @@
       "discovered_at": 17,
       "decided_at": 25,
       "rationale": "정책 위반 방지",
-      "evidence_status": "unverified"
+      "evidence_status": "unverified",
+      "requires_policy_change": false
     },
     {
       "constraint_id": "CST-008",
@@ -174,7 +181,8 @@
       "discovered_at": 18,
       "decided_at": 26,
       "rationale": "남용 방지하면서 선택권 보장",
-      "evidence_status": "unverified"
+      "evidence_status": "unverified",
+      "requires_policy_change": false
     }
   ],
   "summary": {

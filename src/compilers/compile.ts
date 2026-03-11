@@ -1,5 +1,6 @@
 import {
   formatPerspective,
+  isPolicyChangeRequired,
   type ScopeState,
   type ConstraintEntry,
   type Perspective,
@@ -256,6 +257,14 @@ function validateInput(input: CompileInput): string | null {
     }
   }
 
+  // Validate brownfield required fields
+  if (!input.brownfield.related_files || !Array.isArray(input.brownfield.related_files)) {
+    return "brownfield.related_files is required and must be an array of BrownfieldFileEntry";
+  }
+  if (!input.brownfield.module_dependencies || !Array.isArray(input.brownfield.module_dependencies)) {
+    return "brownfield.module_dependencies is required and must be an array of BrownfieldDepEntry";
+  }
+
   return null;
 }
 
@@ -462,6 +471,16 @@ function renderSection3(
     );
   }
 
+  // Policy change warning
+  const policyChangeCsts = state.constraint_pool.constraints.filter(isPolicyChangeRequired);
+  if (policyChangeCsts.length > 0) {
+    lines.push("");
+    lines.push("> **정책 변경 검토 필요:**");
+    for (const c of policyChangeCsts) {
+      lines.push(`> - ${c.constraint_id}: 기존 정책 변경을 전제합니다. 구현 전 법무/정책 검토가 필요합니다.${c.evidence_note ? ` 참고: ${c.evidence_note}` : ""}`);
+    }
+  }
+
   // Also show invalidated separately (collapsed when 3+)
   const invalidated = state.constraint_pool.constraints.filter(
     (c) => c.status === "invalidated",
@@ -494,9 +513,10 @@ function decisionTreatment(c: ConstraintEntry): string {
   if (c.status === "invalidated") {
     return `해당 없음. 사유: ${c.invalidation_reason ?? "방향 변경"}`;
   }
+  const policySuffix = isPolicyChangeRequired(c) ? " [정책 변경 검토 필요]" : "";
   switch (c.decision) {
     case "inject": {
-      return `Section 4에서 구현. ${c.selected_option ?? ""}`.trim();
+      return `Section 4에서 구현. ${c.selected_option ?? ""}`.trim() + policySuffix;
     }
     case "defer":
       return `이번 범위에서 제외. 이유: ${c.rationale ?? c.selected_option ?? "—"}`;
@@ -730,12 +750,22 @@ function renderValidationPlanMd(
   lines.push("");
 
   for (const v of valItems) {
-    lines.push(`### ${v.val_id} | ${v.related_cst} | ${v.decision_type}`);
+    const cstEntry = state.constraint_pool.constraints.find(
+      (c) => c.constraint_id === v.related_cst,
+    );
+    const policyTag = cstEntry && isPolicyChangeRequired(cstEntry)
+      ? " [정책 변경 검토 필요]"
+      : "";
+    lines.push(`### ${v.val_id} | ${v.related_cst} | ${v.decision_type}${policyTag}`);
     lines.push("");
     lines.push(`**검증 대상:** ${v.target}`);
     lines.push(`**검증 방법:** ${v.method}`);
     lines.push(`**통과 조건:** ${v.pass_criteria}`);
     lines.push(`**실패 시 조치:** ${v.fail_action}`);
+    if (cstEntry && isPolicyChangeRequired(cstEntry)) {
+      lines.push("");
+      lines.push(`> **정책 변경 전제**: 이 항목은 기존 정책 변경을 전제합니다. 검증 전 법무/정책 검토 완료 여부를 확인하세요.`);
+    }
     if (v.edge_cases && v.edge_cases.length > 0) {
       lines.push("");
       lines.push("**Edge cases:**");

@@ -299,3 +299,51 @@ describe("scope-md — verdict log", () => {
     expect(md).not.toContain("## 최근 결정");
   });
 });
+
+// ─── requires_policy_change rendering ───
+
+describe("scope-md — requires_policy_change count", () => {
+  it("shows policy change count when requires_policy_change constraints exist", () => {
+    const pool: ConstraintPool = {
+      constraints: [
+        {
+          constraint_id: "CST-001", perspective: "policy", summary: "s",
+          severity: "required", discovery_stage: "draft_phase2",
+          decision_owner: "product_owner", impact_if_ignored: "i",
+          source_refs: [{ source: "t.ts", detail: "d" }],
+          status: "decided", decision: "inject", discovered_at: 1, decided_at: 2,
+          requires_policy_change: true,
+        },
+        {
+          constraint_id: "CST-002", perspective: "code", summary: "s2",
+          severity: "recommended", discovery_stage: "draft_phase2",
+          decision_owner: "product_owner", impact_if_ignored: "i",
+          source_refs: [{ source: "t.ts", detail: "d" }],
+          status: "decided", decision: "inject", discovered_at: 1, decided_at: 2,
+          requires_policy_change: false,
+        },
+      ],
+      summary: { total: 2, required: 1, recommended: 1, decided: 2, clarify_pending: 0, invalidated: 0, undecided: 0 },
+    };
+    const md = renderScopeMd(makeState({ constraint_pool: pool }));
+    expect(md).toContain("정책 변경 검토 필요: 1건");
+  });
+
+  it("omits policy change count when no requires_policy_change constraints", () => {
+    const pool: ConstraintPool = {
+      constraints: [
+        {
+          constraint_id: "CST-001", perspective: "code", summary: "s",
+          severity: "recommended", discovery_stage: "draft_phase2",
+          decision_owner: "product_owner", impact_if_ignored: "i",
+          source_refs: [{ source: "t.ts", detail: "d" }],
+          status: "decided", decision: "inject", discovered_at: 1, decided_at: 2,
+          requires_policy_change: false,
+        },
+      ],
+      summary: { total: 1, required: 0, recommended: 1, decided: 1, clarify_pending: 0, invalidated: 0, undecided: 0 },
+    };
+    const md = renderScopeMd(makeState({ constraint_pool: pool }));
+    expect(md).not.toContain("정책 변경 검토 필요");
+  });
+});

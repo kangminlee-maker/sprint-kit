@@ -692,6 +692,81 @@ describe("constraint-pool — complex scenario summary accuracy", () => {
   });
 });
 
+describe("constraint-pool — requires_policy_change propagation", () => {
+  it("discovered with requires_policy_change=true propagates to entry", () => {
+    const evt: Event = {
+      event_id: "evt_1", scope_id: "SC-TEST", type: "constraint.discovered",
+      ts: "2026-01-01T00:00:01Z", revision: 1, actor: "system",
+      state_before: "surface_confirmed", state_after: "surface_confirmed",
+      payload: {
+        constraint_id: "CST-001", perspective: "policy", summary: "test",
+        severity: "required", discovery_stage: "draft_phase2",
+        decision_owner: "product_owner", impact_if_ignored: "test",
+        source_refs: [{ source: "test.ts", detail: "d" }],
+        requires_policy_change: true,
+      },
+    } as Event;
+    const pool = buildConstraintPool([evt]);
+    expect(findConstraint(pool, "CST-001")!.requires_policy_change).toBe(true);
+  });
+
+  it("discovered without requires_policy_change defaults to false", () => {
+    const events = [discovered("CST-001", 1)];
+    const pool = buildConstraintPool(events);
+    expect(findConstraint(pool, "CST-001")!.requires_policy_change).toBe(false);
+  });
+
+  it("evidence_updated with requires_policy_change updates the entry", () => {
+    const events: Event[] = [
+      discovered("CST-001", 1),
+      {
+        event_id: "evt_2", scope_id: "SC-TEST", type: "constraint.evidence_updated",
+        ts: "2026-01-01T00:00:02Z", revision: 2, actor: "system",
+        state_before: "surface_confirmed", state_after: "surface_confirmed",
+        payload: {
+          constraint_id: "CST-001",
+          evidence_status: "verified",
+          requires_policy_change: true,
+        },
+      } as Event,
+    ];
+    const pool = buildConstraintPool(events);
+    const entry = findConstraint(pool, "CST-001")!;
+    expect(entry.requires_policy_change).toBe(true);
+    expect(entry.evidence_status).toBe("verified");
+  });
+
+  it("evidence_updated without requires_policy_change does not change the field", () => {
+    const discoverEvt: Event = {
+      event_id: "evt_1", scope_id: "SC-TEST", type: "constraint.discovered",
+      ts: "2026-01-01T00:00:01Z", revision: 1, actor: "system",
+      state_before: "surface_confirmed", state_after: "surface_confirmed",
+      payload: {
+        constraint_id: "CST-001", perspective: "policy", summary: "test",
+        severity: "required", discovery_stage: "draft_phase2",
+        decision_owner: "product_owner", impact_if_ignored: "test",
+        source_refs: [{ source: "test.ts", detail: "d" }],
+        requires_policy_change: true,
+      },
+    } as Event;
+    const events: Event[] = [
+      discoverEvt,
+      {
+        event_id: "evt_2", scope_id: "SC-TEST", type: "constraint.evidence_updated",
+        ts: "2026-01-01T00:00:02Z", revision: 2, actor: "system",
+        state_before: "surface_confirmed", state_after: "surface_confirmed",
+        payload: {
+          constraint_id: "CST-001",
+          evidence_status: "verified",
+          // requires_policy_change not specified
+        },
+      } as Event,
+    ];
+    const pool = buildConstraintPool(events);
+    expect(findConstraint(pool, "CST-001")!.requires_policy_change).toBe(true);
+  });
+});
+
 describe("constraint-pool — summary invariants", () => {
   it("invariants hold for mixed status pool", () => {
     const events = [

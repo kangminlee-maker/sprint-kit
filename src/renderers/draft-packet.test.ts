@@ -363,3 +363,37 @@ describe("draft-packet — validation", () => {
     }))).toThrow("decision_owner");
   });
 });
+
+// ─── requires_policy_change rendering ───
+
+describe("draft-packet — requires_policy_change", () => {
+  it("shows policy tag and callout when requires_policy_change=true", () => {
+    const entry = makeEntry("CST-001", { requires_policy_change: true, decision: "inject", status: "decided" });
+    const state = makeState({ constraint_pool: makePoolWith(entry) });
+    const md = renderDraftPacket(state, makeContent({
+      constraint_details: [poDet("CST-001")],
+    }));
+    expect(md).toContain("[정책 변경 검토 필요]");
+    expect(md).toContain("정책 변경 전제");
+    expect(md).toContain("requires_policy_change=false");
+  });
+
+  it("no policy tag when requires_policy_change is false", () => {
+    const entry = makeEntry("CST-001", { requires_policy_change: false });
+    const state = makeState({ constraint_pool: makePoolWith(entry) });
+    const md = renderDraftPacket(state, makeContent({
+      constraint_details: [poDet("CST-001")],
+    }));
+    expect(md).not.toContain("[정책 변경 검토 필요]");
+    expect(md).not.toContain("정책 변경 전제");
+  });
+
+  it("no policy tag when requires_policy_change is undefined", () => {
+    const entry = makeEntry("CST-001"); // no requires_policy_change
+    const state = makeState({ constraint_pool: makePoolWith(entry) });
+    const md = renderDraftPacket(state, makeContent({
+      constraint_details: [poDet("CST-001")],
+    }));
+    expect(md).not.toContain("[정책 변경 검토 필요]");
+  });
+});

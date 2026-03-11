@@ -56,6 +56,7 @@ export function buildConstraintPool(events: Event[]): ConstraintPool {
           source_refs: p.source_refs,
           evidence_status: p.evidence_status ?? "unverified",
           evidence_note: p.evidence_note,
+          requires_policy_change: p.requires_policy_change ?? false,
           status: "undecided",
           discovered_at: evt.revision,
         });
@@ -112,6 +113,9 @@ export function buildConstraintPool(events: Event[]): ConstraintPool {
         entry.evidence_status = p.evidence_status;
         if (p.evidence_note !== undefined) {
           entry.evidence_note = p.evidence_note;
+        }
+        if (p.requires_policy_change !== undefined) {
+          entry.requires_policy_change = p.requires_policy_change;
         }
         break;
       }

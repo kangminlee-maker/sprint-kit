@@ -300,6 +300,7 @@ function checkLayer3(
   warnings: DefenseViolation[],
 ): void {
   checkUnverifiedInject(state, warnings);
+  checkPolicyChangeRequired(state, warnings);
   checkStateCompleteness(state, buildSpec, brownfieldDetail, warnings);
   checkSharedResource(deltaSet, warnings);
   checkInvariantCoverage(state, buildSpec, deltaSet, brownfieldDetail, warnings);
@@ -323,6 +324,25 @@ function checkUnverifiedInject(
         detail: `${c.constraint_id} (required, inject) has evidence_status="${c.evidence_status}". 정책 문서에서 확인되지 않은 가정이 구현에 포함됩니다.${c.evidence_note ? ` Note: ${c.evidence_note}` : ""}`,
       });
     }
+  }
+}
+
+/**
+ * Warn (not block) when an inject constraint has requires_policy_change=true.
+ * Independent from L3-unverified-inject (evidence quality).
+ */
+function checkPolicyChangeRequired(
+  state: ScopeState,
+  warnings: DefenseViolation[],
+): void {
+  for (const c of state.constraint_pool.constraints) {
+    if (c.status === "invalidated") continue;
+    if (c.decision !== "inject") continue;
+    if (!c.requires_policy_change) continue;
+    warnings.push({
+      rule: "L3-policy-change-required",
+      detail: `${c.constraint_id ?? "UNKNOWN-CST"} (inject)는 기존 정책 변경을 전제합니다. 구현 전 법무/정책 검토가 필요합니다.${c.evidence_note ? ` 참고: ${c.evidence_note}` : ""}`,
+    });
   }
 }
 

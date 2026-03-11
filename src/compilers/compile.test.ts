@@ -718,3 +718,77 @@ describe("compile — additional edge cases", () => {
     }
   });
 });
+
+// ─── requires_policy_change rendering ───
+
+describe("compile — requires_policy_change output", () => {
+  it("Section 3 shows policy change warning for inject + requires_policy_change", () => {
+    const pool = makePool(
+      makeEntry("CST-001", { decision: "inject", requires_policy_change: true, evidence_note: "정책 변경 근거" }),
+    );
+    const input = makeFullInput({
+      state: makeState(pool),
+      implementations: [{ summary: "feat", related_cst: ["CST-001"], target: "t", detail: "d" }],
+      changes: [{ action: "create" as const, file_path: "a.ts", description: "d", related_impl_indices: [0], related_cst: ["CST-001"] }],
+      injectValidations: [{ related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] }],
+    });
+    const result = compile(input);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.buildSpecMd).toContain("정책 변경 검토 필요");
+      expect(result.buildSpecMd).toContain("CST-001");
+    }
+  });
+
+  it("decisionTreatment appends [정책 변경 검토 필요] for inject + requires_policy_change", () => {
+    const pool = makePool(
+      makeEntry("CST-001", { decision: "inject", requires_policy_change: true }),
+    );
+    const input = makeFullInput({
+      state: makeState(pool),
+      implementations: [{ summary: "feat", related_cst: ["CST-001"], target: "t", detail: "d" }],
+      changes: [{ action: "create" as const, file_path: "a.ts", description: "d", related_impl_indices: [0], related_cst: ["CST-001"] }],
+      injectValidations: [{ related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] }],
+    });
+    const result = compile(input);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.buildSpecMd).toContain("[정책 변경 검토 필요]");
+    }
+  });
+
+  it("validation plan shows policy warning for inject + requires_policy_change", () => {
+    const pool = makePool(
+      makeEntry("CST-001", { decision: "inject", requires_policy_change: true }),
+    );
+    const input = makeFullInput({
+      state: makeState(pool),
+      implementations: [{ summary: "feat", related_cst: ["CST-001"], target: "t", detail: "d" }],
+      changes: [{ action: "create" as const, file_path: "a.ts", description: "d", related_impl_indices: [0], related_cst: ["CST-001"] }],
+      injectValidations: [{ related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] }],
+    });
+    const result = compile(input);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.validationPlanMd).toContain("정책 변경 전제");
+    }
+  });
+
+  it("no policy warning when requires_policy_change is false", () => {
+    const pool = makePool(
+      makeEntry("CST-001", { decision: "inject", requires_policy_change: false }),
+    );
+    const input = makeFullInput({
+      state: makeState(pool),
+      implementations: [{ summary: "feat", related_cst: ["CST-001"], target: "t", detail: "d" }],
+      changes: [{ action: "create" as const, file_path: "a.ts", description: "d", related_impl_indices: [0], related_cst: ["CST-001"] }],
+      injectValidations: [{ related_cst: "CST-001", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] }],
+    });
+    const result = compile(input);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.buildSpecMd).not.toContain("정책 변경 검토 필요");
+      expect(result.validationPlanMd).not.toContain("정책 변경 전제");
+    }
+  });
+});

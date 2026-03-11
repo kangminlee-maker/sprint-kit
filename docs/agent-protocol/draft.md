@@ -443,16 +443,26 @@ compile() 호출이 실패하면 에이전트는 다음 절차를 따릅니다:
 3. 산출물을 `build/` 디렉토리에 저장합니다.
 4. `compile.completed` 이벤트를 기록합니다.
 
-**L3 미검증 가정 안내 (compile 성공 시):**
+**L3 경고 안내 (compile 성공 시):**
 
 `compile()` 반환값의 `warnings` 필드에 L3 경고가 있으면, 사용자에게 안내합니다:
 
-> "compile이 완료되었습니다. 단, 다음 constraint는 정책 문서에서 확인되지 않은 가정이 포함되어 있습니다:
-> {warnings의 각 항목을 CST-ID + evidence_note로 나열}
+> "compile이 완료되었습니다. 단, 다음 경고가 있습니다:
+> {warnings의 각 항목을 rule + CST-ID + detail로 나열}
 >
-> 이 가정이 잘못된 것으로 밝혀지면 apply 단계 이후 수정이 필요할 수 있습니다."
+> 경고가 있어도 설계 작업(compile, apply)은 계속 진행됩니다. 실제 구현/배포 전까지 해소하면 됩니다."
 
-PO가 정책을 확인한 경우, `constraint.evidence_updated` 이벤트를 기록하여 `evidence_status`를 `verified`로 변경할 수 있습니다:
+**정책 변경 검토 필요 항목의 clearing:**
+
+`requires_policy_change: true` 태그가 있는 constraint의 해소 경로:
+
+1. **검토 불필요 확인**: 법무/정책팀 검토 결과 변경이 불필요한 경우 → `constraint.evidence_updated` 이벤트 기록 (`requires_policy_change: false`, `evidence_note: "법무팀 확인: 변경 불필요 (날짜)"`)
+2. **정책 변경 완료**: 약관/정책이 실제로 개정된 경우 → `constraint.evidence_updated` 이벤트 기록 (`requires_policy_change: false`, `evidence_status: "verified"`, `evidence_note: "약관 제N조 개정 완료 (날짜)"`)
+3. **정책 변경 불가 → 결정 변경**: 변경이 불가한 경우 → 해당 constraint의 결정을 `defer` 또는 `override`로 변경 (`constraint.decision_recorded`)
+
+정책 변경 검토 미완료 상태로도 설계 작업(compile, apply)은 계속 진행됩니다. 실제 구현/배포 전까지 clearing하면 됩니다.
+
+PO가 정책을 확인한 경우, `constraint.evidence_updated` 이벤트를 기록하여 `evidence_status`를 `verified`로 변경하고 `requires_policy_change`를 `false`로 갱신할 수 있습니다:
 
 ```typescript
 appendScopeEvent(paths, {
@@ -462,6 +472,7 @@ appendScopeEvent(paths, {
     constraint_id: "CST-001",
     evidence_status: "verified",
     evidence_note: "schedule/policies.md 섹션 3.2에서 확인 완료",
+    requires_policy_change: false,
   },
 });
 ```

@@ -402,6 +402,15 @@ export function isEvidenceUnverified(status: EvidenceStatus): boolean {
   return status !== "verified";
 }
 
+/** Check if a constraint requires an external policy change process. */
+export function isPolicyChangeRequired(c: ConstraintEntry): boolean {
+  return (
+    c.status !== "invalidated" &&
+    c.decision === "inject" &&
+    c.requires_policy_change === true
+  );
+}
+
 export interface ConstraintDiscoveredPayload {
   constraint_id: string;
   perspective: Perspective;
@@ -413,6 +422,7 @@ export interface ConstraintDiscoveredPayload {
   source_refs: Array<{ source: string; detail: string }>;
   evidence_status?: EvidenceStatus;
   evidence_note?: string;
+  requires_policy_change?: boolean;
 }
 
 export interface ConstraintDecisionRecordedPayload {
@@ -442,6 +452,7 @@ export interface ConstraintEvidenceUpdatedPayload {
   constraint_id: string;
   evidence_status: EvidenceStatus;
   evidence_note?: string;
+  requires_policy_change?: boolean;
 }
 
 export interface ConstraintInvalidatedPayload {
@@ -629,6 +640,7 @@ export interface ConstraintEntry {
   source_refs: Array<{ source: string; detail: string }>;
   evidence_status: EvidenceStatus;
   evidence_note?: string;
+  requires_policy_change?: boolean;
   status: ConstraintStatus;
   invalidation_reason?: string;
   decision?: ConstraintDecision;

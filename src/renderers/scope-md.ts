@@ -1,4 +1,5 @@
 import type { ScopeState, VerdictLogEntry } from "../kernel/types.js";
+import { isPolicyChangeRequired } from "../kernel/types.js";
 import { MAX_COMPILE_RETRIES } from "../kernel/constants.js";
 
 /**
@@ -86,6 +87,10 @@ export function renderScopeMd(state: ScopeState): string {
     }
     if (summary.invalidated > 0) {
       lines.push(`- 제외됨: ${summary.invalidated}건`);
+    }
+    const policyChangeCount = state.constraint_pool.constraints.filter(isPolicyChangeRequired).length;
+    if (policyChangeCount > 0) {
+      lines.push(`- 정책 변경 검토 필요: ${policyChangeCount}건`);
     }
     lines.push("");
   }

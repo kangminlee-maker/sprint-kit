@@ -4,6 +4,7 @@ import type {
   ConstraintDetail,
   ConstraintEntry,
 } from "../kernel/types.js";
+import { isPolicyChangeRequired } from "../kernel/types.js";
 import { findConstraint } from "../kernel/constraint-pool.js";
 import { formatPerspective } from "./format.js";
 
@@ -190,10 +191,11 @@ function renderConstraintDetail(
   entry: ConstraintEntry,
 ): void {
   const severityTag = entry.severity === "required" ? "필수" : "권장";
+  const policyTag = isPolicyChangeRequired(entry) ? " [정책 변경 검토 필요]" : "";
   const ownerTag =
     detail.decision_owner === "builder" ? " (Builder 결정 항목)" : "";
   lines.push(
-    `#### ${detail.constraint_id} | ${formatPerspective(entry.perspective)} | ${entry.summary} — ${severityTag}${ownerTag}`,
+    `#### ${detail.constraint_id} | ${formatPerspective(entry.perspective)} | ${entry.summary} — ${severityTag}${policyTag}${ownerTag}`,
   );
   lines.push("");
 
@@ -202,6 +204,12 @@ function renderConstraintDetail(
 
   lines.push(`**처리하지 않으면:** ${entry.impact_if_ignored}`);
   lines.push("");
+
+  if (isPolicyChangeRequired(entry)) {
+    lines.push(`> **정책 변경 전제**: 이 항목은 기존 정책 변경을 전제합니다(requires_policy_change=true). inject 결정 시 구현 전 법무/정책 검토가 필요합니다.`);
+    lines.push(`> 해소 경로: (1) evidence_updated 이벤트로 requires_policy_change=false 설정 (2) 정책 검토 완료 후 evidence_note에 근거 기록`);
+    lines.push("");
+  }
 
   if (detail.decision_owner === "product_owner") {
     // PO detail

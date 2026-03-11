@@ -634,6 +634,63 @@ describe("Layer 3 — evidence status warnings", () => {
   });
 });
 
+// ─── Layer 3: L3-policy-change-required ───
+
+describe("Layer 3 — L3-policy-change-required", () => {
+  const bs: BuildSpecData = {
+    section3: [{ constraint_id: "CST-001", decision: "inject" }],
+    section4: [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+  };
+  const ds = makeDeltaSet([{ change_id: "CHG-001", action: "modify", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] }]);
+  const vp: ValidationPlanItem[] = [{
+    val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject",
+    target: "t", method: "m", pass_criteria: "p", fail_action: "f",
+    edge_cases: [{ scenario: "s", expected_result: "r" }],
+  }];
+
+  it("requires_policy_change=true + inject → L3 warning", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject", requires_policy_change: true, evidence_note: "기존 정책 변경 필요" }));
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some((w) => w.rule === "L3-policy-change-required" && w.detail.includes("CST-001"))).toBe(true);
+    }
+  });
+
+  it("requires_policy_change=false + inject → no L3-policy-change-required warning", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject", requires_policy_change: false }));
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some((w) => w.rule === "L3-policy-change-required")).toBe(false);
+    }
+  });
+
+  it("requires_policy_change=true + defer → no warning (not inject)", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "defer", requires_policy_change: true }));
+    const bs2: BuildSpecData = { section3: [{ constraint_id: "CST-001", decision: "defer" }], section4: [] };
+    const ds2 = makeDeltaSet([]);
+    const vp2: ValidationPlanItem[] = [];
+    const result = compileDefense(makeState(pool), bs2, ds2, vp2);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some((w) => w.rule === "L3-policy-change-required")).toBe(false);
+    }
+  });
+
+  it("requires_policy_change=true + invalidated → no warning", () => {
+    const pool = makePool(makeEntry("CST-001", { status: "invalidated", decision: "inject", requires_policy_change: true }));
+    const bs2: BuildSpecData = { section3: [], section4: [] };
+    const ds2 = makeDeltaSet([]);
+    const vp2: ValidationPlanItem[] = [];
+    const result = compileDefense(makeState(pool), bs2, ds2, vp2);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings.some((w) => w.rule === "L3-policy-change-required")).toBe(false);
+    }
+  });
+});
+
 // ─── Layer 3: L3-shared-resource ───
 
 describe("compile-defense — L3-shared-resource", () => {
