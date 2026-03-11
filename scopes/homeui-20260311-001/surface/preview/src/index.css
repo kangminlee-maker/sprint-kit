@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* ── PODO Design Tokens ── */
+:root {
+  --podo-green: #B5FD4C;
+  --green-500: #6ABE36;
+  --green-300: #9BEB26;
+  --green-100: #F2FCEC;
+  --gray-900: #1C1C1C;
+  --gray-500: #757575;
+  --gray-400: #9E9E9E;
+  --gray-300: #D6D6D6;
+  --gray-200: #E8E8E8;
+  --gray-100: #F5F5F5;
+  --gray-50: #FAFAFA;
+  --blue-500: #6184FF;
+  --red-500: #FD6771;
+  --red-100: #FFF0F1;
+  --podo-white: #FBFBF9;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.04);
+  --topbar-height: 52px;
+  --gnb-height: 62px;
+}
+
+body {
+  font-family: "Pretendard Variable", -apple-system, sans-serif;
+  background-color: var(--gray-50);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-root {
+  max-width: 480px;
+  min-width: 360px;
+  margin: 0 auto;
+  background: white;
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+}

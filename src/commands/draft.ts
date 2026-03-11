@@ -21,6 +21,7 @@ import { renderScopeMd } from "../renderers/scope-md.js";
 import { wrapGateError } from "./error-messages.js";
 import { contentHash } from "../kernel/hash.js";
 import { compile, type CompileInput, type CompileSuccess } from "../compilers/compile.js";
+import type { DefenseViolation } from "../compilers/compile-defense.js";
 import type { ScopePaths } from "../kernel/scope-manager.js";
 import type { ScopeState, ConstraintDiscoveredPayload, ConstraintDecisionRecordedPayload, FeedbackClassification } from "../kernel/types.js";
 
@@ -53,6 +54,7 @@ export interface DraftResult {
 export interface DraftFailure {
   success: false;
   reason: string;
+  violations?: DefenseViolation[];
 }
 
 export type DraftOutput = DraftResult | DraftFailure;
@@ -344,6 +346,7 @@ function handleCompile(
     return {
       success: false,
       reason: wrapGateError(`Compile 실패: ${compileResult.reason}`),
+      violations: compileResult.violations,
     };
   }
 

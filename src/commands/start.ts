@@ -451,9 +451,11 @@ async function executeGrounding(
 
   for (const result of scanResults) {
     const key = sourceKey(result.source);
-    const hashValues = Object.values(result.content_hashes);
-    if (hashValues.length > 0) {
-      sourceHashes[key] = hashValues[0];
+    // Use sourceKey-based lookup (matches stale-check.ts computeCurrentHash)
+    // content_hashes is keyed by sourceKey, so direct lookup is deterministic.
+    const hash = result.content_hashes[key];
+    if (hash) {
+      sourceHashes[key] = hash;
     }
     totalFiles += result.files.length;
 

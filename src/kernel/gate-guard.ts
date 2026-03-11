@@ -2,6 +2,7 @@ import type {
   Event,
   EventType,
   State,
+  Actor,
   ScopeState,
   ConstraintDecisionRecordedPayload,
   ConstraintClarifyRequestedPayload,
@@ -13,6 +14,47 @@ import type {
 import { resolveTransition } from "./state-machine.js";
 import { MAX_COMPILE_RETRIES } from "./constants.js";
 import { findConstraint, isConstraintsResolved } from "./constraint-pool.js";
+
+// ─── Actor validation mapping ───
+
+/**
+ * Allowed actors per event type.
+ *
+ * Events not listed here are allowed for ALL actors (gradual adoption).
+ * This mapping encodes the intended actor constraints:
+ * - user: human PO actions (scope creation, locking, decisions)
+ * - system: automated pipeline actions (grounding, compile, surface generation)
+ * - agent: AI-driven actions (apply, validation, constraint discovery/decisions)
+ */
+export const ACTOR_MAPPING: Partial<Record<string, ReadonlySet<Actor>>> = {
+  // User-initiated events
+  "scope.created":                new Set(["user"]),
+  "scope.closed":                 new Set(["user"]),
+  "surface.confirmed":            new Set(["user"]),
+  "align.locked":                 new Set(["user"]),
+
+  // User or agent decisions
+  "constraint.decision_recorded": new Set(["user", "agent"]),
+  "constraint.clarify_resolved":  new Set(["user", "agent"]),
+
+  // System-initiated pipeline events (user allowed for gradual adoption)
+  "grounding.started":            new Set(["system", "user"]),
+  "grounding.completed":          new Set(["system", "user"]),
+  "compile.started":              new Set(["system", "user"]),
+  "compile.completed":            new Set(["system", "user"]),
+  "surface.generated":            new Set(["system", "user"]),
+
+  // Agent-driven actions (user allowed for gradual adoption)
+  "apply.started":                new Set(["agent", "user"]),
+  "apply.completed":              new Set(["agent", "user"]),
+  "validation.started":           new Set(["agent", "user"]),
+  "validation.completed":         new Set(["agent", "user"]),
+
+  // Mixed actors
+  "constraint.discovered":        new Set(["system", "agent", "user"]),
+  "align.proposed":               new Set(["system", "user"]),
+  "align.revised":                new Set(["system", "user"]),
+};
 
 // ─── Result type ───
 
@@ -75,6 +117,15 @@ export function validateEvent(
     return {
       allowed: false,
       reason: `scope.created is only allowed as the first event (current revision: ${state.latest_revision})`,
+    };
+  }
+
+  // ── Rule 0: Actor validation ──
+  const allowedActors = ACTOR_MAPPING[eventType];
+  if (allowedActors && !allowedActors.has(newEvent.actor)) {
+    return {
+      allowed: false,
+      reason: `Actor denied: "${newEvent.actor}" is not allowed for "${eventType}". Allowed: ${[...allowedActors].join(", ")}`,
     };
   }
 

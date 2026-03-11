@@ -18,7 +18,7 @@ export interface EventInput<T extends EventType = EventType> {
 
 export type PipelineResult =
   | { success: true; event: Event; next_state: State; state: ScopeState }
-  | { success: false; reason: string };
+  | { success: false; reason: string; current_state: string; rejected_type: string };
 
 // ─── Main pipeline ───
 
@@ -62,7 +62,12 @@ export function appendScopeEvent(
   // ── Step 3: Validate ──
   const gate: GateResult = validateEvent(currentState, tempEvent, gateOptions);
   if (!gate.allowed) {
-    return { success: false, reason: gate.reason };
+    return {
+      success: false,
+      reason: gate.reason,
+      current_state: currentState.current_state,
+      rejected_type: input.type,
+    };
   }
 
   // ── Step 4: Set final state_after and append ──

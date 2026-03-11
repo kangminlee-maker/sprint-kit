@@ -480,3 +480,84 @@ describe("event-pipeline — golden data replay", () => {
     expect(finalState.latest_revision).toBe(29);
   });
 });
+
+// ─── Pipeline: structured rejection (PR-9) ───
+
+describe("event-pipeline — structured rejection fields", () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it("rejection includes current_state and rejected_type for invalid transition", () => {
+    // Set up: create scope in draft state
+    appendScopeEvent(paths, input("scope.created", {
+      title: "T", description: "d", entry_mode: "experience",
+    }, "user"));
+
+    // draft does not allow constraint.discovered
+    const result = appendScopeEvent(paths, input("constraint.discovered", {
+      constraint_id: "CST-001", perspective: "code", summary: "test",
+      severity: "required", discovery_stage: "draft_phase2",
+      decision_owner: "builder", impact_if_ignored: "bad", source_refs: [],
+    }));
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.current_state).toBe("draft");
+      expect(result.rejected_type).toBe("constraint.discovered");
+      expect(result.reason).toContain("Transition denied");
+    }
+  });
+
+  it("compile.started rejection after retry limit includes structured fields", () => {
+    // Build up to target_locked state with golden events
+    appendScopeEvent(paths, input("scope.created", { title: "T", description: "d", entry_mode: "experience" }, "user"));
+    appendScopeEvent(paths, input("grounding.started", { sources: [] }));
+    appendScopeEvent(paths, input("grounding.completed", { snapshot_revision: 1, source_hashes: {}, perspective_summary: { experience: 0, code: 0, policy: 0 } }));
+    appendScopeEvent(paths, input("align.proposed", { packet_path: "p", packet_hash: "h", snapshot_revision: 1 }));
+    appendScopeEvent(paths, input("align.locked", { locked_direction: "dir", locked_scope_boundaries: { in: [], out: [] }, locked_in_out: true }, "user"));
+    appendScopeEvent(paths, input("surface.generated", { surface_type: "experience", surface_path: "s", content_hash: "h", based_on_snapshot: 1 }));
+    appendScopeEvent(paths, input("surface.confirmed", { final_surface_path: "s", final_content_hash: "h", total_revisions: 0 }, "user"));
+
+    // Add a constraint + decide it so we can lock target
+    appendScopeEvent(paths, input("constraint.discovered", {
+      constraint_id: "CST-001", perspective: "code", summary: "test",
+      severity: "required", discovery_stage: "draft_phase2",
+      decision_owner: "builder", impact_if_ignored: "bad", source_refs: [],
+    }));
+    appendScopeEvent(paths, input("constraint.decision_recorded", {
+      constraint_id: "CST-001", decision: "inject", selected_option: "opt",
+      decision_owner: "builder", rationale: "needed",
+    }, "agent"));
+
+    // Lock target
+    appendScopeEvent(paths, input("target.locked", {
+      surface_hash: "h",
+      constraint_decisions: [{ constraint_id: "CST-001", decision: "inject" }],
+    }));
+
+    // Simulate 3 compile gap_found cycles to hit retry limit
+    // Each cycle: compile.started → compile.constraint_gap_found (→ constraints_resolved)
+    //   then re-lock target to get back to target_locked
+    for (let i = 0; i < 3; i++) {
+      appendScopeEvent(paths, input("compile.started", { snapshot_revision: 1, surface_hash: "h" }));
+      appendScopeEvent(paths, input("compile.constraint_gap_found", {
+        new_constraint_id: `CST-GAP-${i}`, perspective: "code", summary: "gap",
+      }));
+      // gap_found transitions to constraints_resolved; re-lock to get back to target_locked
+      appendScopeEvent(paths, input("target.locked", {
+        surface_hash: "h",
+        constraint_decisions: [{ constraint_id: "CST-001", decision: "inject" }],
+      }));
+    }
+
+    // 4th compile.started should be rejected (retry_count_compile === 3)
+    const result = appendScopeEvent(paths, input("compile.started", { snapshot_revision: 1, surface_hash: "h" }));
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.current_state).toBe("target_locked");
+      expect(result.rejected_type).toBe("compile.started");
+      expect(result.reason).toContain("Compile retry limit");
+    }
+  });
+});

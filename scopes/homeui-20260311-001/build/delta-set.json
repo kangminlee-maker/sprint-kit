@@ -1,0 +1,168 @@
+{
+  "scope_id": "homeui-20260311-001",
+  "surface_hash": "6af68fd57b69537bc665a2deb58cabcd8f4324f79626ec9120cc4e02e9046c99",
+  "build_spec_hash": "fde41217c22944bd9479a47bc5e1c8d231344c87fe62bb87fc1a57f24ae48d7a",
+  "changes": [
+    {
+      "change_id": "CHG-001",
+      "action": "modify",
+      "file_path": "apps/web/src/features/home-redirection/home-redirection.tsx",
+      "description": "체험완료 리다이렉트 제거",
+      "related_impl": [
+        "IMPL-001"
+      ],
+      "related_cst": [
+        "CST-001"
+      ]
+    },
+    {
+      "change_id": "CHG-002",
+      "action": "modify",
+      "file_path": "apps/web/src/widgets/greeting/model/status.ts",
+      "description": "enum 확장",
+      "related_impl": [
+        "IMPL-002"
+      ],
+      "related_cst": [
+        "CST-002"
+      ]
+    },
+    {
+      "change_id": "CHG-003",
+      "action": "modify",
+      "file_path": "apps/web/src/app/(internal)/home/page.tsx",
+      "description": "prefetch 추가",
+      "related_impl": [
+        "IMPL-003"
+      ],
+      "related_cst": [
+        "CST-003"
+      ]
+    },
+    {
+      "change_id": "CHG-004",
+      "action": "modify",
+      "file_path": "apps/web/src/widgets/greeting/hooks/use-greeting-status.ts",
+      "description": "8개 상태 판별",
+      "related_impl": [
+        "IMPL-004"
+      ],
+      "related_cst": [
+        "CST-002",
+        "CST-003",
+        "CST-007"
+      ]
+    },
+    {
+      "change_id": "CHG-005",
+      "action": "modify",
+      "file_path": "apps/web/src/widgets/greeting/ui/greeting-content.tsx",
+      "description": "8개 분기 매핑",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-005"
+      ]
+    },
+    {
+      "change_id": "CHG-006",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/TrialCompletedState.tsx",
+      "description": "체험완료 화면",
+      "related_impl": [
+        "IMPL-006"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-005"
+      ]
+    },
+    {
+      "change_id": "CHG-007",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/TutorNoshowState.tsx",
+      "description": "튜터노쇼 화면",
+      "related_impl": [
+        "IMPL-007"
+      ],
+      "related_cst": [
+        "CST-007",
+        "CST-005"
+      ]
+    },
+    {
+      "change_id": "CHG-008",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/StudentNoshowState.tsx",
+      "description": "학생노쇼 화면",
+      "related_impl": [
+        "IMPL-007"
+      ],
+      "related_cst": [
+        "CST-007",
+        "CST-005"
+      ]
+    },
+    {
+      "change_id": "CHG-009",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/TrialWaitingState.tsx",
+      "description": "체험대기 화면",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-005"
+      ]
+    },
+    {
+      "change_id": "CHG-010",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/states/TrialExhaustedState.tsx",
+      "description": "전체소진 화면",
+      "related_impl": [
+        "IMPL-006"
+      ],
+      "related_cst": [
+        "CST-005"
+      ]
+    },
+    {
+      "change_id": "CHG-011",
+      "action": "create",
+      "file_path": "apps/web/src/features/home-greeting/ui/components/TrialProgressBar.tsx",
+      "description": "프로그레스바",
+      "related_impl": [
+        "IMPL-010"
+      ],
+      "related_cst": [
+        "CST-010"
+      ]
+    },
+    {
+      "change_id": "CHG-012",
+      "action": "modify",
+      "file_path": "apps/web/src/features/home-greeting/ui/components/GreetingActionSection.tsx",
+      "description": "CTA를 카드 내부 하단에 배치, StickyBottom 제거",
+      "related_impl": [
+        "IMPL-008"
+      ],
+      "related_cst": [
+        "CST-009"
+      ]
+    },
+    {
+      "change_id": "CHG-013",
+      "action": "modify",
+      "file_path": "apps/web/src/features/payment-complete/hooks/use-payment-complete.ts",
+      "description": "결제 완료 시 체험 상태 캐시 무효화",
+      "related_impl": [
+        "IMPL-009"
+      ],
+      "related_cst": [
+        "CST-008"
+      ]
+    }
+  ]
+}

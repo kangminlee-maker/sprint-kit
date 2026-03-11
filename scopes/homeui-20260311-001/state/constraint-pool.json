@@ -1,0 +1,259 @@
+{
+  "constraints": [
+    {
+      "constraint_id": "CST-001",
+      "perspective": "code",
+      "summary": "HomeRedirection이 체험완료 학생을 강제 리다이렉트하여 홈 화면을 보여주지 않음",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "체험 완료 학생이 홈 화면의 결제 CTA를 볼 수 없어 결제 전환 유도 목표 달성 불가. 현재처럼 /subscribes/tickets로 강제 이동되어 홈 화면 재설계 효과가 체험 완료 단계에서 발휘되지 않음.",
+      "source_refs": [
+        {
+          "source": "podo-app",
+          "detail": "features/home-redirection — trialClassCompYn=Y && paymentYn=N일 때 router.replace"
+        }
+      ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "코드에서 직접 확인. 정책 문서에는 이 리다이렉트 규칙 미기재.",
+      "status": "decided",
+      "discovered_at": 4,
+      "decision": "inject",
+      "selected_option": "리다이렉트 제거",
+      "rationale": "HomeRedirection에서 체험완료 조건 리다이렉트를 제거하여 홈 화면 결제 CTA 노출. 이 scope의 핵심 목표.",
+      "decided_at": 20
+    },
+    {
+      "constraint_id": "CST-002",
+      "perspective": "code",
+      "summary": "greetingStatusSchema가 4개 상태만 지원 — 체험 세분화 상태 미존재",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "ts-pattern exhaustive로 인해 새 상태 없이는 체험 상태별 홈 화면 전환 불가.",
+      "source_refs": [
+        {
+          "source": "podo-app",
+          "detail": "widgets/greeting/model/status.ts — z.enum 4개 값"
+        }
+      ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "코드에서 직접 확인.",
+      "status": "decided",
+      "discovered_at": 5,
+      "decision": "inject",
+      "selected_option": "greetingStatusSchema 8개 확장",
+      "rationale": "ts-pattern exhaustive로 모든 분기 구현 강제. PO guardrail 확인 완료.",
+      "decided_at": 21
+    },
+    {
+      "constraint_id": "CST-003",
+      "perspective": "code",
+      "summary": "체험 상태 세분화에 필요한 통합 API 부재 — PodoUserDto는 대기/예약/레슨중/노쇼 구분 불가",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "단일 API로는 체험 상태 세분화 불가. 최소 2개 API 조합 필요하여 로딩 시간 증가.",
+      "source_refs": [
+        {
+          "source": "podo-backend",
+          "detail": "PodoUserDto — trialPaymentYn, trialClassCompYn만 제공"
+        },
+        {
+          "source": "podo-backend",
+          "detail": "GET /api/v2/lecture/podo/getPodoTrialLectureList 추가 호출 필요"
+        }
+      ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "백엔드 코드에서 직접 확인.",
+      "status": "decided",
+      "discovered_at": 6,
+      "decision": "inject",
+      "selected_option": "getPodoTrialLectureList prefetch 추가",
+      "rationale": "SSR prefetch로 워터폴 없음. 실패 시 기존 4개 상태 fallback. PO guardrail 확인 완료.",
+      "decided_at": 22
+    },
+    {
+      "constraint_id": "CST-004",
+      "perspective": "policy",
+      "summary": "\"무료체험 3회\" 및 \"5,000원/3회 유료 체험\" 정책이 온톨로지와 백엔드에 미존재",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "brief가 전제하는 정책의 근거가 없어 백엔드 변경 범위 예측 불가. 체험권 1회 하드코딩과 충돌.",
+      "source_refs": [
+        {
+          "source": "podo-ontology",
+          "detail": "전체 검색 — 5000, 유료 체험 패턴 매칭 결과 없음"
+        },
+        {
+          "source": "podo-backend",
+          "detail": "TicketServiceV2Impl — originCount=1, nPurchased=1 하드코딩"
+        }
+      ],
+      "evidence_status": "unverified",
+      "evidence_note": "온톨로지, 백엔드 코드, 이용약관 어디에도 근거 없음.",
+      "status": "decided",
+      "discovered_at": 7,
+      "decision": "defer",
+      "selected_option": "1회 체험 기준으로 진행",
+      "rationale": "3회/유료 체험 정책 근거 미확인. 현재 백엔드(1회 하드코딩) 기준으로 먼저 구현, 정책 확인 후 별도 scope에서 처리.",
+      "decided_at": 23
+    },
+    {
+      "constraint_id": "CST-005",
+      "perspective": "experience",
+      "summary": "디자인 온톨로지 home_variants(5개)와 brief 상태 모델(8개+) 간 매핑 불일치",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "디자인 시스템과 구현이 분리되어 홈 화면 디자인 일관성 상실.",
+      "source_refs": [
+        {
+          "source": "vibe-design",
+          "detail": "ontology.yaml — state_branching.home_variants 5개"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "ontology.yaml에서 직접 확인.",
+      "status": "decided",
+      "discovered_at": 8,
+      "decision": "inject",
+      "selected_option": "Surface 매핑 그대로 적용",
+      "rationale": "Align에서 합의된 5개 기존 변형 매핑. 디자인 온톨로지 수정 없이 구현.",
+      "decided_at": 24
+    },
+    {
+      "constraint_id": "CST-006",
+      "perspective": "policy",
+      "summary": "노쇼 판정 기준 불일치 — 백엔드 코드 5분 vs 이용약관 10분",
+      "severity": "recommended",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "홈 화면 노쇼 전환 시점 기준 불명확. 학생 항의 가능성.",
+      "source_refs": [
+        {
+          "source": "podo-backend",
+          "detail": "PodoScheduleServiceImplV2 — NOSHOW_MINUTES = 5"
+        },
+        {
+          "source": "terms-of-service.md",
+          "detail": "제14조 1항 — 10분 초과 시 불참 판정"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "약관과 백엔드 코드 양쪽에서 확인. 수치 불일치.",
+      "status": "decided",
+      "discovered_at": 9,
+      "decision": "defer",
+      "selected_option": "시간 언급 없이 처리",
+      "rationale": "노쇼 시간 기준 불일치(5분 vs 10분) 해소는 별도 과제. 이 scope에서는 시간을 언급하지 않음.",
+      "decided_at": 25
+    },
+    {
+      "constraint_id": "CST-007",
+      "perspective": "policy",
+      "summary": "튜터 노쇼(CANCEL_NOSHOW_T)는 비종료 상태 — 취소 안내 불가, 재매칭 대기 반영 필요",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "튜터 노쇼를 취소로 표시하면 학생이 체험 기회 상실로 오해. CS 문의 증가.",
+      "source_refs": [
+        {
+          "source": "podo-ontology",
+          "detail": "model.yaml — CANCEL_NOSHOW_T는 비종료 상태"
+        },
+        {
+          "source": "podo-backend",
+          "detail": "POST /api/v3/schedule/cancelAndReassign"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "온톨로지 상태 기계와 백엔드 API에서 확인.",
+      "status": "decided",
+      "discovered_at": 10,
+      "decision": "inject",
+      "selected_option": "InvoiceStatus 직접 참조로 판별",
+      "rationale": "trialClassCompYn과 독립적으로 CANCEL_NOSHOW_T를 직접 확인하여 튜터노쇼 전용 화면 표시.",
+      "decided_at": 26
+    },
+    {
+      "constraint_id": "CST-008",
+      "perspective": "code",
+      "summary": "정기권 구매 시 체험 수업/수강권 자동 소멸 — 홈 화면 실시간 전환 필요",
+      "severity": "recommended",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "체험→정규 전환 시 이미 취소된 체험 수업 카드가 홈 화면에 남아있을 수 있음.",
+      "source_refs": [
+        {
+          "source": "podo-backend",
+          "detail": "DuplicateLessonValidator.closeTrialClass()"
+        }
+      ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "백엔드 코드에서 확인.",
+      "status": "decided",
+      "discovered_at": 11,
+      "decision": "inject",
+      "selected_option": "tanstack-query invalidateQueries",
+      "rationale": "기존 캐시 무효화 패턴 재사용. 추가 구현 거의 없음. PO guardrail 없음, 승인 완료.",
+      "decided_at": 27
+    },
+    {
+      "constraint_id": "CST-009",
+      "perspective": "experience",
+      "summary": "홈 화면 GNB(62px 고정)와 플로팅 CTA 버튼 겹침 방지 전략 필요",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "StickyBottom과 GNB 모두 fixed bottom-0이므로 겹침 발생. CTA 접근 불가.",
+      "source_refs": [
+        {
+          "source": "vibe-design",
+          "detail": "components.md — StickyBottom: fixed bottom-0; GNB: fixed bottom-0 h-62px z-100"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "디자인 온톨로지에서 직접 확인.",
+      "status": "decided",
+      "discovered_at": 12,
+      "decision": "inject",
+      "selected_option": "CTA 카드 내 배치",
+      "rationale": "디자인 온톨로지 권장 사항(GNB 있으면 카드 내 CTA). Surface에서 PO 확정. 승인 완료.",
+      "decided_at": 28
+    },
+    {
+      "constraint_id": "CST-010",
+      "perspective": "policy",
+      "summary": "스마트토크 체험은 AI 6회→튜터 1회 순차 개방 — 프로그레스 구조 영향",
+      "severity": "recommended",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "일반 체험 기준 프로그레스바로는 스마트토크의 순차 구조를 반영할 수 없음.",
+      "source_refs": [
+        {
+          "source": "terms-of-service.md",
+          "detail": "제13조 1항 — AI 6회 완료 시 튜터 1회 오픈"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "이용약관에서 직접 확인.",
+      "status": "decided",
+      "discovered_at": 13,
+      "decision": "defer",
+      "selected_option": "스마트토크 프로그레스는 별도 scope",
+      "rationale": "스마트토크 전용 홈은 제외 범위. 일반 체험 프로그레스만 이 scope에서 구현.",
+      "decided_at": 29
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "required": 7,
+    "recommended": 3,
+    "decided": 10,
+    "clarify_pending": 0,
+    "invalidated": 0,
+    "undecided": 0
+  }
+}
