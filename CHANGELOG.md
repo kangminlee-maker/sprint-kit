@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.3.0 (2026-03-11)
+
+Compile Defense 강화: brownfield 교차 검증, 경로 정규화, 입력 검증 보강. Panel Review 체계 정착.
+
+### Compile Defense
+
+- **L3-modify-not-in-brownfield**: delta-set의 modify/delete 대상 파일이 brownfield.related_files에 없으면 경고. 에이전트가 기존 코드를 스캔하지 않고 변경을 계획한 경우 탐지
+- **L3-shared-resource**: 별개 CHG가 동일 파일을 다른 CST로 동시 수정 시 경고 (0.2.1에서 추가)
+- **L3-invariant-uncovered**: brownfieldDetail.invariants의 영향 파일이 delta-set에서 변경되지만 구현 계획에 미언급 시 경고 (0.2.1에서 추가)
+- **L3-policy-change-required**: inject constraint에 requires_policy_change=true 시 정책 변경 검토 경고 (0.2.1에서 추가)
+- **normalizeFilePath 유틸**: 선행 `./` 제거, 연속 `/` 정리, 후행 `/` 제거. 기존 4개소(L2-defer-interfere, L2-override-reflected, L3-invariant-uncovered, checkLayer2 changeFilePaths) + 신규 L3에 적용
+- **compileDefense 시그니처 확장**: `brownfieldContext?: BrownfieldContext` optional 파라미터 추가
+- **CompileSuccess.warnings**: optional → required 변경 (0.2.1에서 변경)
+
+### 입력 검증 강화
+
+- **brownfield 필수 필드 검증**: `validateInput()`에 `brownfield.related_files`와 `brownfield.module_dependencies` 존재 여부 + Array 타입 검사 추가. 누락 시 명확한 에러 메시지 반환 (BUG-002 수정)
+- **inject CST ↔ CHG ↔ VAL 사전 검증**: `validateInput()`에서 compile-defense 이전에 정합성 체크 (IMP-002 수정, 0.2.1)
+- **compile-defense violation detail 강화**: 모든 violation에 CST-ID/IMPL-ID 포함 (IMP-001 수정, 0.2.1)
+
+### 에이전트 프로토콜
+
+- **Cross-constraint interaction check**: inject 2건 이상 시 source_refs 겹침, 상태값 일관성, VAL↔IMPL 정합성 점검 (draft.md)
+- **선택지 1개 constraint 안내 규칙**: 단일 "승인" + situation에 3가지 필수 정보 + modify-direction 안내 (draft.md)
+- **gap_found 역전이 PO 안내**: 어느 단계에서 발견, 왜 이전에 미발견, 기존 결정 유지 여부 3가지 안내 (draft.md)
+- **compile 실패 PO 비노출**: violation 세부사항을 PO에게 노출하지 않고 에이전트가 자동 재시도 (draft.md)
+- **일괄 승인 시 재확인**: PO가 일괄 승인 시 required constraint 각각의 선택 내용 되묻기 (draft.md)
+- **Surface 확정 판단 충분성 확인**: surface.confirmed 전에 시나리오별 방향 판단 가능 여부 확인 (draft.md)
+- **Deep Discovery Policy 점검 보강**: inject 결정의 selected_option을 약관/정책 문서와 교차 대조 (draft.md)
+
+### 타입 확장
+
+- **ImplementationItem.assumptions**: 구현 시 전제하는 가정 기록 (optional string[])
+- **BrownfieldDetail.invariants**: 기존 시스템의 불변 제약 기록 + L3-invariant-uncovered 경고
+- **ConstraintEntry.requires_policy_change**: 정책 변경 전제 여부 + L3-policy-change-required 경고
+
+### 문서
+
+- **blueprint.md**: 에이전트 신뢰 모델 명시 — 코드 강제 영역(gate-guard, compile-defense) vs 에이전트 위임 영역(프로토콜) 경계 기준
+- **start.md**: 이벤트 기록 순서 주의사항 명시 (grounding.completed → constraint.discovered)
+
+### Bug Fixes
+
+- **BUG-002**: compile() validateInput이 brownfield 필수 필드를 검증하지 않아 renderSection7에서 TypeError 발생 → validateInput에 검증 추가
+- **BUG-001**: draft 상태에서 constraint.discovered 거부 시 조용히 무시 → 구조화 에러 반환 (0.2.1)
+- **IMP-001**: compile-defense violation 메시지에 undefined 출력 → 10개소에 fallback 추가 (0.2.1)
+- **IMP-002**: inject CST의 CHG/injectValidation 누락 → 전체 누락 한번에 보고 + 사전 검증 (0.2.1)
+
+### Internal
+
+- 44 test files, 947 tests passing (897 → 947, +50 new tests)
+- normalizeFilePath: 5 tests
+- L3-modify-not-in-brownfield: 7 tests
+- L3-shared-resource: 5 tests (0.2.1)
+- CompileSuccess.warnings required: 1 test (0.2.1)
+- 6-Agent Panel Review 3회 실시 (compile 후 정책 리뷰, homeui 작업설계, brownfield 교차 검증)
+
 ## 0.2.0 (2026-03-11)
 
 Constraint 근거 검증 체계 도입. Grounding 시 정책 문서와 교차 대조하고, Compile 시 미검증 가정을 경고합니다.
