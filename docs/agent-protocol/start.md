@@ -364,6 +364,15 @@ appendScopeEvent(paths, {
 
 ### 4. Constraint 발견 기록
 
+**이벤트 기록 순서 (필수):**
+
+`constraint.discovered`는 `grounded` 상태 이후에만 허용됩니다. 반드시 `grounding.completed`를 **먼저** 기록한 뒤 constraint를 기록하세요. 순서가 뒤바뀌면 상태 기계가 이벤트를 거부하며, 거부 시 `{ success: false, current_state, rejected_type }`이 반환됩니다.
+
+```
+올바른 순서: grounding.completed(→grounded) → constraint.discovered(×N) → align.proposed
+잘못된 순서: constraint.discovered(draft 상태 → 거부됨) → grounding.completed
+```
+
 발견된 각 제약에 대해:
 
 ```typescript

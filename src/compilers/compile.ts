@@ -241,6 +241,22 @@ function validateInput(input: CompileInput): string | null {
     }
   }
 
+  // Validate inject constraints have at least one CHG
+  const chgCsts = new Set(input.changes.flatMap((c) => c.related_cst));
+  for (const cstId of injectCsts) {
+    if (!chgCsts.has(cstId)) {
+      return `inject constraint ${cstId} has no matching CHG entry in changes — every inject constraint must have at least one CHG with related_cst including this ID`;
+    }
+  }
+
+  // Validate every IMPL has at least one CHG referencing it
+  for (let i = 0; i < input.implementations.length; i++) {
+    const hasChg = input.changes.some((c) => c.related_impl_indices.includes(i));
+    if (!hasChg) {
+      return `implementations[${i}] ("${input.implementations[i].summary}") has no CHG referencing it via related_impl_indices`;
+    }
+  }
+
   return null;
 }
 

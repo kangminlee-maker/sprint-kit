@@ -210,8 +210,8 @@ describe("compile — defense integration", () => {
     const result = compile(input);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.violations).toBeDefined();
-      expect(result.violations!.some((v) => v.rule === "L2-inject-impl")).toBe(true);
+      // validateInput catches missing CHG/IMPL before compile-defense runs
+      expect(result.reason).toContain("inject constraint");
     }
   });
 
