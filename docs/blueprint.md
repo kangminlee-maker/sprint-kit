@@ -395,12 +395,15 @@ Compile이 성공하더라도 Layer 3 경고(`warnings`)가 반환될 수 있습
 2. **Layer 2 — Audit Pass**: inject 반영, defer 비간섭, override 비반영, 추적 체인 완전성 검증
 3. **Layer 3 — Evidence Quality Warnings (비차단)**: 미검증 가정과 상태 누락 경고. Layer 1/2와 달리 Compile을 차단하지 않고 경고만 반환합니다
 
-Layer 3의 3가지 규칙:
+Layer 3의 6가지 규칙:
 - **L3-unverified-inject**: `required` + `inject`인데 `evidence_status`가 `verified`가 아닌 경우 경고
+- **L3-policy-change-required**: `inject`인데 `requires_policy_change`가 `true`인 경우 정책 변경 검토 경고
 - **L3-state-completeness**: `BrownfieldDetail.enums`에 정의된 값이 구현 계획에서 언급되지 않은 경우 경고 (예: NOSHOW_BOTH 누락)
 - **L3-shared-resource**: 동일 파일을 별개의 CHG가 서로 다른 CST로 수정하는 경우 경고 (조합 충돌 가능성). 하나의 CHG가 여러 CST를 참조하는 것은 정상(경고 미발행)
+- **L3-invariant-uncovered**: `BrownfieldDetail.invariants`의 영향 파일이 delta-set에서 변경되지만 구현 계획에서 언급되지 않은 경우 경고
+- **L3-modify-not-in-brownfield**: delta-set의 `modify`/`delete` 대상 파일이 `brownfieldContext.related_files`에 등록되지 않은 경우 경고 (기존 코드 스캔 누락 가능성)
 
-Layer 3 검사에는 `brownfieldDetail`이 입력으로 필요합니다. 제공되지 않으면 상태 완전성 검사가 건너뛰어집니다.
+Layer 3 검사에는 `brownfieldDetail`과 `brownfieldContext`가 입력으로 필요합니다. 제공되지 않으면 해당 검사가 건너뛰어집니다.
 
 Compile Function 상세
 
@@ -671,6 +674,8 @@ scopes/{scope-id}/
 | `renderers/`  | scope.md, Align Packet, Draft Packet 렌더링                         | —                                                                               |
 | `compilers/`  | Compile, Build Spec, Compile Defense (3-layer)                   | Delta Set, Build Spec                                                           |
 | `validators/` | 검증 실행, 결과 기록                                                     | —                                                                               |
+| `parsers/`    | brief.md 파싱, 구조화된 데이터 추출                                          | BriefData                                                                       |
+| `logger.ts`   | 스코프 이벤트 로깅                                                        | —                                                                               |
 
 
 ### 의존 방향
@@ -678,7 +683,8 @@ scopes/{scope-id}/
 ```
 config/ → kernel/, scanners/ (SourceEntry type + sourceKey 함수)
 scanners/ → kernel/, config/
-commands/ → kernel/, config/, scanners/, renderers/, compilers/
+parsers/ → (독립)
+commands/ → kernel/, config/, scanners/, renderers/, compilers/, parsers/
 renderers/ → kernel/
 compilers/ → kernel/
 validators/ → kernel/

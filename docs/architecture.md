@@ -351,12 +351,13 @@ If compile encounters an ambiguity that requires a product decision,
 it means Draft did not surface all constraints.
 Compile must block and redirect to Draft with the newly discovered constraint.
 
-### Compile Defense (two layers)
+### Compile Defense (three layers)
 
 | Layer | Mechanism | What it catches |
 |-------|-----------|----------------|
-| **Checklist** | Every Draft constraint decision must be referenced in Build Spec. Missing reference = compile failure | Omissions |
-| **Audit pass** | Separate verification compares Build Spec against Draft decisions. Flags unreferenced or contradicted decisions | Distortions |
+| **L1 Checklist** | Every Draft constraint decision must be referenced in Build Spec. Missing reference = compile failure | Omissions |
+| **L2 Audit pass** | inject/defer/override 반영 검증, CST→IMPL→CHG→VAL 추적 체인 완전성, edge case 존재 여부 | Distortions |
+| **L3 Evidence Quality Warnings** | 미검증 가정, 정책 변경 전제, 상태 누락, 공유 리소스 충돌, 불변 제약 미커버, brownfield 교차 검증 (비차단, 경고만) | Quality gaps |
 
 When compile discovers a new constraint: `compile.constraint_gap_found` event is recorded,
 scope transitions backward, and the new constraint enters Draft for decision.
