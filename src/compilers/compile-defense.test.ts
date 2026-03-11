@@ -589,7 +589,7 @@ describe("Layer 3 — evidence status warnings", () => {
     expect(result.passed).toBe(true);
     if (result.passed) {
       expect(result.warnings).toBeDefined();
-      expect(result.warnings!.some((w) => w.rule === "L3-unverified-inject")).toBe(true);
+      expect(result.warnings.some((w) => w.rule === "L3-unverified-inject")).toBe(true);
     }
   });
 
@@ -598,7 +598,7 @@ describe("Layer 3 — evidence status warnings", () => {
     const result = compileDefense(makeState(pool), bs, ds, vp);
     expect(result.passed).toBe(true);
     if (result.passed) {
-      expect(result.warnings).toBeUndefined();
+      expect(result.warnings).toEqual([]);
     }
   });
 
@@ -607,7 +607,7 @@ describe("Layer 3 — evidence status warnings", () => {
     const result = compileDefense(makeState(pool), bs, ds, vp);
     expect(result.passed).toBe(true);
     if (result.passed) {
-      expect(result.warnings).toBeUndefined();
+      expect(result.warnings).toEqual([]);
     }
   });
 
@@ -619,7 +619,7 @@ describe("Layer 3 — evidence status warnings", () => {
     const result = compileDefense(makeState(pool), bs2, ds2, vp2);
     expect(result.passed).toBe(true);
     if (result.passed) {
-      expect(result.warnings).toBeUndefined();
+      expect(result.warnings).toEqual([]);
     }
   });
 
@@ -629,7 +629,126 @@ describe("Layer 3 — evidence status warnings", () => {
     expect(result.passed).toBe(true);
     if (result.passed) {
       expect(result.warnings).toBeDefined();
-      expect(result.warnings![0].rule).toBe("L3-unverified-inject");
+      expect(result.warnings[0].rule).toBe("L3-unverified-inject");
+    }
+  });
+});
+
+// ─── Layer 3: L3-shared-resource ───
+
+describe("compile-defense — L3-shared-resource", () => {
+  it("warns when same file is modified by separate CHGs from different CSTs", () => {
+    const pool = makePool(
+      makeEntry("CST-001", { decision: "inject" }),
+      makeEntry("CST-002", { decision: "inject" }),
+    );
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }, { constraint_id: "CST-002", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }, { impl_id: "IMPL-002", related_cst: ["CST-002"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/shared.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+      { change_id: "CHG-002", action: "modify", file_path: "src/shared.ts", description: "d", related_impl: ["IMPL-002"], related_cst: ["CST-002"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+      { val_id: "VAL-002", related_cst: "CST-002", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    expect(result.warnings.some((w) => w.rule === "L3-shared-resource" && w.detail.includes("src/shared.ts"))).toBe(true);
+  });
+
+  it("no warning when single CHG references multiple CSTs (one change serving multiple constraints)", () => {
+    const pool = makePool(
+      makeEntry("CST-001", { decision: "inject" }),
+      makeEntry("CST-002", { decision: "inject" }),
+    );
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }, { constraint_id: "CST-002", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001", "CST-002"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/shared.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001", "CST-002"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+      { val_id: "VAL-002", related_cst: "CST-002", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    expect(result.warnings.some((w) => w.rule === "L3-shared-resource")).toBe(false);
+  });
+
+  it("no warning when same file has 2 CHGs from the same CST", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/shared.ts", description: "d1", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+      { change_id: "CHG-002", action: "modify", file_path: "src/shared.ts", description: "d2", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    expect(result.warnings.some((w) => w.rule === "L3-shared-resource")).toBe(false);
+  });
+
+  it("no warning when CHGs have empty related_cst", () => {
+    const pool = makePool(makeEntry("CST-001", { decision: "inject" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "modify", file_path: "src/shared.ts", description: "d", related_impl: ["IMPL-001"], related_cst: [] },
+      { change_id: "CHG-002", action: "modify", file_path: "src/shared.ts", description: "d", related_impl: ["IMPL-001"], related_cst: [] },
+      { change_id: "CHG-003", action: "create", file_path: "src/other.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    expect(result.warnings.some((w) => w.rule === "L3-shared-resource")).toBe(false);
+  });
+
+  it("no warning when deltaSet has no changes", () => {
+    const pool = makePool();
+    const bs = makeBuildSpec([], []);
+    const ds = makeDeltaSet([]);
+    const vp: ValidationPlanItem[] = [];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    expect(result.warnings.some((w) => w.rule === "L3-shared-resource")).toBe(false);
+  });
+});
+
+// ─── CompileSuccess.warnings required ───
+
+describe("compile-defense — warnings always array", () => {
+  it("returns empty array (not undefined) when no warnings", () => {
+    const pool = makePool(makeEntry("CST-001", { severity: "recommended", evidence_status: "verified" }));
+    const bs = makeBuildSpec(
+      [{ constraint_id: "CST-001", decision: "inject" }],
+      [{ impl_id: "IMPL-001", related_cst: ["CST-001"] }],
+    );
+    const ds = makeDeltaSet([
+      { change_id: "CHG-001", action: "create", file_path: "a.ts", description: "d", related_impl: ["IMPL-001"], related_cst: ["CST-001"] },
+    ]);
+    const vp: ValidationPlanItem[] = [
+      { val_id: "VAL-001", related_cst: "CST-001", decision_type: "inject", target: "t", method: "m", pass_criteria: "p", fail_action: "f", edge_cases: [{ scenario: "s", expected_result: "r" }] },
+    ];
+    const result = compileDefense(makeState(pool), bs, ds, vp);
+    expect(result.passed).toBe(true);
+    if (result.passed) {
+      expect(result.warnings).toBeDefined();
+      expect(Array.isArray(result.warnings)).toBe(true);
+      expect(result.warnings).toEqual([]);
     }
   });
 });

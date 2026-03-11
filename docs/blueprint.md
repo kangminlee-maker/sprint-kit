@@ -395,9 +395,10 @@ Compile이 성공하더라도 Layer 3 경고(`warnings`)가 반환될 수 있습
 2. **Layer 2 — Audit Pass**: inject 반영, defer 비간섭, override 비반영, 추적 체인 완전성 검증
 3. **Layer 3 — Evidence Quality Warnings (비차단)**: 미검증 가정과 상태 누락 경고. Layer 1/2와 달리 Compile을 차단하지 않고 경고만 반환합니다
 
-Layer 3의 2가지 규칙:
+Layer 3의 3가지 규칙:
 - **L3-unverified-inject**: `required` + `inject`인데 `evidence_status`가 `verified`가 아닌 경우 경고
 - **L3-state-completeness**: `BrownfieldDetail.enums`에 정의된 값이 구현 계획에서 언급되지 않은 경우 경고 (예: NOSHOW_BOTH 누락)
+- **L3-shared-resource**: 동일 파일을 별개의 CHG가 서로 다른 CST로 수정하는 경우 경고 (조합 충돌 가능성). 하나의 CHG가 여러 CST를 참조하는 것은 정상(경고 미발행)
 
 Layer 3 검사에는 `brownfieldDetail`이 입력으로 필요합니다. 제공되지 않으면 상태 완전성 검사가 건너뛰어집니다.
 
@@ -686,6 +687,23 @@ validators/ → kernel/
 금지 의존: `kernel/ → 다른 모듈`, `scanners/ → compilers/`, `scanners/ → renderers/`
 
 에이전트 실행 프로토콜 상세: `docs/agent-protocol/start.md`, `align.md`, `draft.md`
+
+### 검증 경계와 에이전트 신뢰 모델
+
+시스템의 검증은 두 영역으로 나뉩니다. 경계 기준은 "시스템이 의미 해석 없이 구조만으로 탐지할 수 있는가?"입니다.
+
+| 계층 | 검증 대상 | 강제 방식 | 위반 시 |
+|------|----------|----------|--------|
+| Gate Guard | 이벤트 유효성, 상태 전이 규칙 | 코드 차단 | 이벤트 거부 |
+| Compile Defense L1-2 | 추적 체인 완전성(CST→IMPL→CHG→VAL), 참조 무결성 | 코드 차단 | compile 실패 |
+| Compile Defense L3 | 구조적 패턴 탐지 (증거 미검증, 상태 누락, 리소스 공유) | 코드 경고 (비차단) | 경고 표시, 에이전트가 PO에게 안내 |
+| 에이전트 프로토콜 | 의미적 정합성 (cross-constraint, 정책 정합성, 선택지 품질) | 프로토콜 지침 | best-effort |
+
+**코드 강제 영역** (Gate Guard, L1-2): 위반 시 시스템 정합성이 깨지는 항목. 에이전트가 어떤 행동을 해도 이 규칙을 우회할 수 없습니다.
+
+**코드 탐지 + 에이전트 판정 영역** (L3): 시스템이 구조적 패턴(같은 파일을 수정하는 다수 CST, 미검증 증거 등)을 탐지하여 경고를 발행합니다. 경고의 의미 해석과 대응은 에이전트가 수행합니다.
+
+**에이전트 위임 영역** (프로토콜): 의미 해석이 필요한 검증(constraint 간 논리적 충돌, 정책 문서와의 정합성, 선택지의 완전성)은 에이전트 프로토콜 지침으로 안내합니다. 이 영역의 검증 품질은 에이전트 실행 품질에 의존합니다.
 
 
 

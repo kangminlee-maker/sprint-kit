@@ -46,8 +46,8 @@ export interface DefenseViolation {
 }
 
 export type DefenseResult =
-  | { passed: true; warnings?: DefenseViolation[] }
-  | { passed: false; violations: DefenseViolation[]; warnings?: DefenseViolation[] };
+  | { passed: true; warnings: DefenseViolation[] }
+  | { passed: false; violations: DefenseViolation[]; warnings: DefenseViolation[] };
 
 // ─── Main ───
 
@@ -72,14 +72,14 @@ export function compileDefense(
 
   checkLayer1(state, buildSpec, violations);
   checkLayer2(state, buildSpec, deltaSet, validationPlan, violations);
-  checkLayer3(state, buildSpec, brownfieldDetail, warnings);
+  checkLayer3(state, buildSpec, deltaSet, brownfieldDetail, warnings);
 
   const errors = violations;
 
   if (errors.length === 0) {
-    return { passed: true, warnings: warnings.length > 0 ? warnings : undefined };
+    return { passed: true, warnings };
   }
-  return { passed: false, violations: errors, warnings: warnings.length > 0 ? warnings : undefined };
+  return { passed: false, violations: errors, warnings };
 }
 
 // ─── Layer 1: Checklist ───
@@ -295,11 +295,13 @@ function checkInjectEdgeCases(
 function checkLayer3(
   state: ScopeState,
   buildSpec: BuildSpecData,
+  deltaSet: DeltaSet,
   brownfieldDetail: BrownfieldDetail | undefined,
   warnings: DefenseViolation[],
 ): void {
   checkUnverifiedInject(state, warnings);
   checkStateCompleteness(state, buildSpec, brownfieldDetail, warnings);
+  checkSharedResource(deltaSet, warnings);
 }
 
 /**
@@ -355,6 +357,50 @@ function checkStateCompleteness(
       warnings.push({
         rule: "L3-state-completeness",
         detail: `${enumDef.name} (source: ${enumDef.source})의 다음 값이 구현 계획에서 언급되지 않습니다: ${uncovered.join(", ")}. 상태 매핑이 누락되었을 수 있습니다.`,
+      });
+    }
+  }
+}
+
+/**
+ * Warn when multiple *separate* CHGs targeting the same file come from different CSTs.
+ * A single CHG referencing multiple CSTs is NOT flagged (one change serving multiple constraints is normal).
+ */
+function checkSharedResource(
+  deltaSet: DeltaSet,
+  warnings: DefenseViolation[],
+): void {
+  // Build: file_path → Map<cst_id, Set<change_id>>
+  const fileCstChanges = new Map<string, Map<string, Set<string>>>();
+  for (const chg of deltaSet.changes) {
+    if (chg.related_cst.length === 0) continue;
+    if (!fileCstChanges.has(chg.file_path)) {
+      fileCstChanges.set(chg.file_path, new Map());
+    }
+    const cstMap = fileCstChanges.get(chg.file_path)!;
+    for (const cst of chg.related_cst) {
+      if (!cstMap.has(cst)) cstMap.set(cst, new Set());
+      cstMap.get(cst)!.add(chg.change_id);
+    }
+  }
+
+  for (const [filePath, cstMap] of fileCstChanges) {
+    // Only warn if there are 2+ CSTs AND they come from different CHGs
+    if (cstMap.size < 2) continue;
+    // Check that at least 2 CSTs have non-overlapping CHG sets
+    const chgSets = [...cstMap.values()];
+    let hasDistinctSources = false;
+    for (let i = 0; i < chgSets.length && !hasDistinctSources; i++) {
+      for (let j = i + 1; j < chgSets.length; j++) {
+        const overlap = [...chgSets[i]].some(id => chgSets[j].has(id));
+        if (!overlap) { hasDistinctSources = true; break; }
+      }
+    }
+    if (hasDistinctSources) {
+      const cstIds = [...cstMap.keys()];
+      warnings.push({
+        rule: "L3-shared-resource",
+        detail: `${filePath}을(를) ${cstIds.length}개 CST가 별개의 변경으로 동시에 수정합니다: ${cstIds.join(", ")}. 조합 충돌 여부를 확인하세요.`,
       });
     }
   }

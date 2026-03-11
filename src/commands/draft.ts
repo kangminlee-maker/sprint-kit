@@ -394,6 +394,7 @@ function handleCompile(
       buildSpecHash: success.buildSpecHash,
       deltaSetHash: success.deltaSetHash,
       validationPlanHash: success.validationPlanHash,
+      warnings: success.warnings,
     },
   };
 }

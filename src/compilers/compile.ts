@@ -87,7 +87,7 @@ export interface CompileSuccess {
   validationPlanMd: string;
   validationPlanHash: string;
   validationPlan: ValidationPlanItem[];
-  warnings?: DefenseViolation[];
+  warnings: DefenseViolation[];
 }
 
 export interface CompileFailure {
@@ -186,7 +186,7 @@ export function compile(input: CompileInput): CompileOutput {
     validationPlanMd,
     validationPlanHash,
     validationPlan: valItems,
-    warnings: defenseWarnings,
+    warnings: defenseWarnings ?? [],
   };
 }
 

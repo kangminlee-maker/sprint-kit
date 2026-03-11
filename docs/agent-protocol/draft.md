@@ -179,9 +179,28 @@ appendScopeEvent(paths, {
 
 3-Perspective 탐색 체크리스트 (`/start`와 동일 체크리스트를 확정된 surface 기준으로 재실행)
 
+**Policy 관점 추가 점검 (필수):**
+
+- 각 inject 결정의 `selected_option`이 약관/정책 문서의 조항과 충돌하지 않는지 확인합니다. Policy 소스를 직접 읽어 대조합니다.
+- 충돌 발견 시 `constraint.discovered` (perspective: "policy")로 기록합니다.
+- 확인 완료 시 해당 constraint의 `evidence_status`를 `verified`로 갱신하고, `evidence_note`에 참조한 문서명+섹션을 기록합니다 (`constraint.evidence_updated` 이벤트 사용).
+- 신규 발견 constraint는 `start.md` Step 2.5와 동일한 evidence_status 판단 기준을 적용합니다.
+
 - Grounding에서 발견된 constraint(CST-001~)는 같은 ID로 유지
 - 새로 발견된 constraint는 다음 번호 부여
 - 각 constraint에 대해 `constraint.discovered` 이벤트 기록
+
+#### Cross-Constraint Interaction Check (필수)
+
+inject 결정이 2건 이상인 경우, Draft Packet 렌더링 전에 다음을 점검합니다:
+
+1. **source_refs 겹침 확인**: inject 결정된 CST들의 `source_refs`가 동일 파일을 참조하는 경우, 해당 CST들의 `selected_option`이 논리적으로 양립 가능한지 확인합니다.
+2. **상태값 일관성 확인**: 동일 엔티티/상태 머신을 변경하는 구현 항목들이 같은 상태값(예: DONE, CANCEL, NOSHOW)에 대해 동일한 전제를 사용하는지 확인합니다.
+3. **VAL↔IMPL 정합성 확인**: VAL edge case의 `expected_result`가 관련 IMPL의 `detail`에서 도출 가능한지 확인합니다.
+
+충돌 발견 시: PO에게 충돌 내용을 보고하고, 기존 constraint의 `selected_option`을 정밀화하여 재결정을 요청합니다. 기존 constraint로 표현할 수 없는 독립적 제약인 경우에만 별도 constraint(`constraint.discovered`)로 분리합니다.
+
+**참고**: 이 체크는 compile-defense L2의 `L2-defer-interfere`와 목적이 다릅니다. L2는 compile 시점에 "실제 파일 수정 여부"를 검증하고, 이 체크는 Draft Packet 렌더링 전에 "결정 간 의미적 양립 가능성"을 사전 확인합니다.
 
 #### Draft Packet 렌더링
 
@@ -239,6 +258,18 @@ const content: DraftPacketContent = {
 const markdown = renderDraftPacket(state, content);
 writeFileSync(join(paths.build, "draft-packet.md"), markdown);
 ```
+
+#### 선택지 1개 constraint 안내 규칙
+
+`options_table`에 inject 관련 옵션만 있는 constraint(실질적 대안이 없는 경우)는 다음과 같이 처리합니다:
+
+- PO에게 "시스템이 이 방안을 권장합니다. 동의하시면 '승인'을 선택해 주세요."로 안내합니다.
+- `situation` 필드에 다음 3가지를 반드시 포함합니다:
+  1. **선택지가 1개인 이유**: 왜 다른 방안이 없는지 (예: "법적 요구사항으로 inject가 필수")
+  2. **inject의 구체적 결과**: 이 constraint를 inject하면 구현에서 달라지는 것
+  3. **미결정 세부 사항**: 이 결정으로 확정되지 않는 구현 세부 사항 (예: "음수 방지 방식은 Builder가 결정합니다")
+- 관련 constraint가 있으면 CST-ID를 명시적으로 참조합니다 (예: "CST-001에서 3회 허용을 결정했으므로 이 맥락이 적용됩니다")
+- 방향 자체를 바꾸고 싶다면 `modify-direction`을 선택할 수 있음을 안내합니다.
 
 #### Draft Packet 이벤트 기록
 
@@ -473,6 +504,14 @@ appendScopeEvent(paths, {
 ```
 
 **재시도 상한:** gap_found가 3회 누적되면 `compile.started`가 gate-guard에서 거부됩니다. 이 경우 `scope.deferred`로 전환하거나 `redirect.to_align`으로 방향을 재검토합니다.
+
+**gap_found 역전이 시 PO 안내 (필수):**
+
+compile 또는 apply 단계에서 `constraint_gap_found` 또는 `decision_gap_found`로 역전이가 발생하면, PO에게 다음 3가지를 안내합니다:
+
+1. **어느 단계에서 발견되었는지**: "compile(또는 apply) 단계에서 새로운 제약이 발견되었습니다."
+2. **왜 이전에 발견되지 않았는지**: "이 제약은 구현 수준의 상세 분석에서 드러난 것으로, 방향/대상 수준의 탐색에서는 발견되지 않았습니다."
+3. **기존 결정의 유지 여부**: "이전에 결정하신 항목들은 모두 유지됩니다. 이번에는 새로 발견된 CST-{N}에 대해서만 결정해 주시면 됩니다."
 
 ### compiled → Apply
 
