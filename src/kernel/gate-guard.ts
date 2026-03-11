@@ -20,6 +20,12 @@ export type GateResult =
   | { allowed: true; next_state: State }
   | { allowed: false; reason: string };
 
+// ─── Gate options (caller-provided context) ───
+
+export interface GateOptions {
+  apply_enabled?: boolean;
+}
+
 // ─── Events that reference a constraint_id ───
 
 const CONSTRAINT_REF_EVENTS = new Set<string>([
@@ -56,6 +62,7 @@ const CONVERGENCE_BLOCKED_EVENTS = new Set<string>([
 export function validateEvent(
   state: ScopeState,
   newEvent: Event,
+  options?: GateOptions,
 ): GateResult {
   const eventType = newEvent.type;
 
@@ -137,7 +144,15 @@ export function validateEvent(
     };
   }
 
-  // ── Rule 5: Compile retry limit ──
+  // ── Rule 5a: Apply gate — requires apply_enabled in .sprint-kit.yaml ──
+  if (eventType === "apply.started" && options?.apply_enabled !== true) {
+    return {
+      allowed: false,
+      reason: "Apply gate: apply 단계를 실행하려면 .sprint-kit.yaml에 apply_enabled: true를 추가하세요.",
+    };
+  }
+
+  // ── Rule 5b: Compile retry limit ──
   if (
     eventType === "compile.started" &&
     state.retry_count_compile >= MAX_COMPILE_RETRIES

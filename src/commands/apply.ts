@@ -20,6 +20,7 @@ import { renderScopeMd } from "../renderers/scope-md.js";
 import { wrapGateError } from "./error-messages.js";
 import { validate, type ValidateInput } from "../validators/validate.js";
 import type { ScopePaths } from "../kernel/scope-manager.js";
+import { loadProjectConfig } from "../config/project-config.js";
 import type {
   ScopeState,
   ConstraintDiscoveredPayload,
@@ -64,10 +65,14 @@ export type ApplyOutput = ApplyResult | ApplyFailure;
 
 // ─── Main ───
 
-export function executeApply(paths: ScopePaths, action: ApplyAction): ApplyOutput {
+export function executeApply(
+  paths: ScopePaths,
+  action: ApplyAction,
+  options?: { projectRoot?: string },
+): ApplyOutput {
   switch (action.type) {
     case "start_apply":
-      return handleStartApply(paths, action);
+      return handleStartApply(paths, action, options?.projectRoot);
     case "complete_apply":
       return handleCompleteApply(paths, action);
     case "report_gap":
@@ -87,12 +92,14 @@ export function executeApply(paths: ScopePaths, action: ApplyAction): ApplyOutpu
 function handleStartApply(
   paths: ScopePaths,
   action: ApplyAction & { type: "start_apply" },
+  projectRoot?: string,
 ): ApplyOutput {
+  const config = projectRoot ? loadProjectConfig(projectRoot) : { default_sources: [] };
   const result = appendScopeEvent(paths, {
     type: "apply.started",
     actor: "agent",
     payload: { build_spec_hash: action.buildSpecHash },
-  });
+  }, { apply_enabled: config.apply_enabled });
 
   if (!result.success) return { success: false, reason: wrapGateError(result.reason) };
   writeScopeMd(paths, result.state);

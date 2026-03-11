@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import type { Event, EventType, State, Actor, ScopeState, PayloadMap } from "./types.js";
 import { readEvents, appendEvent } from "./event-store.js";
 import { reduce } from "./reducer.js";
-import { validateEvent, type GateResult } from "./gate-guard.js";
+import { validateEvent, type GateResult, type GateOptions } from "./gate-guard.js";
 import type { ScopePaths } from "./scope-manager.js";
 import { makeId } from "./id.js";
 
@@ -39,6 +39,7 @@ export type PipelineResult =
 export function appendScopeEvent(
   paths: ScopePaths,
   input: EventInput,
+  gateOptions?: GateOptions,
 ): PipelineResult {
   // ── Step 1: Current state ──
   const currentEvents = readEvents(paths.events);
@@ -59,7 +60,7 @@ export function appendScopeEvent(
   } as Event;
 
   // ── Step 3: Validate ──
-  const gate: GateResult = validateEvent(currentState, tempEvent);
+  const gate: GateResult = validateEvent(currentState, tempEvent, gateOptions);
   if (!gate.allowed) {
     return { success: false, reason: gate.reason };
   }

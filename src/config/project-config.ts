@@ -26,6 +26,7 @@ const sourceEntrySchema = z.discriminatedUnion("type", [
 export const projectConfigSchema = z.object({
   default_sources: z.array(sourceEntrySchema),
   target_stack: z.record(z.string(), z.string()).optional(),
+  apply_enabled: z.boolean().optional(),
 });
 
 // ─── Project Config ───
@@ -33,6 +34,7 @@ export const projectConfigSchema = z.object({
 export interface ProjectConfig {
   default_sources: SourceEntry[];
   target_stack?: Record<string, string>;
+  apply_enabled?: boolean;
 }
 
 const CONFIG_FILENAME = ".sprint-kit.yaml";
@@ -65,6 +67,7 @@ export function loadProjectConfig(projectRoot: string): ProjectConfig {
     return {
       default_sources: result.data.default_sources as SourceEntry[],
       target_stack: result.data.target_stack,
+      apply_enabled: result.data.apply_enabled,
     };
   } catch (error) {
     getLogger().debug("loadProjectConfig: failed to load config", { path: configPath, error });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { executeApply } from "./apply.js";
@@ -15,6 +15,7 @@ afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
 /** Set up scope through compiled state */
 function setupCompiled() {
+  writeFileSync(join(tmpDir, ".sprint-kit.yaml"), "apply_enabled: true\ndefault_sources: []\n", "utf-8");
   const paths = createScope(tmpDir, "SC-APPLY-001");
   appendScopeEvent(paths, { type: "scope.created", actor: "user", payload: { title: "Test", description: "d", entry_mode: "experience" } });
   appendScopeEvent(paths, { type: "grounding.started", actor: "system", payload: { sources: [{ type: "add-dir", path_or_url: "/test" }] } });
@@ -34,7 +35,7 @@ function setupCompiled() {
 /** Set up scope through applied state */
 function setupApplied() {
   const paths = setupCompiled();
-  appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "bs1" } });
+  appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "bs1" } }, { apply_enabled: true });
   appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
   return paths;
 }
@@ -42,7 +43,7 @@ function setupApplied() {
 describe("executeApply", () => {
   it("start_apply → compiled (self transition)", () => {
     const paths = setupCompiled();
-    const result = executeApply(paths, { type: "start_apply", buildSpecHash: "bs1" });
+    const result = executeApply(paths, { type: "start_apply", buildSpecHash: "bs1" }, { projectRoot: tmpDir });
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.nextState).toBe("compiled");
@@ -68,7 +69,7 @@ describe("executeApply", () => {
     const paths = setupCompiled();
 
     // start_apply
-    const startResult = executeApply(paths, { type: "start_apply", buildSpecHash: "bs1" });
+    const startResult = executeApply(paths, { type: "start_apply", buildSpecHash: "bs1" }, { projectRoot: tmpDir });
     expect(startResult.success).toBe(true);
 
     // complete_apply
@@ -149,7 +150,7 @@ describe("executeApply", () => {
 
   it("start_apply fails when not in compiled state", () => {
     const paths = setupApplied(); // already applied
-    const result = executeApply(paths, { type: "start_apply", buildSpecHash: "bs1" });
+    const result = executeApply(paths, { type: "start_apply", buildSpecHash: "bs1" }, { projectRoot: tmpDir });
     expect(result.success).toBe(false);
   });
 });

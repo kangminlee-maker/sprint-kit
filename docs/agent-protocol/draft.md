@@ -478,15 +478,26 @@ appendScopeEvent(paths, {
 
 Builder가 Build Spec을 참고하여 delta-set의 변경 사항을 실제 코드에 적용합니다.
 
+**Apply Gate (필수):**
+
+`apply.started` 이벤트는 `.sprint-kit.yaml`에 `apply_enabled: true`가 명시적으로 선언된 경우에만 허용됩니다. 이 설정이 없으면 gate-guard가 이벤트를 거부합니다.
+
+```yaml
+# .sprint-kit.yaml
+apply_enabled: true  # 이 줄이 없으면 apply 단계 진입 불가
+```
+
+이 게이트는 sprint-kit이 실제 저장소의 코드를 수정하는 것을 구조적으로 방지합니다. PO 또는 프로젝트 관리자가 apply 단계 진행을 명시적으로 허가한 경우에만 `apply_enabled: true`를 설정합니다.
+
 **이벤트 기록 순서:**
 
 ```typescript
-// 1. apply.started 기록
+// 1. apply.started 기록 (apply_enabled 필요)
 appendScopeEvent(paths, {
   type: "apply.started",
   actor: "agent",
   payload: { build_spec_hash: result.buildSpecHash },
-});
+}, { apply_enabled: true }); // loadProjectConfig()에서 로드
 
 // 2. delta-set.json의 각 CHG를 순서대로 적용
 // - create: 파일 생성

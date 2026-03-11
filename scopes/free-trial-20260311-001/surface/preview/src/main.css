@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: "Pretendard Variable", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  max-width: 480px;
+  min-width: 360px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: white;
+  position: relative;
+  overflow-x: hidden;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slideUp {
+  animation: slideUp 300ms ease-out;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 200ms ease-out;
+}

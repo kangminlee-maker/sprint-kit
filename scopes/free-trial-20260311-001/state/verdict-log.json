@@ -1,0 +1,96 @@
+[
+  {
+    "type": "align.locked",
+    "revision": 16,
+    "ts": "2026-03-10T17:04:07.506Z",
+    "locked_direction": "체험 레슨을 1회에서 3회로 확대한다. 첫 수업 예약 시 체험권 3장을 발급하고, 순차 개방(직전 수업 정상 종료 후 다음 예약 가능)하며, 예약 시 3일 이내 수업만 선택 가능하다. 학생 노쇼·2시간 내 취소 시 2장 소멸(사용+페널티), 2시간 전 취소 시 복구, 강사 노쇼 시 복구. 매회 체험 완료 후 쿠폰 발급. 정규 전환 시 잔여 체험 자동 취소(확인 없음). 무료 체험은 TRIAL_FREE(0원), 유료 체험(5,000원/3회)은 TRIAL 유형."
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 20,
+    "ts": "2026-03-10T17:48:23.478Z",
+    "constraint_id": "CST-001",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 21,
+    "ts": "2026-03-10T17:48:23.482Z",
+    "constraint_id": "CST-003",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 22,
+    "ts": "2026-03-10T17:48:23.483Z",
+    "constraint_id": "CST-004",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 23,
+    "ts": "2026-03-10T17:48:23.483Z",
+    "constraint_id": "CST-005",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 24,
+    "ts": "2026-03-10T17:48:23.484Z",
+    "constraint_id": "CST-006",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 25,
+    "ts": "2026-03-10T17:48:23.485Z",
+    "constraint_id": "CST-007",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 26,
+    "ts": "2026-03-10T17:48:23.485Z",
+    "constraint_id": "CST-009",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 27,
+    "ts": "2026-03-10T17:48:23.486Z",
+    "constraint_id": "CST-010",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 28,
+    "ts": "2026-03-10T17:48:23.487Z",
+    "constraint_id": "CST-011",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 29,
+    "ts": "2026-03-10T17:48:23.491Z",
+    "constraint_id": "CST-002",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 30,
+    "ts": "2026-03-10T17:48:23.491Z",
+    "constraint_id": "CST-008",
+    "decision": "inject",
+    "decision_owner": "builder"
+  }
+]

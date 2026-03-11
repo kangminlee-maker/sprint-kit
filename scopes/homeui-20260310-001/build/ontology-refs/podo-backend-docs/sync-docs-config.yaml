@@ -1,0 +1,313 @@
+# sync-docs-config.yaml
+# Configuration for sync-docs skill - podo-backend-DOC
+
+project:
+  name: podo-backend-DOC
+  type: java-spring
+  doc_root: podo-docs
+  source_root: src/main/java/com/speaking/podo
+
+source:
+  patterns:
+    - "src/main/java/**/*.java"
+  exclude:
+    - "src/test/**"
+    - "**/build/**"
+    - "**/target/**"
+    - "**/*Test.java"
+    - "**/*Tests.java"
+
+# Domain mapping: code package -> doc folder
+domains:
+  # Subscription Domain
+  - code_pattern: "applications/subscribe/"
+    doc_path: "domains/subscription/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+    related_business: "business/subscription-flow.md"
+
+  # Payment Domain
+  - code_pattern: "applications/payment/"
+    doc_path: "domains/payment/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+    related_api: "api/payment-api.md"
+
+  # Ticket Domain
+  - code_pattern: "applications/ticket/"
+    doc_path: "domains/ticket/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+    related_business: "business/ticket-policy.md"
+    related_api: "api/ticket-api.md"
+
+  # Coupon Domain
+  - code_pattern: "applications/coupon/"
+    doc_path: "domains/coupon/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+    related_business: "business/coupon-policy.md"
+    related_api: "api/coupon-api.md"
+
+  # Lecture Domain
+  - code_pattern: "applications/lecture/"
+    doc_path: "domains/lecture/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+    related_business: "business/lecture-flow.md"
+    related_api: "api/lecture-api.md"
+
+  # Schedule Domain (multiple code locations)
+  - code_patterns:
+      - "applications/alarm/"
+      - "applications/podo/schedule/"
+    doc_path: "domains/schedule/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+
+  # Diagnosis Domain
+  - code_pattern: "applications/diagnosis/"
+    doc_path: "domains/diagnosis/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+
+  # Notification Domain
+  - code_pattern: "applications/notification/"
+    doc_path: "domains/notification/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+
+  # Partners Domain
+  - code_pattern: "applications/partners/"
+    doc_path: "domains/partners/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+
+  # User Domain
+  - code_pattern: "applications/user/"
+    doc_path: "domains/user/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+    related_api: "api/user-api.md"
+
+  # Marketing Domain (NO DOCS FOLDER EXISTS)
+  # Note: applications/marketing/ code package exists, but domains/marketing/ docs folder does NOT exist yet
+  # When sync-docs detects changes in marketing code, it will log a warning and skip doc updates
+  # To enable marketing doc sync: create .omc/docs/domains/marketing/ folder first
+  - code_pattern: "applications/marketing/"
+    doc_path: "domains/marketing/"
+    doc_files: []
+    status: "docs-not-yet-created"
+    note: "Code package exists at applications/marketing/ but documentation folder does not exist - doc updates will be skipped until folder is created"
+
+  # Auth (maps to user domain + auth-api)
+  - code_pattern: "applications/auth/"
+    doc_path: "domains/user/"
+    doc_files:
+      - "README.md"
+      - "entities.md"
+      - "policies.md"
+    related_api: "api/auth-api.md"
+
+  # Core module
+  - code_pattern: "core/"
+    doc_path: "domains/"
+    note: "Core utilities, may affect multiple domains"
+
+  # Modules
+  - code_pattern: "modules/"
+    doc_path: "domains/"
+    note: "Shared modules, may affect multiple domains"
+
+# File type to documentation mapping
+file_types:
+  controller:
+    patterns:
+      - "**/*Controller.java"
+      - "**/*Api.java"
+    target_docs:
+      - "api/{domain}-api.md"
+      - "index/by-controller.md"
+    update_trigger: "API endpoint added/modified/removed"
+
+  service:
+    patterns:
+      - "**/*Service.java"
+      - "**/*ServiceImpl.java"
+    target_docs:
+      - "domains/{domain}/policies.md"
+      - "index/by-domain.md"
+    update_trigger: "Business logic changed"
+
+  entity:
+    patterns:
+      - "**/entity/*.java"
+      - "**/domain/*.java"
+      - "**/*Entity.java"
+    target_docs:
+      - "domains/{domain}/entities.md"
+      - "database/tables/{table}.md"
+      - "index/by-entity.md"
+    update_trigger: "Entity field/relationship changed"
+
+  repository:
+    patterns:
+      - "**/*Repository.java"
+      - "**/*Repo.java"
+    target_docs:
+      - "database/relationships.md"
+      - "index/by-entity.md"
+    update_trigger: "Query method added/modified"
+
+  enum:
+    patterns:
+      - "**/enums/*.java"
+      - "**/*Enum.java"
+      - "**/*Type.java"
+      - "**/*Status.java"
+    target_docs:
+      - "database/enums.md"
+    update_trigger: "Enum value added/modified/removed"
+
+  dto:
+    patterns:
+      - "**/dto/*Dto.java"
+      - "**/dto/*DTO.java"
+      - "**/controller/*Request.java"
+      - "**/controller/*Response.java"
+      - "**/api/*Request.java"
+      - "**/api/*Response.java"
+    target_docs:
+      - "api/{domain}-api.md"
+    update_trigger: "API request/response shape changed"
+
+  config:
+    patterns:
+      - "**/*Config.java"
+      - "**/*Configuration.java"
+    target_docs:
+      - "domains/{domain}/README.md"
+    update_trigger: "Configuration changed"
+
+# Behavior for unmapped code
+unmapped_domain_action: warn
+unmapped_file_action: log
+
+# Index files that should always be updated
+global_indexes:
+  - "index/README.md"
+  - "index/by-domain.md"
+  - "index/by-controller.md"
+  - "index/by-entity.md"
+
+# 디렉토리 구조 변경 시 도메인 문서의 트리 구조 업데이트
+directory_structure:
+  # 새 패키지 추가/삭제/이동 시 해당 도메인 문서의 패키지 트리 갱신
+  mappings:
+    # Subscription Domain
+    - code_pattern: "applications/subscribe/**"
+      target_doc: "domains/subscription/README.md"
+      tree_section: "패키지 구조"
+
+    - code_pattern: "applications/subscribe/entity/**"
+      target_doc: "domains/subscription/entities.md"
+      tree_section: "Entity 목록"
+
+    # Payment Domain
+    - code_pattern: "applications/payment/**"
+      target_doc: "domains/payment/README.md"
+      tree_section: "패키지 구조"
+
+    - code_pattern: "applications/payment/entity/**"
+      target_doc: "domains/payment/entities.md"
+      tree_section: "Entity 목록"
+
+    # Ticket Domain
+    - code_pattern: "applications/ticket/**"
+      target_doc: "domains/ticket/README.md"
+      tree_section: "패키지 구조"
+
+    - code_pattern: "applications/ticket/entity/**"
+      target_doc: "domains/ticket/entities.md"
+      tree_section: "Entity 목록"
+
+    # Coupon Domain
+    - code_pattern: "applications/coupon/**"
+      target_doc: "domains/coupon/README.md"
+      tree_section: "패키지 구조"
+
+    - code_pattern: "applications/coupon/entity/**"
+      target_doc: "domains/coupon/entities.md"
+      tree_section: "Entity 목록"
+
+    # Lecture Domain
+    - code_pattern: "applications/lecture/**"
+      target_doc: "domains/lecture/README.md"
+      tree_section: "패키지 구조"
+
+    - code_pattern: "applications/lecture/entity/**"
+      target_doc: "domains/lecture/entities.md"
+      tree_section: "Entity 목록"
+
+    # Diagnosis Domain
+    - code_pattern: "applications/diagnosis/**"
+      target_doc: "domains/diagnosis/README.md"
+      tree_section: "패키지 구조"
+
+    - code_pattern: "applications/diagnosis/entity/**"
+      target_doc: "domains/diagnosis/entities.md"
+      tree_section: "Entity 목록"
+
+    # Notification Domain
+    - code_pattern: "applications/notification/**"
+      target_doc: "domains/notification/README.md"
+      tree_section: "패키지 구조"
+
+    # User Domain
+    - code_pattern: "applications/user/**"
+      target_doc: "domains/user/README.md"
+      tree_section: "패키지 구조"
+
+    - code_pattern: "applications/user/entity/**"
+      target_doc: "domains/user/entities.md"
+      tree_section: "Entity 목록"
+
+    # Auth Domain
+    - code_pattern: "applications/auth/**"
+      target_doc: "domains/user/README.md"
+      tree_section: "Auth 패키지 구조"
+
+    # Recap Domain (문서 폴더 없음 - 경고만)
+    - code_pattern: "applications/recap/**"
+      target_doc: "domains/recap/README.md"
+      tree_section: "패키지 구조"
+      status: "docs-not-yet-created"
+
+    # Core & Modules
+    - code_pattern: "core/**"
+      target_doc: "domains/README.md"
+      tree_section: "Core 모듈 구조"
+
+    - code_pattern: "modules/**"
+      target_doc: "domains/README.md"
+      tree_section: "공유 모듈 구조"

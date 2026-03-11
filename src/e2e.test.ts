@@ -188,7 +188,7 @@ describe("E2E — tutor-block full lifecycle", () => {
       type: "apply.started",
       actor: "agent",
       payload: { build_spec_hash: compileResult.buildSpecHash },
-    });
+    }, { apply_enabled: true });
     expect(applyStartResult.success).toBe(true);
 
     state = reduce(readEvents(paths.events));
@@ -287,7 +287,7 @@ describe("E2E — tutor-block full lifecycle", () => {
     }
 
     // Apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } });
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     let state = reduce(readEvents(paths.events));
@@ -322,7 +322,7 @@ describe("E2E — tutor-block full lifecycle", () => {
     }
 
     // Apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } });
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     // Mark stale during applied
@@ -763,7 +763,7 @@ describe("E2E — edge case scenarios", () => {
     }
 
     // Apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } });
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     // Validation pass
@@ -800,7 +800,7 @@ describe("E2E — edge case scenarios", () => {
     }
 
     // Apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } });
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     let state = reduce(readEvents(paths.events));
@@ -887,7 +887,7 @@ describe("E2E — edge case scenarios", () => {
     expect(state.current_state).toBe("compiled");
 
     // Re-apply
-    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "hash_bs_003" } });
+    appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "hash_bs_003" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
     state = reduce(readEvents(paths.events));

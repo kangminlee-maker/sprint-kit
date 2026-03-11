@@ -396,7 +396,43 @@ describe("gate-guard — Rule 4: convergence blocking", () => {
   });
 });
 
-// ─── Rule 5: Compile retry limit ───
+// ─── Rule 5a: Apply gate ───
+
+describe("gate-guard — Rule 5a: apply gate", () => {
+  it("denies apply.started when apply_enabled is not provided", () => {
+    const state = makeState({ current_state: "compiled" });
+    const event = makeEvent("apply.started", { build_spec_hash: "h" });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) {
+      expect(result.reason).toContain("apply_enabled");
+    }
+  });
+
+  it("denies apply.started when apply_enabled is false", () => {
+    const state = makeState({ current_state: "compiled" });
+    const event = makeEvent("apply.started", { build_spec_hash: "h" });
+    const result = validateEvent(state, event, { apply_enabled: false });
+    expect(result.allowed).toBe(false);
+  });
+
+  it("allows apply.started when apply_enabled is true", () => {
+    const state = makeState({ current_state: "compiled" });
+    const event = makeEvent("apply.started", { build_spec_hash: "h" });
+    const result = validateEvent(state, event, { apply_enabled: true });
+    expect(result.allowed).toBe(true);
+  });
+
+  it("does not affect non-apply events", () => {
+    const state = makeState({ current_state: "target_locked", compile_ready: true });
+    const event = makeEvent("compile.started", { snapshot_revision: 1, surface_hash: "h" });
+    // No options needed for non-apply events
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+});
+
+// ─── Rule 5b: Compile retry limit ───
 
 describe("gate-guard — Rule 5: compile retry limit", () => {
   it("allows compile.started when retry_count_compile < 3", () => {

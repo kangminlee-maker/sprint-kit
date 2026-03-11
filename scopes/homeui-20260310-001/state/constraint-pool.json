@@ -18,6 +18,7 @@
           "detail": "widgets/greeting/hooks/use-greeting-status.ts — match 로직에 체험완료/노쇼/취소 분기 없음"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 4,
       "decision": "inject",
@@ -39,6 +40,7 @@
           "detail": "features/home-redirection/ui/home-redirection.tsx:128 — trialClassCompYn=Y && paymentYn=N이면 강제 리다이렉트"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 5,
       "decision": "inject",
@@ -64,6 +66,7 @@
           "detail": "widgets/lesson-card/ui/absent-lesson-card — 결석 카드가 레슨 탭 전용"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 6,
       "decision": "inject",
@@ -85,6 +88,7 @@
           "detail": "generated/event-edge-case-audit.yaml — pattern_9_trial_conversion_failure: 36.1% 실패율"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 7,
       "decision": "inject",
@@ -114,6 +118,7 @@
           "detail": "제14조 — 학생 노쇼: 회차권 미복구, 무제한권 72시간 예약 금지"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 8,
       "decision": "inject",
@@ -139,6 +144,7 @@
           "detail": "event-log-audit.yaml — trial(303건) 별도 무료 취소 경로"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 9,
       "decision": "inject",
@@ -164,6 +170,7 @@
           "detail": "ontology.yaml — Subscribe.freeTrial 필드만 존재, 구체적 횟수·금액 미기록"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 10,
       "decision": "defer",
@@ -189,6 +196,7 @@
           "detail": "widgets/greeting/hooks/use-greeting-status.ts — 4개 boolean만으로 분기"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 11,
       "decision": "inject",
@@ -214,6 +222,7 @@
           "detail": "UserController.java:274 — getTrialStepInfo 별도 엔드포인트"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 12,
       "decision": "inject",
@@ -239,6 +248,7 @@
           "detail": "components.StickyBottom — fixed bottom-0, max-w-480px 패턴 정의됨"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 13,
       "decision": "inject",
@@ -260,6 +270,7 @@
           "detail": "제13조 — 회차권/무제한권/스마트토크권별 예약 규칙"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 14,
       "decision": "inject",
@@ -281,6 +292,7 @@
           "detail": "premises.purpose — design-verification, patterns.scenario_branching"
         }
       ],
+      "evidence_status": "unverified",
       "status": "decided",
       "discovered_at": 15,
       "decision": "inject",
