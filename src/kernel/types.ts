@@ -80,6 +80,7 @@ export const OBSERVATIONAL_EVENT_TYPES = [
   "convergence.action_taken",
   "draft_packet.rendered",
   "constraint.evidence_updated",
+  "prd.rendered",
 ] as const;
 
 export type ObservationalEventType =
@@ -564,6 +565,13 @@ export interface DraftPacketRenderedPayload {
   invalidated_count: number;
 }
 
+export interface PrdRenderedPayload {
+  prd_path: string;
+  prd_hash: string;
+  build_spec_hash: string;
+  section_count: number;
+}
+
 // ─── Payload Map (type → payload) ───
 
 export interface PayloadMap {
@@ -605,6 +613,7 @@ export interface PayloadMap {
   "convergence.blocked": ConvergenceBlockedPayload;
   "convergence.action_taken": ConvergenceActionTakenPayload;
   "draft_packet.rendered": DraftPacketRenderedPayload;
+  "prd.rendered": PrdRenderedPayload;
 }
 
 // ─── Event (discriminated union) ───
