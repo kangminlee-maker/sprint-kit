@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.3.2 (2026-03-12)
+
+Adaptive Align, Pre-Apply Review, MCP 소스 타입 도입. Brief 없이 대화만으로 scope를 시작할 수 있는 Exploration 프로토콜 추가.
+
+### Adaptive Align (Exploration)
+
+- **6-Phase Exploration 프로토콜**: 목적 정밀화 → 영역 탐색 → 현재 상태 공유 → 시나리오 탐색(추출→제안→확정) → 가정 검증 → 범위 확정. 인터뷰 방법론(Contextual Inquiry, JTBD, Assumption Mapping, Story Mapping) 기반
+- **Brief 없이 시작 가능**: 3가지 진입 방식 (대화만 / 간략 brief / 상세 brief). Brief는 Exploration의 산출물
+- **Exploration 이벤트 3종**: `exploration.started`, `exploration.round_completed`, `exploration.phase_transitioned` (관찰 이벤트, 상태 머신 변경 없음)
+- **ScopeState.exploration_progress**: Phase 진행 상태, 결정 축적, 가정 목록, Phase 이력 추적
+- **Exploration Log**: `build/exploration-log.md`에 대화 전문을 실시간 append-only 기록. 이벤트에서 재생성 불가능한 "왜"의 맥락 보존
+- **Gate-guard Rule 7**: `MAX_EXPLORATION_ROUNDS`(20) 초과 시 round_completed 거부
+- **`EXPLORATION_SUMMARY_THRESHOLD`(5)**: 5 round 후 중간 정리 제시
+- **대안 제시 패턴**: PO의 답변을 확인한 후, brownfield/온톨로지/설계 패턴 기반 대안을 제시. PO가 답하기 전에 대안을 제시하지 않음
+- **영역 탐색 4가지 방법**: 엔티티 기반 Top-down, 퍼널 기반, 터치포인트 매핑, 영향 체인 역추적
+
+### Pre-Apply Review
+
+- **compile → apply 사이 의미적 검증**: 3관점(정책 정합성, 기존 기능 정합성, 작동 로직) 검증
+- **`pre_apply.review_completed` 관찰 이벤트**: verdict(pass/gap_found) + findings(perspective별 상태)
+- **`compiled` 상태에 `compile.constraint_gap_found` 전이 추가**: compile 산출물 사후 검증에서 gap 발견 시 역전이 경로
+- **PRD에 Pre-Apply Review 섹션 추가**: ✓/⚠ 형식으로 3관점별 결과 표시
+- **soft gate**: PO 판단권 보존. 에이전트가 발견한 충돌을 보고하고 PO가 "진행/수정" 결정
+
+### MCP 소스 타입
+
+- **`type: mcp` 소스 지원**: `SourceEntry`, `SourceType`, Zod 스키마, `sourceKey()`, `scanSource()`, `toGroundingSource()` 전체 지원
+- **ClickHouse MCP**: `.sprint-kit.yaml`에 provider, tools, query_policy 설정. Exploration Phase 2(영역 탐색)와 Phase 5(가정 검증)에서 데이터 기반 판단 보강
+
+### PRD 생성
+
+- **`prd.rendered` 관찰 이벤트**: compile 완료 직후 PRD 자동 생성
+- **PRD 14개 섹션 구조**: Brownfield Sources, Executive Summary, User Journeys(4막 구조), Functional Requirements, Traceability Matrix 등
+- **compile → Pre-Apply Review → PRD** 순서 확정
+
+### 테스트
+
+- 44파일 1024건 (0.3.0 대비 +89건)
+- Exploration 테스트 6건 (reducer 4 + gate-guard 2)
+- State-machine 관찰 이벤트 자동 테스트 42건 추가
+
 ## 0.3.0 (2026-03-11)
 
 Compile Defense 강화: brownfield 교차 검증, 경로 정규화, 입력 검증 보강. Panel Review 체계 정착.
