@@ -82,6 +82,9 @@ export const OBSERVATIONAL_EVENT_TYPES = [
   "constraint.evidence_updated",
   "prd.rendered",
   "pre_apply.review_completed",
+  "exploration.started",
+  "exploration.round_completed",
+  "exploration.phase_transitioned",
 ] as const;
 
 export type ObservationalEventType =
@@ -588,6 +591,36 @@ export interface PreApplyReviewCompletedPayload {
   constraint_gap_id?: string;
 }
 
+export interface ExplorationStartedPayload {
+  entry_mode: "conversation" | "brief_minimal" | "brief_detailed";
+  initial_goals?: string[];
+}
+
+export interface ExplorationRoundCompletedPayload {
+  phase: number;
+  phase_name: string;
+  round: number;
+  topic: string;
+  decisions: Array<{
+    round: number;
+    question: string;
+    answer: string;
+    source?: string;
+  }>;
+  assumptions_found?: string[];
+  alternatives_presented?: string[];
+  brief_fields_contributed?: string[];
+}
+
+export interface ExplorationPhaseTransitionedPayload {
+  from_phase: number;
+  to_phase: number;
+  reason: string;
+  backward?: boolean;
+  log_path?: string;
+  log_hash?: string;
+}
+
 // ─── Payload Map (type → payload) ───
 
 export interface PayloadMap {
@@ -631,6 +664,9 @@ export interface PayloadMap {
   "draft_packet.rendered": DraftPacketRenderedPayload;
   "prd.rendered": PrdRenderedPayload;
   "pre_apply.review_completed": PreApplyReviewCompletedPayload;
+  "exploration.started": ExplorationStartedPayload;
+  "exploration.round_completed": ExplorationRoundCompletedPayload;
+  "exploration.phase_transitioned": ExplorationPhaseTransitionedPayload;
 }
 
 // ─── Event (discriminated union) ───
@@ -743,6 +779,31 @@ export interface ScopeState {
   last_backward_reason?: string;
   verdict_log: VerdictLogEntry[];
   feedback_history: FeedbackClassifiedPayload[];
+  exploration_progress?: {
+    current_phase: number;
+    current_phase_name: string;
+    total_rounds: number;
+    entry_mode: string;
+    decisions: Array<{
+      round: number;
+      phase: number;
+      topic: string;
+      question: string;
+      answer: string;
+    }>;
+    assumptions: Array<{
+      content: string;
+      type: string;
+      status: string;
+      source_phase?: number;
+    }>;
+    phase_history: Array<{
+      phase: number;
+      phase_name: string;
+      entered_at: number;
+    }>;
+    completed_at?: number;
+  };
   latest_revision: number;
 }
 

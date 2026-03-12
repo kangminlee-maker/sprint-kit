@@ -727,3 +727,92 @@ describe("reducer — determinism", () => {
     expect(state1).toEqual(state2);
   });
 });
+
+// ─── Exploration progress ───
+
+describe("exploration progress", () => {
+  function explorationBase() {
+    resetRev();
+    return [
+      evt("scope.created", null, "draft", { title: "test", description: "d", entry_mode: "experience" }),
+      evt("grounding.started", "draft", "draft", { sources: [] }),
+      evt("grounding.completed", "draft", "grounded", {
+        snapshot_revision: 1,
+        source_hashes: {},
+        perspective_summary: { experience: 0, code: 0, policy: 0 },
+      }),
+    ];
+  }
+
+  it("exploration.started initializes exploration_progress", () => {
+    const events = [
+      ...explorationBase(),
+      evt("exploration.started", "grounded", "grounded", { entry_mode: "brief_minimal" }),
+    ];
+    const state = reduce(events);
+    expect(state.exploration_progress).toBeDefined();
+    expect(state.exploration_progress!.current_phase).toBe(1);
+    expect(state.exploration_progress!.total_rounds).toBe(0);
+    expect(state.exploration_progress!.entry_mode).toBe("brief_minimal");
+    expect(state.exploration_progress!.decisions).toHaveLength(0);
+    expect(state.exploration_progress!.phase_history).toHaveLength(1);
+  });
+
+  it("exploration.round_completed accumulates decisions and rounds", () => {
+    const events = [
+      ...explorationBase(),
+      evt("exploration.started", "grounded", "grounded", { entry_mode: "conversation" }),
+      evt("exploration.round_completed", "grounded", "grounded", {
+        phase: 1, phase_name: "목적 정밀화", round: 1, topic: "결과 확인",
+        decisions: [{ round: 1, question: "핵심 결과는?", answer: "결제 전환" }],
+        assumptions_found: ["체험 직후가 최적 시점"],
+      }),
+      evt("exploration.round_completed", "grounded", "grounded", {
+        phase: 2, phase_name: "영역 탐색", round: 2, topic: "영역 확정",
+        decisions: [
+          { round: 2, question: "관련 영역은?", answer: "홈 화면, 결제 플로우" },
+          { round: 2, question: "푸시 알림은?", answer: "이번에는 제외" },
+        ],
+      }),
+    ];
+    const state = reduce(events);
+    expect(state.exploration_progress!.total_rounds).toBe(2);
+    expect(state.exploration_progress!.decisions).toHaveLength(3);
+    expect(state.exploration_progress!.assumptions).toHaveLength(1);
+    expect(state.exploration_progress!.assumptions[0].content).toBe("체험 직후가 최적 시점");
+    expect(state.exploration_progress!.assumptions[0].status).toBe("unverified");
+  });
+
+  it("exploration.phase_transitioned updates current phase", () => {
+    const events = [
+      ...explorationBase(),
+      evt("exploration.started", "grounded", "grounded", { entry_mode: "brief_detailed" }),
+      evt("exploration.phase_transitioned", "grounded", "grounded", {
+        from_phase: 1, to_phase: 2, reason: "PO가 결과 목록에 동의",
+      }),
+      evt("exploration.phase_transitioned", "grounded", "grounded", {
+        from_phase: 2, to_phase: 3, reason: "영역 확정 완료",
+      }),
+    ];
+    const state = reduce(events);
+    expect(state.exploration_progress!.current_phase).toBe(3);
+    expect(state.exploration_progress!.current_phase_name).toBe("현재 상태 공유");
+    expect(state.exploration_progress!.phase_history).toHaveLength(3);
+  });
+
+  it("align.proposed sets exploration_progress.completed_at", () => {
+    const events = [
+      ...explorationBase(),
+      evt("exploration.started", "grounded", "grounded", { entry_mode: "conversation" }),
+      evt("exploration.round_completed", "grounded", "grounded", {
+        phase: 1, phase_name: "목적 정밀화", round: 1, topic: "결과",
+        decisions: [{ round: 1, question: "q", answer: "a" }],
+      }),
+      evt("align.proposed", "grounded", "align_proposed", {
+        packet_path: "build/align-packet.md", packet_hash: "h", snapshot_revision: 1,
+      }),
+    ];
+    const state = reduce(events);
+    expect(state.exploration_progress!.completed_at).toBe(events[events.length - 1].revision);
+  });
+});

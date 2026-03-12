@@ -17,6 +17,9 @@ import type {
   SurfaceChangeRequiredPayload,
   CompileConstraintGapFoundPayload,
   ApplyDecisionGapFoundPayload,
+  ExplorationStartedPayload,
+  ExplorationRoundCompletedPayload,
+  ExplorationPhaseTransitionedPayload,
 } from "./types.js";
 import { buildConstraintPool, isConstraintsResolved } from "./constraint-pool.js";
 
@@ -61,6 +64,7 @@ export function reduce(events: Event[]): ScopeState {
 
   const verdict_log: VerdictLogEntry[] = [];
   const feedback_history: FeedbackClassifiedPayload[] = [];
+  let exploration_progress: ScopeState["exploration_progress"];
 
   let latest_revision = 0;
 
@@ -212,6 +216,73 @@ export function reduce(events: Event[]): ScopeState {
       case "feedback.classified":
         feedback_history.push(evt.payload as FeedbackClassifiedPayload);
         break;
+
+      // ── Exploration ──
+      case "exploration.started": {
+        const p = evt.payload as ExplorationStartedPayload;
+        exploration_progress = {
+          current_phase: 1,
+          current_phase_name: "목적 정밀화",
+          total_rounds: 0,
+          entry_mode: p.entry_mode,
+          decisions: [],
+          assumptions: [],
+          phase_history: [{ phase: 1, phase_name: "목적 정밀화", entered_at: evt.revision }],
+          completed_at: undefined,
+        };
+        break;
+      }
+      case "exploration.round_completed": {
+        const p = evt.payload as ExplorationRoundCompletedPayload;
+        if (exploration_progress) {
+          exploration_progress.total_rounds++;
+          for (const d of p.decisions) {
+            exploration_progress.decisions.push({
+              round: d.round,
+              phase: p.phase,
+              topic: p.topic,
+              question: d.question,
+              answer: d.answer,
+            });
+          }
+          if (p.assumptions_found) {
+            for (const a of p.assumptions_found) {
+              exploration_progress.assumptions.push({
+                content: a,
+                type: "discovered",
+                status: "unverified",
+                source_phase: p.phase,
+              });
+            }
+          }
+        }
+        break;
+      }
+      case "exploration.phase_transitioned": {
+        const p = evt.payload as ExplorationPhaseTransitionedPayload;
+        if (exploration_progress) {
+          exploration_progress.current_phase = p.to_phase;
+          const phaseNames: Record<number, string> = {
+            1: "목적 정밀화", 2: "영역 탐색", 3: "현재 상태 공유",
+            4: "시나리오 탐색", 5: "가정 검증", 6: "범위 확정",
+          };
+          exploration_progress.current_phase_name = phaseNames[p.to_phase] ?? `Phase ${p.to_phase}`;
+          exploration_progress.phase_history.push({
+            phase: p.to_phase,
+            phase_name: exploration_progress.current_phase_name,
+            entered_at: evt.revision,
+          });
+        }
+        break;
+      }
+
+      // ── Exploration completed (via align.proposed) ──
+      case "align.proposed": {
+        if (exploration_progress && !exploration_progress.completed_at) {
+          exploration_progress.completed_at = evt.revision;
+        }
+        break;
+      }
     }
   }
 
@@ -254,6 +325,7 @@ export function reduce(events: Event[]): ScopeState {
     validation_result,
     verdict_log,
     feedback_history,
+    exploration_progress,
     latest_revision,
   };
 }

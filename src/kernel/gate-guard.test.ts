@@ -74,6 +74,7 @@ function makeEvent(
   type: string,
   payload: Record<string, unknown> = {},
   revision = 10,
+  actor: string = "user",
 ): Event {
   return {
     event_id: `evt_${revision}`,
@@ -81,7 +82,7 @@ function makeEvent(
     type,
     ts: "2026-01-01T00:00:10Z",
     revision,
-    actor: "user",
+    actor,
     state_before: "surface_confirmed",
     state_after: "surface_confirmed",
     payload,
@@ -870,5 +871,53 @@ describe("gate-guard — scope.deferred exhaustive non-terminal", () => {
     const state = makeState({ current_state: "closed" });
     const event = makeEvent("scope.deferred", { reason: "r", resume_condition: "c" });
     expect(validateEvent(state, event).allowed).toBe(false);
+  });
+});
+
+// ─── Rule 7: Exploration round limit ───
+
+describe("Rule 7 — exploration round limit", () => {
+  it("allows exploration.round_completed when under limit", () => {
+    const state = makeState({
+      current_state: "grounded",
+      exploration_progress: {
+        current_phase: 2,
+        current_phase_name: "영역 탐색",
+        total_rounds: 19,
+        entry_mode: "conversation",
+        decisions: [],
+        assumptions: [],
+        phase_history: [{ phase: 1, phase_name: "목적 정밀화", entered_at: 3 }],
+      },
+    });
+    const event = makeEvent("exploration.round_completed", {
+      phase: 2, phase_name: "영역 탐색", round: 20, topic: "test",
+      decisions: [{ round: 20, question: "q", answer: "a" }],
+    }, 10, "agent");
+    expect(validateEvent(state, event).allowed).toBe(true);
+  });
+
+  it("rejects exploration.round_completed when at limit", () => {
+    const state = makeState({
+      current_state: "grounded",
+      exploration_progress: {
+        current_phase: 4,
+        current_phase_name: "시나리오 탐색",
+        total_rounds: 20,
+        entry_mode: "conversation",
+        decisions: [],
+        assumptions: [],
+        phase_history: [{ phase: 1, phase_name: "목적 정밀화", entered_at: 3 }],
+      },
+    });
+    const event = makeEvent("exploration.round_completed", {
+      phase: 4, phase_name: "시나리오 탐색", round: 21, topic: "test",
+      decisions: [{ round: 21, question: "q", answer: "a" }],
+    }, 10, "agent");
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) {
+      expect(result.reason).toContain("round limit");
+    }
   });
 });

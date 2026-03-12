@@ -13,3 +13,6 @@ export const VERDICT_LOG_DISPLAY_COUNT = 5;
 export const INVALIDATED_COLLAPSE_THRESHOLD = 3;
 
 export const ID_PAD = 3;
+
+export const EXPLORATION_SUMMARY_THRESHOLD = 5;
+export const MAX_EXPLORATION_ROUNDS = 20;

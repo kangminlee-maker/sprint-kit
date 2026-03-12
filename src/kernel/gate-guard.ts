@@ -12,7 +12,7 @@ import type {
   ValidationCompletedPayload,
 } from "./types.js";
 import { resolveTransition } from "./state-machine.js";
-import { MAX_COMPILE_RETRIES } from "./constants.js";
+import { MAX_COMPILE_RETRIES, MAX_EXPLORATION_ROUNDS } from "./constants.js";
 import { findConstraint, isConstraintsResolved } from "./constraint-pool.js";
 
 // ─── Actor validation mapping ───
@@ -54,6 +54,9 @@ export const ACTOR_MAPPING: Partial<Record<string, ReadonlySet<Actor>>> = {
   "constraint.discovered":        new Set(["system", "agent", "user"]),
   "align.proposed":               new Set(["system", "user"]),
   "align.revised":                new Set(["system", "user"]),
+  "exploration.started":            new Set(["agent", "system"]),
+  "exploration.round_completed":    new Set(["agent", "system"]),
+  "exploration.phase_transitioned": new Set(["agent", "system"]),
 };
 
 // ─── Result type ───
@@ -223,6 +226,18 @@ export function validateEvent(
     return {
       allowed: false,
       reason: `Target lock 불가: ${reasons.join(", ")}. 모든 constraint 결정이 완료되어야 합니다.`,
+    };
+  }
+
+  // ── Rule 7: Exploration round limit ──
+  if (
+    eventType === "exploration.round_completed" &&
+    state.exploration_progress &&
+    state.exploration_progress.total_rounds >= MAX_EXPLORATION_ROUNDS
+  ) {
+    return {
+      allowed: false,
+      reason: `Exploration round limit exceeded (${state.exploration_progress.total_rounds} rounds). align.proposed로 진행하거나 scope.deferred를 고려하세요.`,
     };
   }
 
