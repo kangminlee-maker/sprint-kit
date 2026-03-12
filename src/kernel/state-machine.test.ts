@@ -330,6 +330,12 @@ describe("state-machine — transition events exhaustive", () => {
     },
     {
       state: "compiled",
+      event: "compile.constraint_gap_found",
+      next: "constraints_resolved",
+      kind: "backward",
+    },
+    {
+      state: "compiled",
       event: "apply.started",
       next: "compiled",
       kind: "self",

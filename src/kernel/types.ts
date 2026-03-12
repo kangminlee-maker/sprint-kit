@@ -81,6 +81,7 @@ export const OBSERVATIONAL_EVENT_TYPES = [
   "draft_packet.rendered",
   "constraint.evidence_updated",
   "prd.rendered",
+  "pre_apply.review_completed",
 ] as const;
 
 export type ObservationalEventType =
@@ -572,6 +573,21 @@ export interface PrdRenderedPayload {
   section_count: number;
 }
 
+export type PreApplyReviewVerdict = "pass" | "gap_found";
+
+export interface PreApplyReviewFinding {
+  perspective: "policy" | "brownfield" | "logic";
+  status: "pass" | "warning";
+  summary: string;
+  detail?: string;
+}
+
+export interface PreApplyReviewCompletedPayload {
+  verdict: PreApplyReviewVerdict;
+  findings: PreApplyReviewFinding[];
+  constraint_gap_id?: string;
+}
+
 // ─── Payload Map (type → payload) ───
 
 export interface PayloadMap {
@@ -614,6 +630,7 @@ export interface PayloadMap {
   "convergence.action_taken": ConvergenceActionTakenPayload;
   "draft_packet.rendered": DraftPacketRenderedPayload;
   "prd.rendered": PrdRenderedPayload;
+  "pre_apply.review_completed": PreApplyReviewCompletedPayload;
 }
 
 // ─── Event (discriminated union) ───

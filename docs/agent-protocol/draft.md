@@ -571,9 +571,96 @@ compile 또는 apply 단계에서 `constraint_gap_found` 또는 `decision_gap_fo
 2. **왜 이전에 발견되지 않았는지**: "이 제약은 구현 수준의 상세 분석에서 드러난 것으로, 방향/대상 수준의 탐색에서는 발견되지 않았습니다."
 3. **기존 결정의 유지 여부**: "이전에 결정하신 항목들은 모두 유지됩니다. 이번에는 새로 발견된 CST-{N}에 대해서만 결정해 주시면 됩니다."
 
-### compile.completed 직후 → PRD 생성 (필수)
+### compile.completed 직후 → Pre-Apply Review (필수)
 
-compile이 성공적으로 완료된 직후, 에이전트는 PRD(Product Requirements Document)를 생성합니다.
+compile이 성공적으로 완료되면, PRD 생성 전에 에이전트는 3가지 관점에서 의미적 정합성을 검증합니다.
+이 검증은 compile-defense(구조적 완전성)가 다루지 않는 "의미적 양립 가능성"을 확인합니다.
+compile 산출물(Build Spec, delta-set, validation-plan, brownfield-detail)만으로 수행하며, 코드 구현 없이 실행 가능합니다.
+
+#### 검증 3관점
+
+**1. 정책 정합성 (policy)**
+- inject 결정된 CST의 `selected_option`이 약관/정책 문서의 조항과 충돌하지 않는지 확인합니다
+- Policy 소스(`usage_hint: context` 또는 `usage_hint: full`)를 직접 읽어 대조합니다
+- 확인 대상: constraint pool에서 `decision === "inject"`인 항목 전체
+- `requires_policy_change: true`인 항목은 특히 주의하여 검토합니다
+
+**2. 기존 기능 정합성 (brownfield)**
+- delta-set의 CHG 항목이 기존 코드의 불변 제약(brownfield invariant)을 위반하지 않는지 확인합니다
+- `brownfield-detail.md`의 `invariants` 필드에 기록된 항목과 CHG 대상 파일을 대조합니다
+- 확인 대상: invariant 목록 × CHG 목록의 교차점
+
+**3. 작동 로직 (logic)**
+- 별개 CHG가 동일 파일을 수정할 때 전제 조건이 양립하는지 확인합니다
+- validation-plan의 edge case가 실제 구현 항목(IMPL)에서 처리되는지 확인합니다
+- Surface 시나리오에 정의된 모든 상태 전이 경로가 Build Spec Section 4에 포함되어 있는지 확인합니다
+
+#### 판정 기준
+
+- **3관점 모두 충돌 없음**: `pre_apply.review_completed` (verdict: `"pass"`) 이벤트를 기록하고 PRD 생성으로 진행합니다
+- **경고 수준 발견사항**: PO에게 보고합니다. `pre_apply.review_completed` (verdict: `"pass"`, 해당 finding의 status: `"warning"`)를 기록하고 PRD 생성으로 진행합니다
+- **새 constraint 수준 충돌**: `constraint.discovered` → `compile.constraint_gap_found` → `constraints_resolved`로 역전이합니다
+
+#### 이벤트 기록
+
+```typescript
+// 충돌 없음
+appendScopeEvent(paths, {
+  type: "pre_apply.review_completed",
+  actor: "agent",
+  payload: {
+    verdict: "pass",
+    findings: [
+      { perspective: "policy", status: "pass", summary: "inject 결정 N건 모두 정책 문서와 양립" },
+      { perspective: "brownfield", status: "pass", summary: "invariant N건 모두 CHG와 충돌 없음" },
+      { perspective: "logic", status: "pass", summary: "상태 전이 교차점 없음, edge case 모두 커버" },
+    ],
+  },
+});
+
+// 새 constraint 발견 시 → 역전이
+appendScopeEvent(paths, {
+  type: "constraint.discovered",
+  actor: "agent",
+  payload: { constraint_id: "CST-NEW", perspective: "policy", summary: "...", ... },
+});
+appendScopeEvent(paths, {
+  type: "compile.constraint_gap_found",
+  actor: "system",
+  payload: { new_constraint_id: "CST-NEW", perspective: "policy", summary: "..." },
+});
+// → constraints_resolved로 역전이
+```
+
+#### PO 안내 형식
+
+```
+"Pre-Apply Review를 수행했습니다.
+
+[정책 정합성] ✓ inject 결정 N건 모두 정책 문서와 양립합니다.
+[기존 기능 정합성] ✓ invariant N건 모두 CHG와 충돌 없습니다.
+[작동 로직] ✓ 상태 전이 교차점 없음, edge case 모두 커버됩니다.
+
+PRD 생성을 진행합니다."
+```
+
+⚠ 표시 항목이 있는 경우:
+```
+"[기존 기능 정합성] ⚠ invariant 'X'와 CST-003의 충돌 가능성이 있습니다. {상세}
+
+이 상태로 진행하시겠습니까?"
+```
+
+#### 설계 원칙
+
+- **"탐지는 코드, 판정은 에이전트"**: Pre-Apply Review는 에이전트가 수행하는 의미적 검증입니다
+- **soft gate**: PO 판단권을 보존합니다. ⚠ 항목이 있어도 PO가 "진행"을 결정할 수 있습니다
+- **기존 경로 재사용**: 문제 발견 시 기존 `compile.constraint_gap_found` 역전이 경로를 사용합니다
+- **"충돌 없음"도 기록**: `pre_apply.review_completed` 이벤트로 긍정 결과를 기록하여 감사 추적 확보
+
+### Pre-Apply Review 완료 후 → PRD 생성 (필수)
+
+Pre-Apply Review가 pass 판정을 받은 후, 에이전트는 PRD(Product Requirements Document)를 생성합니다.
 PRD는 scope 전체 과정에서 축적된 모든 정보를 하나의 문서로 통합한 것입니다.
 
 #### PRD 데이터 수집
@@ -594,6 +681,7 @@ PRD는 scope 전체 과정에서 축적된 모든 정보를 하나의 문서로 
 | Non-Functional Requirements | constraint pool (recommended) + guardrails | DraftPacketContent.guardrails |
 | QA Considerations | validation-plan items + edge_cases | compile 산출물 |
 | Event Tracking | Surface에서 정의된 사용자 행동 이벤트 | Surface 파일 분석 |
+| Pre-Apply Review | `pre_apply.review_completed` 이벤트 payload | events.ndjson에서 해당 이벤트 추출 |
 | Traceability Matrix | CST → IMPL → CHG → VAL 체인 | compile 산출물의 ID 체인 |
 | 와이어프레임 | Surface 시나리오별 텍스트 와이어프레임 | Surface 파일에서 화면 구조 추출 |
 
@@ -698,6 +786,19 @@ changeLog:
 
 ## Non-Functional Requirements
 ### Performance / Reliability / Integration / Security / Error Handling
+
+## Pre-Apply Review
+### Policy Alignment
+{✓ 또는 ⚠} {요약}
+{상세: 확인된 정책 문서 목록, 충돌 시 충돌 내용}
+
+### Brownfield Compatibility
+{✓ 또는 ⚠} {요약}
+{상세: 확인된 invariant 목록, 충돌 시 위반 내용}
+
+### Logic Consistency
+{✓ 또는 ⚠} {요약}
+{상세: 상태 전이 교차점 확인 결과, edge case 커버 여부}
 
 ## QA Considerations
 ### {QA 그룹} (Priority)

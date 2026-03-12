@@ -137,6 +137,10 @@ const MATRIX: Partial<
   // ── compiled ──
   compiled: {
     "constraint.discovered": { next: "compiled", kind: "self" },
+    "compile.constraint_gap_found": {
+      next: "constraints_resolved",
+      kind: "backward",
+    },
     "apply.started": { next: "compiled", kind: "self" },
     "apply.completed": { next: "applied", kind: "forward" },
     "apply.decision_gap_found": {
