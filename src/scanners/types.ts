@@ -83,6 +83,8 @@ export function toGroundingSource(entry: SourceEntry): { type: SourceType; path_
       return { type: "figma-mcp", path_or_url: entry.file_key };
     case "obsidian-vault":
       return { type: "obsidian-vault", path_or_url: entry.path };
+    case "mcp":
+      return { type: "mcp", path_or_url: entry.provider };
   }
 }
 

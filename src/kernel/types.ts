@@ -152,7 +152,8 @@ export type SourceType =
   | "add-dir"
   | "github-tarball"
   | "figma-mcp"
-  | "obsidian-vault";
+  | "obsidian-vault"
+  | "mcp";
 
 // ─── Source Entry (config 수준) ───
 
@@ -160,7 +161,8 @@ export type SourceEntry =
   | { type: "add-dir"; path: string; description?: string }
   | { type: "github-tarball"; url: string; description?: string }
   | { type: "figma-mcp"; file_key: string; description?: string }
-  | { type: "obsidian-vault"; path: string; description?: string };
+  | { type: "obsidian-vault"; path: string; description?: string }
+  | { type: "mcp"; provider: string; description?: string; tools?: string[]; query_policy?: Record<string, unknown> };
 
 // ─── Source Key ───
 
@@ -174,6 +176,8 @@ export function sourceKey(entry: SourceEntry): string {
       return `figma-mcp:${entry.file_key}`;
     case "obsidian-vault":
       return `obsidian-vault:${entry.path}`;
+    case "mcp":
+      return `mcp:${entry.provider}`;
   }
 }
 

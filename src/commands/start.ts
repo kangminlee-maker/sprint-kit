@@ -535,6 +535,8 @@ function toBriefSourceEntry(entry: SourceEntry): BriefSourceEntry {
       return { type: "figma-mcp", identifier: entry.file_key, description: entry.description };
     case "obsidian-vault":
       return { type: "obsidian-vault", identifier: entry.path, description: entry.description };
+    case "mcp":
+      return { type: "mcp", identifier: entry.provider, description: entry.description };
   }
 }
 
@@ -549,7 +551,8 @@ async function scanSource(source: SourceEntry): Promise<ScanResult | ScanError> 
     case "obsidian-vault":
       return scanVault(source);
     case "figma-mcp":
-      // Figma is agent-driven (MCP calls). Return empty ScanResult.
+    case "mcp":
+      // MCP sources are agent-driven (MCP calls). Return empty ScanResult.
       return {
         source,
         scanned_at: new Date().toISOString(),

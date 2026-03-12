@@ -21,6 +21,7 @@ const sourceEntrySchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("github-tarball"), url: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
   z.object({ type: z.literal("figma-mcp"), file_key: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
   z.object({ type: z.literal("obsidian-vault"), path: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
+  z.object({ type: z.literal("mcp"), provider: z.string(), description: z.string().optional(), usage_hint: usageHintSchema, tools: z.array(z.string()).optional(), query_policy: z.record(z.string(), z.unknown()).optional() }),
 ]);
 
 export const projectConfigSchema = z.object({
