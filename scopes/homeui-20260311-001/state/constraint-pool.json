@@ -18,6 +18,9 @@
           "detail": "hasActiveTicket/hasNextLecture/hasTrialTicket/hasRegularTicket 4개 조건으로만 분기"
         }
       ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "podo-app 프론트엔드 코드에서 직접 확인. 현재 상태 분기 로직이 체험 진행 세부 상태를 구분하지 않음",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 4,
       "decision": "inject",
@@ -43,6 +46,9 @@
           "detail": "디자인 시스템에 ProgressBar/StepIndicator 컴포넌트 미정의"
         }
       ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "podo-app과 vibe-design 양쪽에서 프로그레스바 관련 컴포넌트 부재 확인",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 5,
       "decision": "inject",
@@ -68,6 +74,9 @@
           "detail": "각 상태별 컴포넌트가 GreetingActionSection 내부에 CTA 버튼 포함"
         }
       ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "vibe-design에 StickyBottom 정의 존재. podo-app 홈에서는 GreetingActionSection으로 CTA를 카드 내부에 배치 중",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 6,
       "decision": "inject",
@@ -93,6 +102,9 @@
           "detail": "InvoiceStatus enum: COMPLETED, NOSHOW_S, NOSHOW_BOTH, CANCEL_NOSHOW_T, CANCEL 등 세부 상태 존재하나 프론트엔드에서 미참조"
         }
       ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "podo-app의 useGreetingStatus 훅이 수강권 유무와 다음 레슨 유무만 확인. 레슨 종료 상태(완료/노쇼/취소)와 잔여 체험 횟수는 조회하지 않음",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 7,
       "decision": "inject",
@@ -118,6 +130,9 @@
           "detail": "\"PREFINISH는 invoiceStatus가 아닌 classState 컬럼의 값. 수업 종료 직전 상태\""
         }
       ],
+      "evidence_status": "verified",
+      "evidence_note": "podo-ontology model.yaml에서 3중 상태 필드 구조 확인. state-transitions.yaml에서 전이 규칙 문서화됨",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 8,
       "decision": "inject",
@@ -139,6 +154,9 @@
           "detail": "L10(NOSHOW_S), L11(NOSHOW_BOTH), L12(CANCEL_NOSHOW_T) 전이의 guard가 모두 \"(외부 시스템 — 레거시 PHP 또는 어드민 도구에서 처리)\""
         }
       ],
+      "evidence_status": "verified",
+      "evidence_note": "podo-ontology state-transitions.yaml에서 노쇼 전이 3건 모두 외부 시스템 처리임을 명시",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 9,
       "decision": "inject",
@@ -164,6 +182,9 @@
           "detail": "SubscribeMappStatus에 TRIAL 상태 정의, 그러나 잔여 횟수 추적 필드 미확인"
         }
       ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "PaymentType에 TRIAL/TRIAL_FREE 구분은 있으나, 무료체험 횟수 한도(3회) 관리 로직의 구체적 위치 미확인",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 10,
       "decision": "inject",
@@ -185,6 +206,9 @@
           "detail": "제14조 라인 53: 무제한권 노쇼 시 3일(72시간) 수업 예약 불가 패널티"
         }
       ],
+      "evidence_status": "verified",
+      "evidence_note": "terms-of-service.md 제14조에서 노쇼 패널티 규정 직접 확인",
+      "requires_policy_change": false,
       "status": "invalidated",
       "discovered_at": 11,
       "invalidation_reason": "무료체험은 수강권(무제한권/회차권)과 별개 상품. 이용약관 제14조의 72시간 예약 차단 패널티는 무제한권에만 적용되며, 이 scope 대상인 무료체험 학생에게는 적용되지 않음."
@@ -207,6 +231,9 @@
           "detail": "cancelTrial() 호출 시 체험 수업 취소 + cancelAt 설정"
         }
       ],
+      "evidence_status": "verified",
+      "evidence_note": "podo-ontology state-transitions.yaml에서 L7, S5 전이 규칙으로 확인",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 12,
       "decision": "inject",
@@ -232,6 +259,9 @@
           "detail": "신규 7상태(NOT_APPLIED, WAITING, LESSON_READY, COMPLETED, TUTOR_NOSHOW, STUDENT_ABSENT, EXHAUSTED)"
         }
       ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "기존 코드의 상태 분기와 Surface 상태 모델의 차이에서 도출",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 18,
       "decision": "inject",
@@ -257,6 +287,9 @@
           "detail": "4단계 프로그레스바: step 0(신청), 1(예습), 2(레슨), 3(완료)"
         }
       ],
+      "evidence_status": "verified",
+      "evidence_note": "podo-ontology model.yaml에서 InvoiceStatus와 classState 필드 구조 확인",
+      "requires_policy_change": false,
       "status": "decided",
       "discovered_at": 19,
       "decision": "inject",
