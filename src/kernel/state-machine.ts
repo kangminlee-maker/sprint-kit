@@ -39,6 +39,16 @@ const MATRIX: Partial<
     "align.proposed": { next: "align_proposed", kind: "forward" },
     "constraint.discovered": { next: "grounded", kind: "self" },
     "snapshot.marked_stale": { next: "grounded", kind: "self" },
+    "exploration.started": { next: "exploring", kind: "forward" },
+  },
+
+  // ── exploring ──
+  exploring: {
+    "exploration.round_completed": { next: "exploring", kind: "self" },
+    "exploration.phase_transitioned": { next: "exploring", kind: "self" },
+    "align.proposed": { next: "align_proposed", kind: "forward" },
+    "constraint.discovered": { next: "exploring", kind: "self" },
+    "snapshot.marked_stale": { next: "exploring", kind: "self" },
   },
 
   // ── align_proposed ──

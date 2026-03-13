@@ -222,8 +222,8 @@ const state = reduce(events);
 | 현재 상태 | 동작 |
 |-----------|------|
 | `draft` (grounding 미완료) | brief.md 검증 → 소스 재스캔. `grounding.started`가 이미 있으면 스캔만 재실행 (Step 2부터) |
-| `grounded` (exploration 미시작) | "Align Packet이 아직 생성되지 않았습니다. 계속 진행합니다." → Step 4~7 실행 |
-| `grounded` (exploration 진행 중) | `build/exploration-log.md`를 읽어 마지막 Phase와 합의 내용을 확인한 뒤, "Phase {N} 진행 중입니다. {M}개 시나리오 완료. 이어서 진행합니다." → `exploration.md` 프로토콜로 진입 |
+| `grounded` | "Align Packet이 아직 생성되지 않았습니다. 계속 진행합니다." → Step 4~7 실행 |
+| `exploring` | `build/exploration-log.md`를 읽어 마지막 Phase와 합의 내용을 확인한 뒤, "Phase {N} 진행 중입니다. {M}회 완료. 이어서 진행합니다." → `exploration.md` 프로토콜로 진입 |
 | `align_proposed` | "Align Packet이 대기 중입니다. `/align`으로 결정해 주세요." |
 | `align_locked` 이상 | "현재 `{state}` 상태입니다. `/draft`로 진행해 주세요." |
 | `closed` / `deferred` / `rejected` | "이 scope는 종료되었습니다. 새 scope를 만드시려면 다른 이름으로 `/start`를 실행해 주세요." |
@@ -403,17 +403,27 @@ appendScopeEvent(paths, {
 - `product_owner`: 제품·사업 판단이 필요 (차단 한도, 약관 변경, 매칭 정책)
 - `builder`: 구현 방식 판단이 필요 (DB 구조, API 설계, 인덱스 전략)
 
-### 4.5. Exploration 진입 판별
+### 4.5. Exploration 진입
 
-Grounding 완료 후, brief의 상세도에 따라 exploration 진행 여부를 판별합니다.
+Grounding 완료 후, `exploration.started` 이벤트를 기록하여 `exploring` 상태로 전이합니다.
+brief의 상세도에 따라 exploration 범위가 달라집니다.
 
-| brief 상태 | 판별 | 다음 단계 |
+| brief 상태 | 판별 | exploration 범위 |
 |-----------|------|---------|
-| brief 없음 또는 모든 필수 항목 비어 있음 | `entry_mode: "conversation"` | `exploration.md` 프로토콜로 진입 (Phase 1~6 전체) |
-| 변경 목적만 채워짐 | `entry_mode: "brief_minimal"` | `exploration.md` 프로토콜로 진입 (Phase 1 확인 후 2~6) |
-| 모든 필수 항목 채워짐 + 포함/제외 범위까지 명확 | `entry_mode: "brief_detailed"` | `exploration.md` 프로토콜로 진입 (Phase 1 재정위 후, 이미 결정된 부분 건너뜀) |
+| brief 없음 또는 모든 필수 항목 비어 있음 | `entry_mode: "conversation"` | Phase 1~6 전체 |
+| 변경 목적만 채워짐 | `entry_mode: "brief_minimal"` | Phase 1 확인 후 2~6 |
+| 모든 필수 항목 채워짐 + 포함/제외 범위까지 명확 | `entry_mode: "brief_detailed"` | Phase 1 재정위 후, 이미 결정된 부분 건너뜀 |
 
-exploration 완료 후 Step 5(Align Packet 렌더링)로 진행합니다.
+```typescript
+// 상태 전이: grounded → exploring
+appendScopeEvent(paths, {
+  type: "exploration.started",
+  actor: "agent",
+  payload: { entry_mode, initial_goals },
+});
+```
+
+exploration 완료 후 `align.proposed` 이벤트로 `exploring → align_proposed`로 전이합니다.
 exploration에서 생성된 `build/exploration-log.md`의 Phase 6 결과가 AlignPacketContent의 입력이 됩니다.
 
 상세 프로토콜: `docs/agent-protocol/exploration.md` 참조.

@@ -70,8 +70,8 @@ describe("types — golden data compatibility", () => {
 });
 
 describe("types — constants", () => {
-  it("has 14 states", () => {
-    expect(STATES).toHaveLength(14);
+  it("has 15 states", () => {
+    expect(STATES).toHaveLength(15);
   });
 
   it("terminal states are closed, deferred, rejected", () => {
@@ -85,7 +85,7 @@ describe("types — constants", () => {
     expect(GLOBAL_EVENT_TYPES).toHaveLength(2);
   });
 
-  it("has 12 observational event types", () => {
-    expect(OBSERVATIONAL_EVENT_TYPES).toHaveLength(12);
+  it("has 9 observational event types", () => {
+    expect(OBSERVATIONAL_EVENT_TYPES).toHaveLength(9);
   });
 });

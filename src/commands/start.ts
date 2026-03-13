@@ -337,6 +337,13 @@ async function handleResume(
     }
   } else if (currentState === "grounded") {
     nextAction = "Align Packet이 아직 생성되지 않았습니다. 계속 진행합니다.";
+  } else if (currentState === "exploring") {
+    const ep = state.exploration_progress;
+    if (ep) {
+      nextAction = `Exploration Phase ${ep.current_phase}/6 (${ep.current_phase_name}) 진행 중입니다. ${ep.total_rounds}회 완료. exploration-log.md를 확인 후 이어서 진행해 주세요.`;
+    } else {
+      nextAction = "Exploration이 시작되었습니다. 계속 진행합니다.";
+    }
   } else if (currentState === "align_proposed") {
     nextAction = "Align Packet이 대기 중입니다. /align으로 결정해 주세요.";
   } else {

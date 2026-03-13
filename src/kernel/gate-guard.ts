@@ -241,6 +241,37 @@ export function validateEvent(
     };
   }
 
+  // ── Rule 8: Exploration sequence integrity ──
+  // Rule 8a (align.proposed during exploration) is now handled structurally by MATRIX:
+  // exploring state allows align.proposed; grounded state allows align.proposed.
+  // Protocol determines when agent should record align.proposed.
+
+  // Rule 8b: exploration.round_completed/phase_transitioned require exploration.started
+  // MATRIX enforces this structurally (only exploring state allows these events).
+  // This rule provides a clearer error message.
+  if (
+    (eventType === "exploration.round_completed" ||
+      eventType === "exploration.phase_transitioned") &&
+    !state.exploration_progress
+  ) {
+    return {
+      allowed: false,
+      reason: `exploration.started 이벤트가 먼저 기록되어야 합니다.`,
+    };
+  }
+
+  // Rule 8c: exploration.started blocked when exploration already in progress
+  if (
+    eventType === "exploration.started" &&
+    state.exploration_progress &&
+    !state.exploration_progress.completed_at
+  ) {
+    return {
+      allowed: false,
+      reason: `Exploration이 이미 진행 중입니다 (Phase ${state.exploration_progress.current_phase}/6). 완료 후 재시작 가능합니다.`,
+    };
+  }
+
   // ── Resolve next state (handle conditional targets) ──
   const next_state = resolveNextState(outcome, state, newEvent);
 

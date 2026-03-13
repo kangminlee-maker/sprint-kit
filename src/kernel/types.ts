@@ -3,6 +3,7 @@
 export const STATES = [
   "draft",
   "grounded",
+  "exploring",
   "align_proposed",
   "align_locked",
   "surface_iterating",
@@ -59,6 +60,9 @@ export const TRANSITION_EVENT_TYPES = [
   "apply.decision_gap_found",
   "validation.started",
   "validation.completed",
+  "exploration.started",
+  "exploration.round_completed",
+  "exploration.phase_transitioned",
 ] as const;
 
 export type TransitionEventType = (typeof TRANSITION_EVENT_TYPES)[number];
@@ -82,9 +86,6 @@ export const OBSERVATIONAL_EVENT_TYPES = [
   "constraint.evidence_updated",
   "prd.rendered",
   "pre_apply.review_completed",
-  "exploration.started",
-  "exploration.round_completed",
-  "exploration.phase_transitioned",
 ] as const;
 
 export type ObservationalEventType =
@@ -621,8 +622,10 @@ export interface ExplorationPhaseTransitionedPayload {
   to_phase: number;
   reason: string;
   backward?: boolean;
-  log_path?: string;
-  log_hash?: string;
+  /** exploration-log.md 경로 (공식 artifact). Phase 전환 시 필수 기록. */
+  log_path: string;
+  /** exploration-log.md의 content hash. 변경 감지용. */
+  log_hash: string;
 }
 
 // ─── Payload Map (type → payload) ───

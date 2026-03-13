@@ -879,7 +879,7 @@ describe("gate-guard — scope.deferred exhaustive non-terminal", () => {
 describe("Rule 7 — exploration round limit", () => {
   it("allows exploration.round_completed when under limit", () => {
     const state = makeState({
-      current_state: "grounded",
+      current_state: "exploring",
       exploration_progress: {
         current_phase: 2,
         current_phase_name: "영역 탐색",
@@ -899,7 +899,7 @@ describe("Rule 7 — exploration round limit", () => {
 
   it("rejects exploration.round_completed when at limit", () => {
     const state = makeState({
-      current_state: "grounded",
+      current_state: "exploring",
       exploration_progress: {
         current_phase: 4,
         current_phase_name: "시나리오 탐색",
@@ -919,5 +919,148 @@ describe("Rule 7 — exploration round limit", () => {
     if (!result.allowed) {
       expect(result.reason).toContain("round limit");
     }
+  });
+});
+
+// ─── Rule 8a: MATRIX-based exploration structural protection ───
+
+describe("Rule 8a — MATRIX-based exploration protection", () => {
+  it("denies exploration.round_completed from grounded (MATRIX)", () => {
+    const state = makeState({ current_state: "grounded" });
+    const event = makeEvent("exploration.round_completed", {
+      phase: 1, phase_name: "목적 정밀화", round: 1, topic: "test",
+      decisions: [{ round: 1, question: "q", answer: "a" }],
+    }, 10, "agent");
+    expect(validateEvent(state, event).allowed).toBe(false);
+  });
+
+  it("allows align.proposed from exploring (MATRIX)", () => {
+    const state = makeState({
+      current_state: "exploring",
+      exploration_progress: {
+        current_phase: 6,
+        current_phase_name: "범위 확정",
+        total_rounds: 12,
+        entry_mode: "conversation",
+        decisions: [],
+        assumptions: [],
+        phase_history: [{ phase: 1, phase_name: "목적 정밀화", entered_at: 3 }],
+      },
+    });
+    const event = makeEvent("align.proposed", {
+      packet_path: "build/align-packet.md",
+      packet_hash: "abc",
+      snapshot_revision: 1,
+    }, 16, "system");
+    expect(validateEvent(state, event).allowed).toBe(true);
+  });
+
+  it("allows align.proposed from grounded without exploration", () => {
+    const state = makeState({ current_state: "grounded" });
+    const event = makeEvent("align.proposed", {
+      packet_path: "build/align-packet.md",
+      packet_hash: "abc",
+      snapshot_revision: 1,
+    }, 10, "system");
+    expect(validateEvent(state, event).allowed).toBe(true);
+  });
+
+  it("exploration.started transitions grounded to exploring", () => {
+    const state = makeState({ current_state: "grounded" });
+    const event = makeEvent("exploration.started", {
+      entry_mode: "conversation",
+      initial_goals: ["test"],
+    }, 10, "agent");
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+    if (result.allowed) {
+      expect(result.next_state).toBe("exploring");
+    }
+  });
+});
+
+// ─── Rule 8b: exploration round/phase require exploration.started ───
+
+describe("Rule 8b — exploration events require exploration.started", () => {
+  it("blocks exploration.round_completed without exploration_progress", () => {
+    const state = makeState({ current_state: "exploring" });
+    const event = makeEvent("exploration.round_completed", {
+      phase: 1, phase_name: "목적 정밀화", round: 1, topic: "test",
+      decisions: [{ round: 1, question: "q", answer: "a" }],
+    }, 10, "agent");
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) {
+      expect(result.reason).toContain("exploration.started");
+    }
+  });
+
+  it("blocks exploration.phase_transitioned without exploration_progress", () => {
+    const state = makeState({ current_state: "exploring" });
+    const event = makeEvent("exploration.phase_transitioned", {
+      from_phase: 1, to_phase: 2, reason: "PO 동의",
+      log_path: "build/exploration-log.md", log_hash: "abc",
+    }, 10, "agent");
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) {
+      expect(result.reason).toContain("exploration.started");
+    }
+  });
+});
+
+// ─── Rule 8c: exploration.started blocked when already in progress ───
+
+describe("Rule 8c — exploration.started blocked when already in progress", () => {
+  it("blocks duplicate exploration.started from exploring state", () => {
+    const state = makeState({
+      current_state: "exploring",
+      exploration_progress: {
+        current_phase: 2,
+        current_phase_name: "영역 탐색",
+        total_rounds: 3,
+        entry_mode: "conversation",
+        decisions: [],
+        assumptions: [],
+        phase_history: [{ phase: 1, phase_name: "목적 정밀화", entered_at: 3 }],
+      },
+    });
+    const event = makeEvent("exploration.started", {
+      entry_mode: "conversation",
+      initial_goals: ["test"],
+    }, 10, "agent");
+    // MATRIX denies exploration.started from exploring (not listed)
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(false);
+  });
+
+  it("allows exploration.started when no previous exploration", () => {
+    const state = makeState({ current_state: "grounded" });
+    const event = makeEvent("exploration.started", {
+      entry_mode: "conversation",
+      initial_goals: ["test"],
+    }, 10, "agent");
+    expect(validateEvent(state, event).allowed).toBe(true);
+  });
+
+  it("allows exploration.started after previous exploration completed", () => {
+    const state = makeState({
+      current_state: "grounded",
+      exploration_progress: {
+        current_phase: 6,
+        current_phase_name: "범위 확정",
+        total_rounds: 10,
+        entry_mode: "conversation",
+        decisions: [],
+        assumptions: [],
+        phase_history: [],
+        completed_at: 15,
+      },
+    });
+    const event = makeEvent("exploration.started", {
+      entry_mode: "brief_detailed",
+      initial_goals: ["re-explore"],
+    }, 16, "agent");
+    expect(validateEvent(state, event).allowed).toBe(true);
   });
 });

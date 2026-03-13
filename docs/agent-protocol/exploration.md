@@ -3,6 +3,22 @@
 grounding 완료 후, Align Packet 생성 전에 PO와 함께 요구사항을 탐색적으로 구체화하는 프로토콜입니다.
 설계 근거: `docs/design/adaptive-align-conversation-design.md`
 
+## 상태 전이
+
+`exploration.started`는 **transition 이벤트**입니다. 기록 시 상태가 `grounded → exploring`으로 전이됩니다.
+
+```
+grounded → exploration.started → exploring
+exploring → (round_completed × N, phase_transitioned × 5) → align.proposed → align_proposed
+```
+
+`exploring` 상태에서 허용되는 이벤트:
+- `exploration.round_completed` (self): Round 완료 기록
+- `exploration.phase_transitioned` (self): Phase 전환 기록
+- `align.proposed` (forward → align_proposed): exploration 완료 후 Align Packet 제안
+- `constraint.discovered` (self): 탐색 중 제약 발견
+- `snapshot.marked_stale` (self): 소스 변경 감지
+
 ## 진입 조건
 
 - 현재 상태가 `grounded`
@@ -18,7 +34,7 @@ brief의 상세도에 따라 exploration 범위가 달라집니다.
 | **간략 brief** | 변경 목적만 채워져 있고 나머지(대상 사용자, 기대 결과, 포함/제외)가 비어 있음 | Phase 1에서 목적 확인 후 Phase 2~6 수행 |
 | **상세 brief** | 모든 필수 항목이 채워져 있음 | Phase 1에서 목적 재정위 후, brief에 이미 결정된 부분은 확인만 하고 건너뜀 |
 
-진입 시 `exploration.started` 이벤트를 기록합니다:
+진입 시 `exploration.started` 이벤트를 기록합니다. **이 이벤트는 상태를 `exploring`으로 전이시킵니다.**
 
 ```typescript
 appendScopeEvent(paths, {
@@ -29,7 +45,12 @@ appendScopeEvent(paths, {
     initial_goals: ["PO가 최초에 언급한 목표 목록"],
   },
 });
+// state: grounded → exploring
 ```
+
+**gate-guard 규칙:**
+- `exploration.started`는 `grounded` 상태에서만 허용 (MATRIX 강제)
+- 이미 exploration이 진행 중(`exploration_progress` 존재 + `completed_at` 없음)이면 거부 (Rule 8c)
 
 ## 6개 Phase
 
@@ -269,6 +290,8 @@ appendScopeEvent(paths, {
 
 ### Phase 전환 시
 
+`log_path`와 `log_hash`는 **필수**입니다. exploration-log.md는 공식 artifact이며, Phase 전환 시 hash를 기록하여 변경 감지를 보장합니다.
+
 ```typescript
 appendScopeEvent(paths, {
   type: "exploration.phase_transitioned",
@@ -277,8 +300,8 @@ appendScopeEvent(paths, {
     from_phase: 1,
     to_phase: 2,
     reason: "PO가 결과 목록에 동의",
-    log_path: "build/exploration-log.md",
-    log_hash: contentHash(logContent),
+    log_path: "build/exploration-log.md",   // required
+    log_hash: contentHash(logContent),       // required
   },
 });
 ```
@@ -318,13 +341,27 @@ PO가 이전 결정을 번복하면:
 
 ### 세션 중단/재개
 
-재개 시 에이전트는:
-1. `scope.md` 읽기 → 현재 상태 확인
+재개 시 `current_state: "exploring"`으로 즉시 exploration 진행 중임을 확인할 수 있습니다.
+
+에이전트는:
+1. `scope.md` 읽기 → `current_state: "exploring"` 확인
 2. `build/exploration-log.md` 읽기 → 마지막 Phase, 마지막 Round, 합의 내용
 3. PO에게 안내:
    > "Phase {N} 진행 중입니다. 시나리오 {M}/{K}까지 완료했습니다.
    > 마지막 대화에서 '{요약}' 방향으로 확정했습니다.
    > 이어서 진행하겠습니까?"
+
+### 데이터 원천 규칙
+
+exploration 데이터는 두 경로로 존재합니다. 불일치 시 다음 원칙을 따릅니다:
+
+| 데이터 종류 | 원천 (source of truth) | 보조 |
+|------------|----------------------|------|
+| 진행 상태 (Phase 번호, Round 수, 완료 여부) | `exploration_progress` (이벤트 기반, reducer 재생성) | exploration-log.md |
+| 의미적 맥락 (PO 응답 원문, 결정 이유, 대안 비교) | `exploration-log.md` (파일 기반) | exploration_progress.decisions |
+
+- AlignPacketContent 조립 시: `exploration-log.md`의 의미적 맥락을 기반으로 작성
+- Phase/Round 정합성 확인: `exploration_progress`의 숫자가 우선
 
 ---
 
@@ -333,7 +370,7 @@ PO가 이전 결정을 번복하면:
 exploration이 완료되면:
 1. `exploration-log.md`에서 AlignPacketContent 각 필드를 조립
 2. `renderAlignPacket()` 호출하여 Align Packet 생성
-3. `align.proposed` 이벤트 기록 (exploration_progress.completed_at 자동 설정)
+3. `align.proposed` 이벤트 기록 → **상태가 `exploring → align_proposed`로 전이** (exploration_progress.completed_at 자동 설정)
 4. brief.md가 없었다면, Phase 1~6 결과로 brief.md 자동 생성
 5. PO에게 Align Packet 제시 → `/align`으로 결정 요청
 

@@ -146,6 +146,7 @@ export function renderScopeMd(state: ScopeState): string {
 const STATE_LABELS: Record<string, string> = {
   draft: "초안 (소스 스캔 전)",
   grounded: "소스 스캔 완료",
+  exploring: "요구사항 탐색 중",
   align_proposed: "Align Packet 검토 중",
   align_locked: "방향·범위 확정됨",
   surface_iterating: "Surface 반복 수정 중",
@@ -178,6 +179,11 @@ function formatNextAction(state: ScopeState): string {
       return "소스를 스캔하세요 (`/start`를 실행하세요)";
     case "grounded":
       return "스캔 결과를 검토하세요. Align Packet이 준비되었습니다 (`/align`을 실행하세요)";
+    case "exploring": {
+      const ep = state.exploration_progress;
+      const phaseInfo = ep ? ` (Phase ${ep.current_phase}/6: ${ep.current_phase_name})` : "";
+      return `요구사항을 탐색하고 있습니다${phaseInfo}. 질문에 답하여 scope를 구체화하세요`;
+    }
     case "align_proposed":
       return "Align Packet을 읽고 방향과 범위를 확정하세요 (승인/수정/거절/재스캔 중 선택)";
     case "align_locked":

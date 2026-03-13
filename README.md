@@ -158,9 +158,9 @@ sources/          로컬 참고 자료 (디자인 가이드, 이용약관 등)
 
 ## 현재 규모
 
-- 소스 파일 45+개, 테스트 44파일 1024건
-- 상태 14개, 이벤트 40종+, Compile Defense 규칙 15개
-- Exploration 이벤트 3종, Pre-Apply Review 이벤트 1종
+- 소스 파일 45+개, 테스트 44파일 1008건
+- 상태 15개 (`exploring` 포함), 이벤트 40종+, Compile Defense 규칙 15개
+- Exploration 이벤트 3종 (전이 이벤트), Pre-Apply Review 이벤트 1종
 
 ## License
 

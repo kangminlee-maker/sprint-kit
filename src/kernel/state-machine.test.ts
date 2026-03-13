@@ -110,6 +110,44 @@ describe("state-machine — transition events exhaustive", () => {
       next: "grounded",
       kind: "self",
     },
+    {
+      state: "grounded",
+      event: "exploration.started",
+      next: "exploring",
+      kind: "forward",
+    },
+
+    // exploring
+    {
+      state: "exploring",
+      event: "exploration.round_completed",
+      next: "exploring",
+      kind: "self",
+    },
+    {
+      state: "exploring",
+      event: "exploration.phase_transitioned",
+      next: "exploring",
+      kind: "self",
+    },
+    {
+      state: "exploring",
+      event: "align.proposed",
+      next: "align_proposed",
+      kind: "forward",
+    },
+    {
+      state: "exploring",
+      event: "constraint.discovered",
+      next: "exploring",
+      kind: "self",
+    },
+    {
+      state: "exploring",
+      event: "snapshot.marked_stale",
+      next: "exploring",
+      kind: "self",
+    },
 
     // align_proposed
     {
