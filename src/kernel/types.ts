@@ -164,13 +164,6 @@ export type SurfaceType = "experience" | "interface";
 
 // ─── Source Type ───
 
-export type SourceType =
-  | "add-dir"
-  | "github-tarball"
-  | "figma-mcp"
-  | "obsidian-vault"
-  | "mcp";
-
 // ─── Source Entry (config 수준) ───
 
 export type SourceEntry =
@@ -179,6 +172,9 @@ export type SourceEntry =
   | { type: "figma-mcp"; file_key: string; description?: string }
   | { type: "obsidian-vault"; path: string; description?: string }
   | { type: "mcp"; provider: string; description?: string; tools?: string[]; query_policy?: Record<string, unknown> };
+
+// SourceType is derived from SourceEntry to enforce sync
+export type SourceType = SourceEntry["type"];
 
 // ─── Source Key ───
 

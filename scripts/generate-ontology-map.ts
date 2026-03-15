@@ -31,20 +31,19 @@ const L3_RENDERER_INPUTS = new Set([
 // 1차 소비자: AI 에이전트, 2차 소비자: PO(에이전트 경유)
 
 const DOMAIN_CONCEPTS: Record<string, string[]> = {
-  "Scope": ["ScopeState", "ScopePaths", "State", "ScopeMeta"],
+  "Scope": ["ScopeState", "State", "VerdictLogEntry"],
   "Event": ["Event", "EventType", "TransitionEventType", "GlobalEventType", "ObservationalEventType", "PayloadMap", "Actor"],
   "State Machine": ["State", "STATES", "TRANSITION_EVENT_TYPES", "GLOBAL_EVENT_TYPES", "OBSERVATIONAL_EVENT_TYPES", "TERMINAL_STATES"],
-  "Constraint": ["ConstraintEntry", "ConstraintPool", "ConstraintDecision", "Perspective", "Severity", "DecisionOwner", "DiscoveryStage"],
+  "Constraint": ["ConstraintEntry", "ConstraintPool", "ConstraintDecision", "Perspective", "Severity", "DecisionOwner", "DiscoveryStage", "ConstraintStatus", "EvidenceStatus"],
   "Source": ["SourceEntry", "SourceType", "sourceKey"],
-  "Exploration": ["ExplorationProgress", "AssumptionStatus", "ExplorationArea"],
-  "Validation": ["ValidationPlanItem", "ValidationResult"],
+  "Exploration": ["AssumptionStatus", "ExplorationStartedPayload", "ExplorationRoundCompletedPayload", "ExplorationPhaseTransitionedPayload"],
+  "Surface": ["SurfaceType", "EntryMode", "SurfaceConfirmedPayload", "SurfaceGeneratedPayload"],
+  "Validation": ["ValidationPlanItem", "ValidationPlanEntry", "ValidationResult", "ValidationItemResult"],
   "Brownfield": ["BrownfieldContext", "BrownfieldDetail", "BrownfieldFileEntry", "BrownfieldDepEntry", "BrownfieldApiEntry", "BrownfieldSchemaEntry", "BrownfieldConfigEntry", "BrownfieldInvariant"],
-  "Surface": ["SurfaceType", "EntryMode"],
-  "Feedback": ["FeedbackClassification"],
-  "Snapshot": ["RealitySnapshot"],
+  "Feedback": ["FeedbackClassification", "FeedbackClassifiedPayload"],
+  "Snapshot": ["RealitySnapshot", "SnapshotMarkedStalePayload"],
   "Convergence": ["ConvergenceWarningPayload", "ConvergenceDiagnosisPayload", "ConvergenceBlockedPayload", "ConvergenceActionTakenPayload"],
   "Renderer / Packet": ["AlignPacketContent", "DraftPacketContent", "ConstraintDetailPO", "ConstraintDetailBuilder", "ConstraintDetail"],
-  "Compile": ["CompileSuccess", "CompileFailure"],
 };
 
 // ─── Reverse Index Scanner ───
@@ -288,9 +287,38 @@ function render(r: ParseResult): string {
   return lines.join("\n");
 }
 
+// ─── DOMAIN_CONCEPTS Sync Check ───
+
+function validateDomainConcepts(): string[] {
+  // Read types.ts source and check for exported names directly
+  // (parser only captures string literal unions/interfaces/functions/const arrays,
+  //  but types.ts also has derived types, discriminated unions, generic types)
+  const source = readFileSync(TYPES_PATH, "utf-8");
+
+  const warnings: string[] = [];
+  for (const [concept, typeNames] of Object.entries(DOMAIN_CONCEPTS)) {
+    for (const name of typeNames) {
+      // Match: export type Name, export interface Name, export function Name, export const Name
+      const pattern = new RegExp(`export\\s+(?:type|interface|function|const)\\s+${name}\\b`);
+      if (!pattern.test(source)) {
+        warnings.push(`DOMAIN_CONCEPTS["${concept}"] references "${name}" which is not exported from kernel/types.ts`);
+      }
+    }
+  }
+  return warnings;
+}
+
 // ─── Main ───
 
 const result = parseTypeFile(TYPES_PATH);
+
+// Validate DOMAIN_CONCEPTS sync
+const syncWarnings = validateDomainConcepts();
+if (syncWarnings.length > 0) {
+  console.error(`⚠ DOMAIN_CONCEPTS sync warnings (${syncWarnings.length}):`);
+  for (const w of syncWarnings) console.error(`  ${w}`);
+}
+
 const markdown = render(result);
 
 if (process.argv.includes("--write")) {

@@ -442,27 +442,29 @@ appendScopeEvent(paths, {
 
 200k 컨텍스트 모델에서는 프로토콜 문서(~22k 토큰, 200k의 ~11%)가 아니라 **소스 데이터**가 병목입니다. 다음 계층화 전략으로 컨텍스트를 관리합니다.
 
-### Tier 1 — Grounding 스캔 결과 요약 (필수)
+### Tier 1 — Grounding 스캔 결과 선별 (필수)
 
-소스 스캔 후 전체 결과를 컨텍스트에 유지하지 않고, 아래 형식으로 요약합니다:
+소스 스캔 후 전체 결과를 컨텍스트에 유지하지 않고, 아래 기준으로 선별합니다:
 
 | 항목 | 포함 | 제외 |
 |------|------|------|
 | constraint 목록 (CST-*) | 전체 유지 | — |
 | 파일 목록 (files[]) | 카테고리별 상위 10건 | 나머지 |
-| 의존 그래프 (dependency_graph[]) | 진입점에서 depth 2까지 | 나머지 |
-| API 패턴 (api_patterns[]) | 변경 대상 엔드포인트만 | 나머지 |
-| 스키마 패턴 (schema_patterns[]) | 변경 대상 테이블만 | 나머지 |
+| 의존 그래프 (dependency_graph[]) | scope의 목적과 관련된 모듈에서 depth 2까지 | 나머지 |
+| API 패턴 (api_patterns[]) | scope의 목적과 관련된 엔드포인트만 | 나머지 |
+| 스키마 패턴 (schema_patterns[]) | scope의 목적과 관련된 테이블만 | 나머지 |
+
+"관련 영역"의 판별: scope의 title, description, brief(있는 경우)에서 언급된 기능/화면/엔티티를 기준으로 판별합니다. 판별이 모호한 경우 해당 항목을 포함합니다 (과소 포함보다 과다 포함이 안전).
 
 ### Tier 2 — Surface/Compile 시 소스 재주입
 
 `usage_hint: context` 소스의 전문 주입(draft-surface.md 참조)은 200k에서도 필수입니다. 단, 다음을 적용합니다:
 
 - **디자인 온톨로지**: 전문 필수 (요약 금지 — draft-surface.md 규칙 유지)
-- **앱 소스코드**: 변경 대상 디렉토리의 파일만 선택적 로드. `target_stack`의 프레임워크 규칙 파일(tailwind.config.*, package.json) 우선
-- **정책 문서**: constraint의 `source_refs`가 가리키는 섹션만 선택적 로드
+- **앱 소스코드**: scope의 목적과 관련된 디렉토리의 파일만 선택적 로드. `target_stack`의 프레임워크 규칙 파일(tailwind.config.*, package.json) 우선. 관련 영역 판별이 모호하면 과다 포함
+- **정책 문서**: constraint의 `source_refs`가 가리키는 섹션만 선택적 로드. constraint 발견 전 단계에서는 scope 목적과 관련된 정책 영역을 선택적 로드
 
-### Tier 3 — Exploration 대화 압축
+### Tier 3 — Exploration 대화 선택적 유지
 
 exploration-log.md에 대화 전문이 기록되므로, 에이전트 컨텍스트에서는:
 - 현재 Phase의 대화만 유지

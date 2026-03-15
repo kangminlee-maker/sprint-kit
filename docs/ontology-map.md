@@ -1,6 +1,6 @@
 # Sprint Kit Ontology Map
 <!-- auto-generated from src/kernel/types.ts — do not edit manually -->
-<!-- generated at: 2026-03-15T05:29:40.650Z -->
+<!-- generated at: 2026-03-15T07:26:14.181Z -->
 <!-- regenerate: npx tsx scripts/generate-ontology-map.ts --write -->
 
 ## Union Types
@@ -46,29 +46,25 @@
 `experience | interface`
 → src/kernel/types.ts:163
 
-### SourceType (5 values)
-`add-dir | github-tarball | figma-mcp | obsidian-vault | mcp`
-→ src/kernel/types.ts:167
-
 ### ValidationResult (2 values)
 `pass | fail`
-→ src/kernel/types.ts:315
+→ src/kernel/types.ts:311
 
 ### EvidenceStatus (4 values)
 `verified | code_inferred | brief_claimed | unverified`
-→ src/kernel/types.ts:423
+→ src/kernel/types.ts:419
 
 ### PreApplyReviewVerdict (2 values)
 `pass | gap_found`
-→ src/kernel/types.ts:603
+→ src/kernel/types.ts:599
 
 ### ConstraintStatus (4 values)
 `undecided | decided | clarify_pending | invalidated`
-→ src/kernel/types.ts:715
+→ src/kernel/types.ts:711
 
 ### TransitionKind (3 values)
 `forward | self | backward`
-→ src/kernel/types.ts:925
+→ src/kernel/types.ts:921
 
 ## Const Arrays
 
@@ -98,32 +94,32 @@
 - path: string
 - role: string
 - detail_anchor: string
-→ src/kernel/types.ts:206
+→ src/kernel/types.ts:202
 
 ### BrownfieldDepEntry
 - module: string
 - depends_on: string
 - detail_anchor: string
-→ src/kernel/types.ts:212
+→ src/kernel/types.ts:208
 
 ### BrownfieldApiEntry
 - endpoint: string
 - method: string
 - description: string
 - detail_anchor: string
-→ src/kernel/types.ts:218
+→ src/kernel/types.ts:214
 
 ### BrownfieldSchemaEntry
 - table: string
 - columns: string
 - detail_anchor: string
-→ src/kernel/types.ts:225
+→ src/kernel/types.ts:221
 
 ### BrownfieldConfigEntry
 - key: string
 - description: string
 - detail_anchor: string
-→ src/kernel/types.ts:231
+→ src/kernel/types.ts:227
 
 ### BrownfieldContext
 - related_files: BrownfieldFileEntry[]
@@ -131,13 +127,13 @@
 - api_contracts?: BrownfieldApiEntry[]
 - db_schemas?: BrownfieldSchemaEntry[]
 - config_env?: BrownfieldConfigEntry[]
-→ src/kernel/types.ts:237
+→ src/kernel/types.ts:233
 
 ### BrownfieldEnumDef
 - name: string
 - source: string
 - values: string[]
-→ src/kernel/types.ts:245
+→ src/kernel/types.ts:241
 
 ### BrownfieldInvariant
 - name: string
@@ -145,27 +141,27 @@
 - description: string
 - type: "schema" | "business_rule" | "api_contract" | "state_machine"
 - affected_files?: string[]
-→ src/kernel/types.ts:251
+→ src/kernel/types.ts:247
 
 ### BrownfieldDetail
 - scope_id: string
 - sections: BrownfieldDetailSection[]
 - enums?: BrownfieldEnumDef[]
 - invariants?: BrownfieldInvariant[]
-→ src/kernel/types.ts:259
+→ src/kernel/types.ts:255
 
 ### BrownfieldDetailSection
 - anchor: string
 - source: string
 - title: string
 - content: string
-→ src/kernel/types.ts:266
+→ src/kernel/types.ts:262
 
 ### ValidationPlanEntry
 - val_id: string
 - related_cst: string
 - decision_type: "inject" | "defer" | "override"
-→ src/kernel/types.ts:275
+→ src/kernel/types.ts:271
 
 ### ValidationPlanItem
 extends: ValidationPlanEntry
@@ -177,7 +173,7 @@ extends: ValidationPlanEntry
     scenario: string;
     expected_result: string;
   }>
-→ src/kernel/types.ts:281
+→ src/kernel/types.ts:277
 
 ### RealitySnapshot
 - scope_id: string
@@ -185,14 +181,14 @@ extends: ValidationPlanEntry
 - source_hashes: Record<string, string>
 - perspective_summary: Record<Perspective, number>
 - scanned_at: string
-→ src/kernel/types.ts:294
+→ src/kernel/types.ts:290
 
 ### PreApplyReviewFinding
 - perspective: "policy" | "brownfield" | "logic"
 - status: "pass" | "warning"
 - summary: string
 - detail?: string
-→ src/kernel/types.ts:605
+→ src/kernel/types.ts:601
 
 ### ConstraintEntry
 - constraint_id: string
@@ -213,7 +209,7 @@ extends: ValidationPlanEntry
 - rationale?: string
 - discovered_at: number
 - decided_at?: number
-→ src/kernel/types.ts:721
+→ src/kernel/types.ts:717
 
 ### ConstraintPool
 - constraints: ConstraintEntry[]
@@ -226,7 +222,7 @@ extends: ValidationPlanEntry
     invalidated: number;
     undecided: number;
   }
-→ src/kernel/types.ts:742
+→ src/kernel/types.ts:738
 
 ### ScopeState
 > [설계 예약] 가정 검증 시 발견된 constraint의 ID. exploration.assumption_resolved 이벤트 구현 시 활성화.
@@ -283,7 +279,7 @@ extends: ValidationPlanEntry
     completed_at?: number;
   }
 - latest_revision: number
-→ src/kernel/types.ts:783
+→ src/kernel/types.ts:779
 
 ## Renderer Input Types
 
@@ -319,7 +315,7 @@ extends: ValidationPlanEntry
     breaking_change: string;
     version_policy: string;
   }
-→ src/kernel/types.ts:841
+→ src/kernel/types.ts:837
 
 ### DraftPacketContent
 - surface_path: string
@@ -334,7 +330,7 @@ extends: ValidationPlanEntry
 - constraint_details: ConstraintDetail[]
 - guardrails: string[]
 - decision_questions: string[]
-→ src/kernel/types.ts:900
+→ src/kernel/types.ts:896
 
 ## Event-Payload Map
 
@@ -466,6 +462,7 @@ Sprint Kit's identity is defined by behavioral knowledge:
 - src/compilers/compile-defense.ts
 - src/compilers/compile.ts
 - src/kernel/constraint-pool.ts
+- src/renderers/align-packet.ts
 - src/renderers/draft-packet.ts
 
 ### Source
@@ -474,6 +471,12 @@ Sprint Kit's identity is defined by behavioral knowledge:
 - src/config/project-config.ts
 - src/parsers/brief-parser.ts
 - src/scanners/types.ts
+
+### Exploration
+- src/kernel/reducer.ts
+
+### Surface
+- src/kernel/reducer.ts
 
 ### Validation
 - src/commands/apply.ts
@@ -487,6 +490,10 @@ Sprint Kit's identity is defined by behavioral knowledge:
 
 ### Feedback
 - src/commands/draft.ts
+- src/kernel/reducer.ts
+
+### Snapshot
+- src/kernel/reducer.ts
 
 ### Renderer / Packet
 - src/renderers/align-packet.ts
