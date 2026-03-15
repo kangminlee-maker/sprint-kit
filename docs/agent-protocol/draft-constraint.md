@@ -32,6 +32,22 @@
 - 새로 발견된 constraint는 다음 번호 부여
 - 각 constraint에 대해 `constraint.discovered` 이벤트 기록
 
+### Brownfield 불변 제약 보강 (필수)
+
+Surface가 확정되었으므로, Grounding에서 기록한 불변 제약을 구체화하고 누락된 항목을 추가합니다.
+변경 대상 파일이 확정된 상태이므로, 해당 파일과 직접 연결된 불변 제약을 정밀하게 기록합니다.
+
+**api_contract 유형** (최우선):
+- [ ] 변경 대상 파일이 정의하는 API 엔드포인트의 응답 구조를 소스에서 직접 확인
+- [ ] 해당 API를 호출하는 클라이언트(프론트엔드, 다른 서비스, 외부 연동)를 식별
+- [ ] 응답 필드 중 삭제·타입 변경·구조 변경이 예정된 것이 있으면 invariant로 기록
+- [ ] 클라이언트가 전제하는 필드(필수 참조)를 invariant의 `description`에 명시
+
+**기록 원칙**:
+- 변경 영향권 밖의 API는 기록하지 않음 (false positive 방지)
+- `affected_files`에 API 정의 파일과 호출 파일 모두 포함
+- 이미 Grounding에서 기록한 invariant는 중복 생성하지 않고 보강만 수행
+
 ### Cross-Constraint Interaction Check (필수)
 
 inject 결정이 2건 이상인 경우, Draft Packet 렌더링 전에 다음을 점검합니다:

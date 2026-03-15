@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.5 (2026-03-15)
+
+Brownfield 불변 제약 기록 절차 도입 (Phase 1: api_contract). 설계 과제 5건 종결.
+
+### 에이전트 프로토콜
+
+- **Brownfield 불변 제약 기록 (Phase 1)**: api_contract 유형 우선. Grounding → Draft → Pre-Apply Review 3단계에 걸쳐 기존 코드의 API 계약을 기록하고 검증하는 절차 추가
+  - `start.md`: Code 관점 체크리스트에 api_contract 불변 제약 기록 절차 + 기록 형식 예시 추가
+  - `draft-constraint.md`: Surface 확정 후 불변 제약 보강 절차 추가 (변경 대상 파일의 API 계약 정밀 기록)
+  - `draft-compile.md`: Pre-Apply Review brownfield 관점에 api_contract 집중 점검 항목 3개 추가
+
+### 설계 과제 종결 (5건)
+
+- **Compile 의미적 정합성 검증** — "탐지는 코드(L3), 판정은 에이전트(Pre-Apply Review)" 설계 완결
+- **L3-cross-constraint-hint** — L3-shared-resource + draft-constraint.md 체크리스트로 대체
+- **delta-set 호환성 검증 Phase 1** — api_contract 불변 제약 기록 절차로 프로토콜 보강 완료
+- **산출물 온톨로지 구조 적용** — ContentType + 순수 함수 렌더러가 이미 달성. 재검토 조건 미충족
+- **InjectValidation 1:N cardinality** — 1 VAL = 1 CST 유지. 대안 충분, 재검토 조건 미충족
+
+### 보류 중인 설계 과제 (4건)
+
+- Figma-MCP hash 자동 기록 — 에이전트 주도 방식으로 작동 중
+- src/index.ts 공개 API — 90-95% 완료, 외부 소비자 등장 시 나머지 추가
+- agent-protocol 리팩터링 — 워크플로우/도구 호출 분리, Codex/Cursor 지원 시 실행
+- delta-set 호환성 Phase 2 — Phase 1 운영 결과 관찰 후 schema → state_machine → business_rule 추가
+
 ## 0.3.4 (2026-03-15)
 
 속도 개선 #2-#5 구현, docs 재구성(런타임/개발 분리), Reverse Index + Gate Guard 도입.

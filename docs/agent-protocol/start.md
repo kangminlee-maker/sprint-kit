@@ -270,6 +270,29 @@ appendScopeEvent(paths, {
 - [ ] 상태 머신: 빠진 전이, 잘못된 상태
 - [ ] 성능: 쿼리 복잡도, 데이터량
 
+**Brownfield 불변 제약 기록** (Code 관점에서 제약 발견 시 함께 수행):
+
+변경 영향권에 있는 기존 코드에서, 깨지면 안 되는 규칙을 `BrownfieldInvariant`로 기록합니다.
+Grounding 단계에서는 **api_contract** 유형을 우선 기록합니다:
+
+- [ ] 외부에 노출된 API 엔드포인트의 응답 필드 구조 (필드명, 타입, 필수/선택)
+- [ ] 다른 서비스가 호출하는 내부 API의 요청/응답 계약
+- [ ] webhook, 콜백 등 외부 시스템이 전제하는 데이터 형식
+
+기록 형식:
+```typescript
+// brownfieldDetail.invariants에 추가
+{
+  name: "GET /api/bookings 응답에 schedule_id 필드 필수",
+  source: "src/api/bookings.ts",
+  description: "모바일 앱이 schedule_id를 필수로 사용. 삭제 시 앱 크래시",
+  type: "api_contract",
+  affected_files: ["src/api/bookings.ts", "src/types/booking.ts"]
+}
+```
+
+Grounding은 방향 수준이므로, 변경 영향권이 명확한 API만 기록합니다. 세부 불변 제약은 Draft에서 추가합니다.
+
 **Policy** — 규칙이 제약하는 것에서 제약을 찾습니다:
 - [ ] 이용약관: 조항 충돌
 - [ ] 사업 규칙: 모순, 미정의 케이스
