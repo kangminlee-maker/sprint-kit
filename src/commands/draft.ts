@@ -109,7 +109,7 @@ function handleGenerateSurface(
   });
 
   if (!result.success) return { success: false, reason: wrapGateError(result.reason) };
-  writeScopeMd(paths);
+  writeScopeMd(paths, result.state);
 
   const guide = state.entry_mode === "experience"
     ? "`cd surface/preview && npm run dev`로 mockup을 확인하세요."
@@ -160,7 +160,7 @@ function handleApplyFeedback(
       },
     });
     if (!redirectResult.success) return { success: false, reason: wrapGateError(redirectResult.reason) };
-    writeScopeMd(paths);
+    writeScopeMd(paths, redirectResult.state);
 
     return {
       success: true,
@@ -181,7 +181,7 @@ function handleApplyFeedback(
   });
   if (!revResult.success) return { success: false, reason: wrapGateError(revResult.reason) };
 
-  writeScopeMd(paths);
+  writeScopeMd(paths, revResult.state);
 
   // 5. target_change → append scope change notice
   const message = classification === "target_change"
@@ -211,7 +211,7 @@ function handleConfirmSurface(
   });
 
   if (!result.success) return { success: false, reason: wrapGateError(result.reason) };
-  writeScopeMd(paths);
+  writeScopeMd(paths, result.state);
 
   return {
     success: true,
@@ -234,7 +234,7 @@ function handleSurfaceChangeRequired(
   });
 
   if (!result.success) return { success: false, reason: wrapGateError(result.reason) };
-  writeScopeMd(paths);
+  writeScopeMd(paths, result.state);
 
   return {
     success: true,
@@ -254,7 +254,7 @@ function handleRecordConstraint(
   });
 
   if (!result.success) return { success: false, reason: wrapGateError(result.reason) };
-  writeScopeMd(paths);
+  writeScopeMd(paths, result.state);
 
   const cstId = action.constraintPayload.constraint_id ?? "?";
   return {
@@ -290,7 +290,7 @@ function handleRecordDecision(
       },
     });
     if (!redirectResult.success) return { success: false, reason: wrapGateError(redirectResult.reason) };
-    writeScopeMd(paths);
+    writeScopeMd(paths, redirectResult.state);
 
     return {
       success: true,
@@ -299,7 +299,7 @@ function handleRecordDecision(
     };
   }
 
-  writeScopeMd(paths);
+  writeScopeMd(paths, result.state);
 
   return {
     success: true,
@@ -324,7 +324,7 @@ function handleLockTarget(paths: ScopePaths, state: ScopeState): DraftOutput {
   });
 
   if (!result.success) return { success: false, reason: wrapGateError(result.reason) };
-  writeScopeMd(paths);
+  writeScopeMd(paths, result.state);
 
   return {
     success: true,
@@ -387,7 +387,7 @@ function handleCompile(
   });
 
   if (!completeResult.success) return { success: false, reason: wrapGateError(completeResult.reason) };
-  writeScopeMd(paths);
+  writeScopeMd(paths, completeResult.state);
 
   return {
     success: true,

@@ -125,11 +125,26 @@ export type ConstraintDecision =
 
 export type DiscoveryStage =
   | "grounding"
+  | "exploration" // Exploration Phase 5 가정 검증 중 발견
   | "draft_surface_gen" // Surface 생성 직후 품질 체크에서 발견
   | "draft_phase1"
   | "draft_phase2"
   | "compile"
   | "apply";
+
+/**
+ * Exploration Phase 5 가정의 검증 상태.
+ *
+ * 설계 예약: 현재 reducer는 "unverified"로만 초기화합니다.
+ * 나머지 3개 값으로의 전이는 `exploration.assumption_resolved` 이벤트 구현 시 활성화됩니다.
+ * 해당 이벤트가 구현되기 전까지, §2.6 렌더러는 status === "unverified"만 필터하여
+ * 모든 가정을 PO에게 표시합니다 (정보 누락 방지).
+ */
+export type AssumptionStatus =
+  | "unverified" // 아직 검증되지 않음 (현재 유일하게 사용되는 값)
+  | "verified" // [설계 예약] 검증 완료, 제약 없음
+  | "constraint_discovered" // [설계 예약] 검증 과정에서 새 constraint 발견됨
+  | "invalidated"; // [설계 예약] 방향 변경으로 더 이상 해당 없음
 
 // ─── Feedback Classification ───
 
@@ -668,6 +683,7 @@ export interface PayloadMap {
   "convergence.diagnosis": ConvergenceDiagnosisPayload;
   "convergence.blocked": ConvergenceBlockedPayload;
   "convergence.action_taken": ConvergenceActionTakenPayload;
+  "constraint.evidence_updated": ConstraintEvidenceUpdatedPayload;
   "draft_packet.rendered": DraftPacketRenderedPayload;
   "prd.rendered": PrdRenderedPayload;
   "pre_apply.review_completed": PreApplyReviewCompletedPayload;
@@ -801,8 +817,10 @@ export interface ScopeState {
     assumptions: Array<{
       content: string;
       type: string;
-      status: string;
+      status: AssumptionStatus;
       source_phase?: number;
+      /** [설계 예약] 가정 검증 시 발견된 constraint의 ID. exploration.assumption_resolved 이벤트 구현 시 활성화. */
+      related_constraint_id?: string;
     }>;
     phase_history: Array<{
       phase: number;

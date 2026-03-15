@@ -148,6 +148,12 @@ describe("state-machine — transition events exhaustive", () => {
       next: "exploring",
       kind: "self",
     },
+    {
+      state: "exploring",
+      event: "redirect.to_grounding",
+      next: "grounded",
+      kind: "backward",
+    },
 
     // align_proposed
     {

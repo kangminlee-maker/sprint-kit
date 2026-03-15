@@ -208,7 +208,7 @@ function handleReject(
     return { success: false, reason: wrapGateError(result.reason) };
   }
 
-  writeScopeMd(paths);
+  writeScopeMd(paths, result.state);
 
   return {
     success: true,
@@ -234,7 +234,7 @@ function handleRedirect(
     return { success: false, reason: wrapGateError(result.reason) };
   }
 
-  writeScopeMd(paths);
+  writeScopeMd(paths, result.state);
 
   return {
     success: true,

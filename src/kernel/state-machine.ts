@@ -49,6 +49,7 @@ const MATRIX: Partial<
     "align.proposed": { next: "align_proposed", kind: "forward" },
     "constraint.discovered": { next: "exploring", kind: "self" },
     "snapshot.marked_stale": { next: "exploring", kind: "self" },
+    "redirect.to_grounding": { next: "grounded", kind: "backward" },
   },
 
   // ── align_proposed ──

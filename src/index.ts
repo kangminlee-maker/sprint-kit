@@ -65,6 +65,7 @@ export type {
   DecisionOwner,
   ConstraintDecision,
   DiscoveryStage,
+  AssumptionStatus,
   EntryMode,
   SurfaceType,
   SourceType,

@@ -87,6 +87,11 @@ export function reduce(events: Event[]): ScopeState {
       case "redirect.to_grounding": {
         const p = evt.payload as RedirectToGroundingPayload;
         last_backward_reason = p.reason;
+        // exploring → grounded: exploration_progress 초기화.
+        // exploration-log.md(파일)는 보존되므로 맥락 소실 없음.
+        if (exploration_progress && !exploration_progress.completed_at) {
+          exploration_progress = undefined;
+        }
         break;
       }
 
@@ -264,7 +269,7 @@ export function reduce(events: Event[]): ScopeState {
           exploration_progress.current_phase = p.to_phase;
           const phaseNames: Record<number, string> = {
             1: "목적 정밀화", 2: "영역 탐색", 3: "현재 상태 공유",
-            4: "시나리오 탐색", 5: "가정 검증", 6: "범위 확정",
+            4: "시나리오 탐색", 5: "가정 검증", 6: "범위 합의",
           };
           exploration_progress.current_phase_name = phaseNames[p.to_phase] ?? `Phase ${p.to_phase}`;
           exploration_progress.phase_history.push({

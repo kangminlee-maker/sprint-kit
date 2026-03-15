@@ -389,7 +389,7 @@ it unlocks the gate so the human can re-decide with fresh information.
 Forward transitions:
 
 ```text
-draft → grounded → align_proposed → align_locked → surface_iterating → surface_confirmed → constraints_resolved → target_locked → compiled → applied → validated → closed
+draft → grounded → exploring → align_proposed → align_locked → surface_iterating → surface_confirmed → constraints_resolved → target_locked → compiled → applied → validated → closed
 ```
 
 Self-transitions:
@@ -398,11 +398,13 @@ Self-transitions:
 align_proposed → align_proposed    (align.revised, revision counter incremented)
 surface_iterating → surface_iterating  (surface.revision_applied)
 constraints_resolved → constraints_resolved  (constraint decision revised)
+exploring → exploring  (exploration.round_completed, exploration.phase_transitioned)
 ```
 
 Backward transitions:
 
 ```text
+exploring → grounded                   (redirect to grounding)
 align_proposed → grounded              (redirect to grounding)
 align_locked → align_proposed          (stale snapshot detected)
 surface_iterating → align_proposed     (redirect to Align — scope change needed)

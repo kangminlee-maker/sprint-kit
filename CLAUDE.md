@@ -20,3 +20,11 @@ For every concept, answer three questions in order:
 The user may lack specialized knowledge in the technical domain. Ensure that mechanisms, trade-offs, and decisions are understandable without prior expertise — while preserving full technical accuracy.
 
 These principles apply to all artifacts and documents produced by the system.
+
+## System Structure
+
+- **Ontology Map**: `docs/ontology-map.md` — 도메인 엔티티, union type, 관계 구조 (자동 생성, `npm run ontology-map`)
+
+## Agent Review
+
+- **domain**: software-engineering

@@ -1,0 +1,4 @@
+# onto_coverage — sprint-kit 도메인 학습
+
+- Sprint Kit의 Compile 입출력 타입(ImplementationItem, ChangeItem, InjectValidation, CompileInput, CompileSuccess, DeltaSet, DeltaSetChange, DefenseViolation)은 kernel/types.ts가 아닌 compilers/compile.ts와 compilers/compile-defense.ts에 정의됨. 에이전트 프로토콜(draft-compile.md)이 이 타입들을 직접 참조하여 compile() 입력을 조립하므로, "에이전트가 소비하는 공개 인터페이스"에 해당. kernel/types.ts만 입력 소스로 사용하는 생성 스크립트는 이 타입들을 누락할 수 있음 (출처: Schema-as-Ontology 수준 B 작업설계 리뷰, 2026-03-14)
+- ETag 캐시(`etag-cache.json`)는 프로젝트 루트의 `.sprint-kit/cache/` 디렉토리에 저장됨. `start.ts` 내부의 `readEtagCache`/`writeEtagCache` 비공개 함수가 관리. 읽기는 try/catch로 보호되어 있으나 쓰기는 보호되지 않는 비대칭 구조. `fetched_at` 필드를 기록하지만 만료 판단에는 사용하지 않음 (출처: 속도 개선 4건 포괄성 검증, 2026-03-15)

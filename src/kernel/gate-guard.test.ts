@@ -939,7 +939,7 @@ describe("Rule 8a — MATRIX-based exploration protection", () => {
       current_state: "exploring",
       exploration_progress: {
         current_phase: 6,
-        current_phase_name: "범위 확정",
+        current_phase_name: "범위 합의",
         total_rounds: 12,
         entry_mode: "conversation",
         decisions: [],
@@ -1048,7 +1048,7 @@ describe("Rule 8c — exploration.started blocked when already in progress", () 
       current_state: "grounded",
       exploration_progress: {
         current_phase: 6,
-        current_phase_name: "범위 확정",
+        current_phase_name: "범위 합의",
         total_rounds: 10,
         entry_mode: "conversation",
         decisions: [],

@@ -1,6 +1,6 @@
 # Adaptive Align — 탐색적 문답 기반 요구사항 공동 설계
 
-> 상태: 제안 (proposal)
+> 상태: 채택 완료 — 접근 B(`exploring` 정식 상태) 구현됨 (5ecc963, 0.3.3)
 > 작성일: 2026-03-12
 > 관련: 6-Agent Panel Review 2건 (validation-plan 업그레이드, 코드 독립적 검증)
 
@@ -126,18 +126,20 @@ sprint-kit의 역할을 **"검증자"에서 "공동 설계자"로** 확장합니
 
 두 가지 접근이 가능합니다:
 
-**접근 A: 상태 추가 없이 `grounded` 상태 내에서 처리 (권장)**
+**접근 A: 상태 추가 없이 `grounded` 상태 내에서 처리**
 
 `grounded` 상태에서 관찰 이벤트(`exploration.round_completed` 등)를 반복 기록하면서 문답을 진행합니다. constraint discovery는 기존 메커니즘을 그대로 사용합니다. 문답이 충분히 진행되면 기존대로 `align.proposed`를 발행합니다.
 
 장점: 상태 머신 변경 최소. 기존 테스트 영향 없음.
 
-**접근 B: `exploring` 상태 추가**
+**접근 B: `exploring` 상태 추가 — 채택됨 (5ecc963)**
 
 `grounded` → `exploring` → `align_proposed`로 새 상태를 추가합니다.
 
 장점: 문답 진행 중인 scope와 문답 완료된 scope를 상태로 구분 가능.
 단점: 상태 머신 매트릭스 확장, 전이 규칙 추가 필요.
+
+> 6-Agent Panel Review (6/6 합의)에서 접근 A가 관찰 이벤트 분류 규칙을 위반한다고 판정. 접근 B 채택.
 
 ### 종료 조건
 

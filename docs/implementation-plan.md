@@ -37,7 +37,7 @@ Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
 
 | 파일 | 책임 |
 |------|------|
-| `src/kernel/types.ts` | 모든 타입 정의. Event envelope, 14개 상태, 30+ 이벤트 타입, payload 타입, ScopeState 인터페이스. discriminated union (type 필드가 판별자) |
+| `src/kernel/types.ts` | 모든 타입 정의. Event envelope, 15개 상태, 30+ 이벤트 타입, payload 타입, ScopeState 인터페이스. discriminated union (type 필드가 판별자) |
 | `src/kernel/event-store.ts` | `events.ndjson` append + 읽기. revision 자동 증가 |
 | `src/kernel/state-machine.ts` | State × Event 매트릭스를 데이터로 인코딩. `canTransition(state, eventType) → { allowed, nextState }`. 전역/관찰 이벤트 처리 포함 |
 | `src/kernel/hash.ts` | SHA-256 content hash 유틸리티 |

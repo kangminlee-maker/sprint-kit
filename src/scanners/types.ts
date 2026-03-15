@@ -17,6 +17,7 @@ export interface ScanResult {
   schema_patterns: SchemaPattern[];
   config_patterns: ConfigPattern[];
   doc_structure: DocStructure[];
+  response_etag?: string;
 }
 
 export interface FileEntry {
@@ -102,6 +103,20 @@ export function emptyScanResult(source: SourceEntry): ScanResult {
     config_patterns: [],
     doc_structure: [],
   };
+}
+
+// ─── Scan Skipped (ETag cache hit — 304 Not Modified) ───
+
+export interface ScanSkipped {
+  skipped: true;
+  source: SourceEntry;
+  previous_hash: string;
+}
+
+export function isScanSkipped(
+  result: ScanResult | ScanError | ScanSkipped,
+): result is ScanSkipped {
+  return "skipped" in result && (result as ScanSkipped).skipped === true;
 }
 
 // ─── Scan Error ───

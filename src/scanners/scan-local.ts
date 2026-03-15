@@ -2,7 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { contentHash } from "../kernel/hash.js";
 import { getLogger } from "../logger.js";
-import { walkDirectory, computeDirectoryHash, normalizePath } from "./file-utils.js";
+import { walkDirectory, computeDirectoryHashFromMap, normalizePath } from "./file-utils.js";
 import { detectPatterns } from "./patterns/index.js";
 import { sourceKey, emptyScanResult } from "./types.js";
 import type { ScanResult, SourceEntry, DepEdge, ApiPattern, SchemaPattern, ConfigPattern, DocStructure } from "./types.js";
@@ -38,6 +38,8 @@ export function scanDirectory(source: SourceEntry, rootPath: string): ScanResult
   const configs: ConfigPattern[] = [];
   const docs: DocStructure[] = [];
 
+  const contentHashMap = new Map<string, string>();
+
   for (const file of files) {
     const absPath = join(rootPath, file.path);
     let content: string;
@@ -45,8 +47,11 @@ export function scanDirectory(source: SourceEntry, rootPath: string): ScanResult
       content = readFileSync(absPath, "utf-8");
     } catch (error) {
       getLogger().debug("scanDirectory: failed to read file", { path: absPath, error });
+      contentHashMap.set(file.path, "unreadable");
       continue;
     }
+
+    contentHashMap.set(file.path, contentHash(content));
 
     const patterns = detectPatterns(content, file.path);
     deps.push(...patterns.deps);
@@ -56,7 +61,7 @@ export function scanDirectory(source: SourceEntry, rootPath: string): ScanResult
     docs.push(...patterns.docs);
   }
 
-  const dirHash = computeDirectoryHash(rootPath, files);
+  const dirHash = computeDirectoryHashFromMap(contentHashMap);
 
   return {
     source,

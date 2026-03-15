@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sourceKey, toGroundingSource, type SourceEntry } from "./types.js";
+import { sourceKey, toGroundingSource, isScanSkipped, type SourceEntry, type ScanResult, type ScanError, type ScanSkipped } from "./types.js";
 
 describe("sourceKey", () => {
   it("add-dir", () => {
@@ -34,5 +34,34 @@ describe("toGroundingSource", () => {
   it("normalizes obsidian-vault", () => {
     expect(toGroundingSource({ type: "obsidian-vault", path: "/vaults" }))
       .toEqual({ type: "obsidian-vault", path_or_url: "/vaults" });
+  });
+});
+
+describe("isScanSkipped", () => {
+  const source: SourceEntry = { type: "github-tarball", url: "https://github.com/a/b" };
+
+  it("returns true for ScanSkipped", () => {
+    const skipped: ScanSkipped = { skipped: true, source, previous_hash: "abc123" };
+    expect(isScanSkipped(skipped)).toBe(true);
+  });
+
+  it("returns false for ScanResult", () => {
+    const result: ScanResult = {
+      source,
+      scanned_at: new Date().toISOString(),
+      files: [],
+      content_hashes: {},
+      dependency_graph: [],
+      api_patterns: [],
+      schema_patterns: [],
+      config_patterns: [],
+      doc_structure: [],
+    };
+    expect(isScanSkipped(result)).toBe(false);
+  });
+
+  it("returns false for ScanError", () => {
+    const err: ScanError = { source, error_type: "network", message: "fail" };
+    expect(isScanSkipped(err)).toBe(false);
   });
 });

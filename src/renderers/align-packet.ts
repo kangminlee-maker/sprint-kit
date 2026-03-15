@@ -292,39 +292,65 @@ function renderUnverifiedAssumptions(
     (c) => isEvidenceUnverified(c.evidence_status),
   );
 
-  if (unverified.length === 0) return;
+  // §2.6 — Exploration Phase 5에서 발견된 가정 (§2.5와 독립적으로 판단)
+  const explorationAssumptions =
+    state.exploration_progress?.assumptions?.filter(
+      (a) => a.status === "unverified",
+    ) ?? [];
 
-  const ratio = active.length > 0 ? unverified.length / active.length : 0;
+  // §2.5와 §2.6 모두 비어있으면 섹션 전체 생략
+  if (unverified.length === 0 && explorationAssumptions.length === 0) return;
 
-  lines.push("### 2.5 미검증 가정 (주의)");
-  lines.push("");
+  // §2.5 — 소스 탐색에서 발견된 미검증 가정
+  if (unverified.length > 0) {
+    const ratio = active.length > 0 ? unverified.length / active.length : 0;
 
-  // 80% 이상 미검증이면 단일 경고 문구로 대체
-  if (ratio >= 0.8) {
-    lines.push(
-      `> 현재 발견된 ${active.length}건의 제약 조건 중 **${unverified.length}건이 정책 문서에서 확인되지 않았습니다.** Approve 전에 정책 문서와 대조를 권장합니다.`,
-    );
+    lines.push("### 2.5 미검증 가정 — 소스 탐색에서 발견");
     lines.push("");
-    lines.push("---");
-    lines.push("");
-    return;
+
+    // 80% 이상 미검증이면 단일 경고 문구로 대체
+    if (ratio >= 0.8) {
+      lines.push(
+        `> 현재 발견된 ${active.length}건의 제약 조건 중 **${unverified.length}건이 정책 문서에서 확인되지 않았습니다.** Approve 전에 정책 문서와 대조를 권장합니다.`,
+      );
+      lines.push("");
+    } else {
+      lines.push(
+        "아래 항목은 정책 문서에서 확인되지 않은 가정입니다. Approve 전에 확인을 권장합니다.",
+      );
+      lines.push("");
+
+      lines.push("| CST-ID | 가정 출처 | 요약 | 확인 필요 사항 |");
+      lines.push("|--------|----------|------|--------------|");
+      for (const c of unverified) {
+        const statusLabel = formatEvidenceStatus(c.evidence_status);
+        const note = c.evidence_note ?? generateFallbackNote(c);
+        lines.push(
+          `| ${c.constraint_id} | ${statusLabel} | ${c.summary} | ${note} |`,
+        );
+      }
+      lines.push("");
+    }
   }
 
-  lines.push(
-    "아래 항목은 정책 문서에서 확인되지 않은 가정입니다. Approve 전에 확인을 권장합니다.",
-  );
-  lines.push("");
-
-  lines.push("| CST-ID | 가정 출처 | 요약 | 확인 필요 사항 |");
-  lines.push("|--------|----------|------|--------------|");
-  for (const c of unverified) {
-    const statusLabel = formatEvidenceStatus(c.evidence_status);
-    const note = c.evidence_note ?? generateFallbackNote(c);
+  // §2.6 — 대화 탐색에서 발견된 미검증 가정 (§2.5 조기 반환과 독립)
+  if (explorationAssumptions.length > 0) {
+    lines.push("### 2.6 미검증 가정 — 대화 탐색에서 발견");
+    lines.push("");
     lines.push(
-      `| ${c.constraint_id} | ${statusLabel} | ${c.summary} | ${note} |`,
+      "아래 항목은 Exploration 대화에서 발견된 PO 결정의 전제입니다. 아직 검증되지 않았습니다.",
     );
+    lines.push("");
+    lines.push("| # | 가정 내용 | 발견 Phase | 상태 |");
+    lines.push("|---|----------|-----------|------|");
+    explorationAssumptions.forEach((a, i) => {
+      lines.push(
+        `| ${i + 1} | ${a.content} | Phase ${a.source_phase ?? "?"} | 미검증 |`,
+      );
+    });
+    lines.push("");
   }
-  lines.push("");
+
   lines.push("---");
   lines.push("");
 }
@@ -341,7 +367,7 @@ function formatEvidenceStatus(status: EvidenceStatus): string {
     case "verified":
       return "정책 문서 확인됨";
     case "code_inferred":
-      return "코드에서 파악, 문서 미확인";
+      return "현재 작동 중이나 정책 문서에 근거 없음";
     case "brief_claimed":
       return "요청자 주장, 별도 확인 필요";
     case "unverified":

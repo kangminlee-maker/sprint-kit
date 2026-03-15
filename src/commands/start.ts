@@ -14,7 +14,7 @@
  *   executes immediately (existing tests keep passing).
  */
 
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   createScope,
@@ -38,7 +38,7 @@ import {
 import { scanLocal } from "../scanners/scan-local.js";
 import { scanVault } from "../scanners/scan-vault.js";
 import { scanTarball, isScanError } from "../scanners/scan-tarball.js";
-import { sourceKey, toGroundingSource, type SourceEntry, type ScanResult, type ScanError } from "../scanners/types.js";
+import { sourceKey, toGroundingSource, isScanSkipped, type SourceEntry, type ScanResult, type ScanError, type ScanSkipped } from "../scanners/types.js";
 import { buildBrownfield } from "../scanners/brownfield-builder.js";
 import { parseBrief } from "../parsers/brief-parser.js";
 import { TERMINAL_STATES } from "../kernel/types.js";
@@ -72,6 +72,7 @@ export interface StartResult {
   paths: ScopePaths;
   scanResults: ScanResult[];
   scanErrors: ScanError[];
+  scanSkipped: ScanSkipped[];
   sourceHashes: Record<string, string>;
   totalFiles: number;
 }
@@ -264,7 +265,7 @@ async function handleBriefExecution(
   }
 
   // B-6: Continue with grounding
-  return executeGrounding(paths, scopeId, sources, progress);
+  return executeGrounding(paths, scopeId, sources, progress, input.projectRoot);
 }
 
 // ─── Path B direct: backward compatibility (old interface) ───
@@ -307,7 +308,7 @@ async function executePathBDirect(
   }
 
   // Step 5: Write sources.yaml + grounding
-  return executeGrounding(paths, input.scopeId, sources, progress);
+  return executeGrounding(paths, input.scopeId, sources, progress, input.projectRoot);
 }
 
 // ─── Path C: Resume ───
@@ -405,6 +406,7 @@ async function executeGrounding(
   scopeId: string,
   sources: SourceEntry[],
   progress: (msg: string) => void,
+  projectRoot: string,
 ): Promise<StartResult | StartFailure> {
   // Write sources.yaml
   writeSourcesYaml(paths.sourcesYaml, sources);
@@ -412,25 +414,54 @@ async function executeGrounding(
   // Scan sources
   progress(`소스 스캔을 시작합니다 (${sources.length}개 소스)`);
 
+  const etagCache = readEtagCache(projectRoot);
   const scanResults: ScanResult[] = [];
   const scanErrors: ScanError[] = [];
+  const scanSkipped: ScanSkipped[] = [];
 
-  for (let i = 0; i < sources.length; i++) {
+  const scanPromises = sources.map((src) => scanSource(src, etagCache));
+  const settled = await Promise.allSettled(scanPromises);
+
+  for (let i = 0; i < settled.length; i++) {
     const src = sources[i];
     const label = src.description ?? sourceKey(src);
-    progress(`${label} 스캔 중 (${i + 1}/${sources.length})...`);
+    const outcome = settled[i];
 
-    const result = await scanSource(src);
-    if (isScanError(result)) {
-      scanErrors.push(result);
-      progress(`${label} 스캔 실패: ${result.message}`);
+    if (outcome.status === "rejected") {
+      scanErrors.push({
+        source: src,
+        error_type: "io",
+        message: String(outcome.reason),
+      });
+      progress(`${label} 스캔 실패: ${outcome.reason}`);
     } else {
-      scanResults.push(result);
+      const result = outcome.value;
+      if (isScanError(result)) {
+        scanErrors.push(result);
+        progress(`${label} 스캔 실패: ${result.message}`);
+      } else if (isScanSkipped(result)) {
+        scanSkipped.push(result);
+        progress(`${label} 변경 없음 (캐시 사용)`);
+      } else {
+        scanResults.push(result);
+        // Update etag cache for tarball sources
+        if (result.response_etag && result.source.type === "github-tarball") {
+          const key = sourceKey(result.source);
+          const hash = result.content_hashes[key];
+          if (hash) {
+            etagCache[key] = { etag: result.response_etag, hash, fetched_at: new Date().toISOString() };
+          }
+        }
+        progress(`${label} 스캔 완료`);
+      }
     }
   }
 
-  // Check if all scans failed
-  if (scanResults.length === 0 && scanErrors.length > 0) {
+  // Persist updated etag cache
+  writeEtagCache(projectRoot, etagCache);
+
+  // Check if all scans failed (skipped sources count as success)
+  if (scanResults.length === 0 && scanSkipped.length === 0 && scanErrors.length > 0) {
     const errorSummary = scanErrors.map(e => `${sourceKey(e.source)}: ${e.message}`).join("; ");
     return {
       success: false,
@@ -473,6 +504,12 @@ async function executeGrounding(
       + result.config_patterns.length;
     perspectiveSummary.experience += result.files.filter(f => f.category === "doc" || f.language === "html" || f.language === "css").length;
     perspectiveSummary.policy += result.doc_structure.length;
+  }
+
+  // Add skipped source hashes (ETag cache hit → previous hash reuse)
+  for (const skipped of scanSkipped) {
+    const key = sourceKey(skipped.source);
+    sourceHashes[key] = skipped.previous_hash;
   }
 
   // Compute snapshot_revision from previous grounding events
@@ -522,9 +559,39 @@ async function executeGrounding(
     paths,
     scanResults,
     scanErrors,
+    scanSkipped,
     sourceHashes,
     totalFiles,
   };
+}
+
+// ─── ETag Cache ───
+
+interface EtagCacheEntry {
+  etag: string;
+  hash: string;
+  fetched_at: string;
+}
+
+type EtagCacheData = Record<string, EtagCacheEntry>;
+
+function readEtagCache(projectRoot: string): EtagCacheData {
+  const cachePath = join(projectRoot, ".sprint-kit", "cache", "etag-cache.json");
+  try {
+    return JSON.parse(readFileSync(cachePath, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function writeEtagCache(projectRoot: string, cache: EtagCacheData): void {
+  try {
+    const cacheDir = join(projectRoot, ".sprint-kit", "cache");
+    mkdirSync(cacheDir, { recursive: true });
+    writeFileSync(join(cacheDir, "etag-cache.json"), JSON.stringify(cache, null, 2) + "\n", "utf-8");
+  } catch {
+    // Best effort — cache write failure must not block grounding
+  }
 }
 
 // ─── Helpers ───
@@ -549,12 +616,15 @@ function toBriefSourceEntry(entry: SourceEntry): BriefSourceEntry {
 
 // ─── Source dispatch ───
 
-async function scanSource(source: SourceEntry): Promise<ScanResult | ScanError> {
+async function scanSource(source: SourceEntry, etagCache?: EtagCacheData): Promise<ScanResult | ScanError | ScanSkipped> {
   switch (source.type) {
     case "add-dir":
       return scanLocal(source);
-    case "github-tarball":
-      return scanTarball(source);
+    case "github-tarball": {
+      const key = sourceKey(source);
+      const cached = etagCache?.[key];
+      return scanTarball(source, cached?.etag, cached?.hash);
+    }
     case "obsidian-vault":
       return scanVault(source);
     case "figma-mcp":

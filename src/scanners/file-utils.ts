@@ -193,22 +193,41 @@ export function walkDirectory(
 
 // ─── Sorted concat hash ───
 
+/**
+ * Core hash logic: sorted path-hash pairs → single directory hash.
+ * Both computeDirectoryHash and computeDirectoryHashFromMap delegate to this.
+ * Changing this function changes all directory hashes (source_hashes in events).
+ */
+export function computeHashFromEntries(entries: Array<[string, string]>): string {
+  const sorted = [...entries].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  return contentHash(sorted.map(e => e[1]).join(""));
+}
+
 export function computeDirectoryHash(rootPath: string, files: FileEntry[]): string {
   const root = normalizePath(rootPath);
-  const sortedPaths = files.map(f => f.path).sort();
-  const hashes: string[] = [];
+  const entries: Array<[string, string]> = [];
 
-  for (const relPath of sortedPaths) {
-    const fullPath = join(root, relPath);
+  for (const file of files) {
+    const fullPath = join(root, file.path);
     try {
       const content = readFileSync(fullPath, "utf-8");
-      hashes.push(contentHash(content));
+      entries.push([file.path, contentHash(content)]);
     } catch {
-      hashes.push("unreadable");
+      entries.push([file.path, "unreadable"]);
     }
   }
 
-  return contentHash(hashes.join(""));
+  return computeHashFromEntries(entries);
+}
+
+/**
+ * Compute directory hash from pre-computed content hashes.
+ * Avoids re-reading files when hashes are already available.
+ * Results are identical to computeDirectoryHash for the same file set.
+ */
+export function computeDirectoryHashFromMap(contentMap: Map<string, string>): string {
+  const entries: Array<[string, string]> = [...contentMap.entries()];
+  return computeHashFromEntries(entries);
 }
 
 // ─── File categorization ───

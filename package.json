@@ -16,7 +16,9 @@
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ontology-map": "tsx scripts/generate-ontology-map.ts --write",
+    "check-refs": "tsx scripts/check-protocol-refs.ts"
   },
   "repository": {
     "type": "git",

@@ -22,7 +22,8 @@ vi.mock("./scan-local.js", () => ({
 
 import { scanTarball, isScanError } from "./scan-tarball.js";
 import { execSync } from "node:child_process";
-import type { ScanResult, ScanError, SourceEntry } from "./types.js";
+import { isScanSkipped } from "./types.js";
+import type { ScanResult, ScanError, ScanSkipped, SourceEntry } from "./types.js";
 
 const mockedExecSync = vi.mocked(execSync);
 
@@ -31,19 +32,20 @@ function makeSource(url: string): SourceEntry & { type: "github-tarball" } {
 }
 
 // Helper: create a mock Response
-function mockResponse(status: number, body: ArrayBuffer | null = null): Response {
+function mockResponse(status: number, body: ArrayBuffer | null = null, extraHeaders?: Record<string, string>): Response {
+  const headers = new Headers(extraHeaders);
   return {
     ok: status >= 200 && status < 300,
     status,
     statusText: status === 200 ? "OK" : "Error",
     arrayBuffer: async () => body ?? new ArrayBuffer(0),
-    headers: new Headers(),
+    headers,
     redirected: false,
     type: "basic",
     url: "",
     body: null,
     bodyUsed: false,
-    clone: () => mockResponse(status, body),
+    clone: () => mockResponse(status, body, extraHeaders),
     blob: async () => new Blob(),
     formData: async () => new FormData(),
     json: async () => ({}),
@@ -273,5 +275,121 @@ describe("isScanError", () => {
       doc_structure: [],
     };
     expect(isScanError(result)).toBe(false);
+  });
+
+  it("returns false for ScanSkipped objects", () => {
+    const skipped: ScanSkipped = {
+      skipped: true,
+      source: makeSource("https://github.com/a/b"),
+      previous_hash: "abc",
+    };
+    expect(isScanError(skipped)).toBe(false);
+  });
+});
+
+describe("ETag caching", () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = process.env.GITHUB_TOKEN;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.GITHUB_TOKEN;
+    mockedExecSync.mockReturnValue(Buffer.from(""));
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    if (originalEnv !== undefined) {
+      process.env.GITHUB_TOKEN = originalEnv;
+    } else {
+      delete process.env.GITHUB_TOKEN;
+    }
+  });
+
+  it("sends If-None-Match header when etag is provided", async () => {
+    const source = makeSource("https://github.com/acme/repo");
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse(200, new ArrayBuffer(8)),
+    );
+
+    await scanTarball(source, '"etag-abc"');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "If-None-Match": '"etag-abc"',
+        }),
+      }),
+    );
+  });
+
+  it("returns ScanSkipped on 304 with previousHash", async () => {
+    const source = makeSource("https://github.com/acme/repo");
+
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(304));
+
+    const result = await scanTarball(source, '"etag-abc"', "prev-hash-123");
+
+    expect(isScanError(result)).toBe(false);
+    expect(isScanSkipped(result)).toBe(true);
+    const skipped = result as ScanSkipped;
+    expect(skipped.skipped).toBe(true);
+    expect(skipped.source).toBe(source);
+    expect(skipped.previous_hash).toBe("prev-hash-123");
+  });
+
+  it("returns network error on 304 without previousHash", async () => {
+    const source = makeSource("https://github.com/acme/repo");
+
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(304));
+
+    const result = await scanTarball(source, '"etag-abc"');
+
+    // 304 without previousHash falls through to !response.ok error handling
+    expect(isScanError(result)).toBe(true);
+    const err = result as ScanError;
+    expect(err.error_type).toBe("network");
+  });
+
+  it("extracts ETag from 200 response headers", async () => {
+    const source = makeSource("https://github.com/acme/repo");
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse(200, new ArrayBuffer(8), { ETag: '"new-etag-xyz"' }),
+    );
+
+    const result = await scanTarball(source);
+
+    expect(isScanError(result)).toBe(false);
+    expect(isScanSkipped(result)).toBe(false);
+    const scan = result as ScanResult;
+    expect(scan.response_etag).toBe('"new-etag-xyz"');
+  });
+
+  it("sets response_etag to undefined when no ETag header", async () => {
+    const source = makeSource("https://github.com/acme/repo");
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse(200, new ArrayBuffer(8)),
+    );
+
+    const result = await scanTarball(source);
+
+    expect(isScanError(result)).toBe(false);
+    const scan = result as ScanResult;
+    expect(scan.response_etag).toBeUndefined();
+  });
+
+  it("does not download tarball on 304 (no tar, no scanLocal)", async () => {
+    const source = makeSource("https://github.com/acme/repo");
+
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(304));
+
+    await scanTarball(source, '"etag"', "hash");
+
+    // tar should NOT be called
+    expect(mockedExecSync).not.toHaveBeenCalled();
   });
 });

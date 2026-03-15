@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { scanLocal } from "./scan-local.js";
-import type { ScanResult, SourceEntry, ScanError } from "./types.js";
+import type { ScanResult, SourceEntry, ScanError, ScanSkipped } from "./types.js";
 
 /**
  * Download a GitHub tarball and scan its contents.
@@ -16,7 +16,9 @@ import type { ScanResult, SourceEntry, ScanError } from "./types.js";
  */
 export async function scanTarball(
   source: SourceEntry & { type: "github-tarball" },
-): Promise<ScanResult | ScanError> {
+  etag?: string,
+  previousHash?: string,
+): Promise<ScanResult | ScanError | ScanSkipped> {
   const tmpDir = mkdtempSync(join(tmpdir(), "sprint-kit-tarball-"));
 
   try {
@@ -49,6 +51,9 @@ export async function scanTarball(
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
+    if (etag) {
+      headers["If-None-Match"] = etag;
+    }
 
     // Download tarball via fetch
     let response: Response;
@@ -68,6 +73,11 @@ export async function scanTarball(
       return { source, error_type: "network", message: `Failed to download ${repoPath}: ${msg}` };
     }
 
+    // Handle 304 Not Modified (ETag cache hit)
+    if (response.status === 304 && previousHash) {
+      return { skipped: true, source, previous_hash: previousHash };
+    }
+
     // Handle HTTP error responses
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
@@ -82,6 +92,9 @@ export async function scanTarball(
       }
       return { source, error_type: "network", message: `Failed to download ${repoPath}: HTTP ${response.status}` };
     }
+
+    // Capture ETag for cache update
+    const responseEtag = response.headers.get("ETag") ?? undefined;
 
     // Write tarball to temp file and extract
     const arrayBuffer = await response.arrayBuffer();
@@ -98,8 +111,8 @@ export async function scanTarball(
     const localSource = { type: "add-dir" as const, path: tmpDir, description: source.description };
     const result = scanLocal(localSource);
 
-    // Return with original source entry
-    return { ...result, source };
+    // Return with original source entry + ETag
+    return { ...result, source, response_etag: responseEtag };
   } finally {
     // Always clean up
     try {
@@ -111,6 +124,6 @@ export async function scanTarball(
 }
 
 /** Type guard for ScanError */
-export function isScanError(result: ScanResult | ScanError): result is ScanError {
+export function isScanError(result: ScanResult | ScanError | ScanSkipped): result is ScanError {
   return "error_type" in result;
 }
