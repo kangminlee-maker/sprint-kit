@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "ontology-map": "tsx scripts/generate-ontology-map.ts --write",
-    "check-refs": "tsx scripts/check-protocol-refs.ts"
+    "check-refs": "tsx scripts/check-protocol-refs.ts",
+    "check-deps": "tsx scripts/check-dependency-direction.ts"
   },
   "repository": {
     "type": "git",

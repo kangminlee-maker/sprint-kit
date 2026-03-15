@@ -7,8 +7,8 @@
  *   npx tsx scripts/generate-ontology-map.ts --write   # write to docs/ontology-map.md
  */
 
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { writeFileSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 import { parseTypeFile, type ParseResult } from "./lib/parse-types.js";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -26,6 +26,106 @@ const L3_RENDERER_INPUTS = new Set([
   "AlignPacketContent", "DraftPacketContent",
   "ConstraintDetailPO", "ConstraintDetailBuilder", "ConstraintDetail",
 ]);
+
+// ─── Domain Concepts → Type Names ───
+// 1차 소비자: AI 에이전트, 2차 소비자: PO(에이전트 경유)
+
+const DOMAIN_CONCEPTS: Record<string, string[]> = {
+  "Scope": ["ScopeState", "ScopePaths", "State", "ScopeMeta"],
+  "Event": ["Event", "EventType", "TransitionEventType", "GlobalEventType", "ObservationalEventType", "PayloadMap", "Actor"],
+  "State Machine": ["State", "STATES", "TRANSITION_EVENT_TYPES", "GLOBAL_EVENT_TYPES", "OBSERVATIONAL_EVENT_TYPES", "TERMINAL_STATES"],
+  "Constraint": ["ConstraintEntry", "ConstraintPool", "ConstraintDecision", "Perspective", "Severity", "DecisionOwner", "DiscoveryStage"],
+  "Source": ["SourceEntry", "SourceType", "sourceKey"],
+  "Exploration": ["ExplorationProgress", "AssumptionStatus", "ExplorationArea"],
+  "Validation": ["ValidationPlanItem", "ValidationResult"],
+  "Brownfield": ["BrownfieldContext", "BrownfieldDetail", "BrownfieldFileEntry", "BrownfieldDepEntry", "BrownfieldApiEntry", "BrownfieldSchemaEntry", "BrownfieldConfigEntry", "BrownfieldInvariant"],
+  "Surface": ["SurfaceType", "EntryMode"],
+  "Feedback": ["FeedbackClassification"],
+  "Snapshot": ["RealitySnapshot"],
+  "Convergence": ["ConvergenceWarningPayload", "ConvergenceDiagnosisPayload", "ConvergenceBlockedPayload", "ConvergenceActionTakenPayload"],
+  "Renderer / Packet": ["AlignPacketContent", "DraftPacketContent", "ConstraintDetailPO", "ConstraintDetailBuilder", "ConstraintDetail"],
+  "Compile": ["CompileSuccess", "CompileFailure"],
+};
+
+// ─── Reverse Index Scanner ───
+
+function collectTsFiles(dir: string): string[] {
+  const results: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      results.push(...collectTsFiles(full));
+    } else if (full.endsWith(".ts") && !full.endsWith(".test.ts") && !full.endsWith(".d.ts")) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+interface FileImports {
+  file: string;       // relative path from project root
+  imports: string[];   // imported names from kernel/types
+}
+
+function scanImports(srcDir: string, root: string): FileImports[] {
+  const files = collectTsFiles(srcDir);
+  const results: FileImports[] = [];
+
+  // Patterns that resolve to kernel/types.ts:
+  //   from "../kernel/types.js"  (from commands/, scanners/, etc.)
+  //   from "./types.js"          (from kernel/ internal)
+  //   from "../scanners/types.js" (re-exports SourceEntry, sourceKey)
+  const TARGET_PATTERNS = [/kernel\/types(?:\.js)?/, /scanners\/types(?:\.js)?/];
+
+  for (const file of files) {
+    const relPath = relative(root, file);
+    const content = readFileSync(file, "utf-8");
+
+    // Handle multiline imports: collapse "import type {\n  A,\n  B,\n} from ..." into single match
+    const importRegex = /import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+["']([^"']+)["']/gs;
+    let match;
+    const imports: string[] = [];
+
+    while ((match = importRegex.exec(content)) !== null) {
+      const fromPath = match[2];
+
+      // Check if this import resolves to kernel/types
+      const isKernelTypes =
+        TARGET_PATTERNS.some(p => p.test(fromPath)) ||
+        (relPath.startsWith("src/kernel/") && /^\.\/types(?:\.js)?$/.test(fromPath));
+
+      if (!isKernelTypes) continue;
+
+      const names = match[1]
+        .split(",")
+        .map(n => n.trim().replace(/^type\s+/, "").replace(/\s+as\s+\w+/, ""))
+        .filter(Boolean);
+      imports.push(...names);
+    }
+
+    if (imports.length > 0) {
+      results.push({ file: relPath, imports });
+    }
+  }
+  return results;
+}
+
+function buildReverseIndex(fileImports: FileImports[]): Map<string, string[]> {
+  const index = new Map<string, string[]>();
+
+  for (const [concept, typeNames] of Object.entries(DOMAIN_CONCEPTS)) {
+    const files = new Set<string>();
+    for (const fi of fileImports) {
+      if (fi.imports.some(imp => typeNames.includes(imp))) {
+        files.add(fi.file);
+      }
+    }
+    if (files.size > 0) {
+      index.set(concept, [...files].sort());
+    }
+  }
+  return index;
+}
 
 const PAYLOAD_SUFFIX = "Payload";
 
@@ -158,6 +258,25 @@ function render(r: ParseResult): string {
   lines.push(`| Feedback Classification rules | docs/agent-protocol/draft-surface.md |`);
   lines.push(`| Agent protocol procedures | docs/agent-protocol/*.md |`);
   lines.push(``);
+
+  // ── Reverse Index ──
+  const srcDir = join(ROOT, "src");
+  const fileImports = scanImports(srcDir, ROOT);
+  const reverseIndex = buildReverseIndex(fileImports);
+
+  lines.push(`## Reverse Index (domain concept → files)`);
+  lines.push(``);
+  lines.push(`> 1차 소비자: AI 에이전트 / 2차 소비자: PO(에이전트 경유)`);
+  lines.push(`> "이 도메인 개념을 변경하면 어떤 파일이 영향을 받는가?"에 답합니다.`);
+  lines.push(``);
+
+  for (const [concept, files] of reverseIndex) {
+    lines.push(`### ${concept}`);
+    for (const f of files) {
+      lines.push(`- ${f}`);
+    }
+    lines.push(``);
+  }
 
   // ── Functions (L4, excluded) ──
   lines.push(`## Excluded (L4: internal implementation)`);

@@ -1,6 +1,6 @@
 # Sprint Kit Ontology Map
 <!-- auto-generated from src/kernel/types.ts — do not edit manually -->
-<!-- generated at: 2026-03-15T05:10:10.057Z -->
+<!-- generated at: 2026-03-15T05:29:40.650Z -->
 <!-- regenerate: npx tsx scripts/generate-ontology-map.ts --write -->
 
 ## Union Types
@@ -426,6 +426,71 @@ Sprint Kit's identity is defined by behavioral knowledge:
 | Pre-Apply Review 3-perspective | docs/agent-protocol/draft-compile.md |
 | Feedback Classification rules | docs/agent-protocol/draft-surface.md |
 | Agent protocol procedures | docs/agent-protocol/*.md |
+
+## Reverse Index (domain concept → files)
+
+> 1차 소비자: AI 에이전트 / 2차 소비자: PO(에이전트 경유)
+> "이 도메인 개념을 변경하면 어떤 파일이 영향을 받는가?"에 답합니다.
+
+### Scope
+- src/commands/align.ts
+- src/commands/apply.ts
+- src/commands/close.ts
+- src/commands/draft.ts
+- src/compilers/compile-defense.ts
+- src/compilers/compile.ts
+- src/kernel/event-pipeline.ts
+- src/kernel/gate-guard.ts
+- src/kernel/reducer.ts
+- src/kernel/state-machine.ts
+- src/renderers/align-packet.ts
+- src/renderers/draft-packet.ts
+- src/renderers/scope-md.ts
+- src/validators/validate.ts
+
+### Event
+- src/kernel/constraint-pool.ts
+- src/kernel/event-pipeline.ts
+- src/kernel/event-store.ts
+- src/kernel/gate-guard.ts
+- src/kernel/reducer.ts
+- src/kernel/state-machine.ts
+
+### State Machine
+- src/commands/start.ts
+- src/kernel/event-pipeline.ts
+- src/kernel/gate-guard.ts
+- src/kernel/state-machine.ts
+
+### Constraint
+- src/compilers/compile-defense.ts
+- src/compilers/compile.ts
+- src/kernel/constraint-pool.ts
+- src/renderers/draft-packet.ts
+
+### Source
+- src/commands/stale-check.ts
+- src/commands/start.ts
+- src/config/project-config.ts
+- src/parsers/brief-parser.ts
+- src/scanners/types.ts
+
+### Validation
+- src/commands/apply.ts
+- src/compilers/compile-defense.ts
+- src/validators/validate.ts
+
+### Brownfield
+- src/compilers/compile-defense.ts
+- src/compilers/compile.ts
+- src/scanners/brownfield-builder.ts
+
+### Feedback
+- src/commands/draft.ts
+
+### Renderer / Packet
+- src/renderers/align-packet.ts
+- src/renderers/draft-packet.ts
 
 ## Excluded (L4: internal implementation)
 
