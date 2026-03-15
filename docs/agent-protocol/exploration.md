@@ -1,7 +1,7 @@
 # Exploration Protocol
 
 grounding 완료 후, Align Packet 생성 전에 PO와 함께 요구사항을 탐색적으로 구체화하는 프로토콜입니다.
-설계 근거: `docs/design/adaptive-align-conversation-design.md`
+설계 근거: `dev-docs/design/adaptive-align-conversation-design.md`
 
 ## 상태 전이
 

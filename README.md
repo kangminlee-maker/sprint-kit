@@ -146,15 +146,23 @@ sources/          로컬 참고 자료 (디자인 가이드, 이용약관 등)
 
 ## 상세 문서
 
+### 런타임 문서 (`docs/`) — 에이전트가 실행 중 참조
+
 | 문서 | 내용 |
 |------|------|
-| `docs/blueprint.md` | 시스템 정의 — 상태 기계, 모듈 구조, 신뢰 모델 |
-| `docs/architecture.md` | 시스템 설계, 데이터 흐름, 저장 구조 |
-| `docs/event-state-contract.md` | 이벤트 분류, 상태 전이 매트릭스 |
-| `docs/constraint-discovery.md` | 3개 관점 탐색, 제약 생명주기 |
-| `docs/build-spec-compile.md` | Build Spec 구조, Compile Defense 규칙 (L1/L2/L3) |
 | `docs/agent-protocol/` | 에이전트 실행 프로토콜 (start, align, draft, exploration) |
-| `docs/design/` | 설계 제안서 (Adaptive Align, Pre-Apply Review) |
+| `docs/ontology-map.md` | 자동 생성 타입 맵 (`npm run ontology-map`) |
+
+### 개발 문서 (`dev-docs/`) — 시스템 명세, 설계, 참고
+
+| 문서 | 내용 |
+|------|------|
+| `dev-docs/spec/blueprint.md` | 시스템 정의 — 상태 기계, 모듈 구조, 신뢰 모델 |
+| `dev-docs/spec/architecture.md` | 시스템 설계, 데이터 흐름, 저장 구조 |
+| `dev-docs/spec/event-state-contract.md` | 이벤트 분류, 상태 전이 매트릭스 |
+| `dev-docs/spec/constraint-discovery.md` | 3개 관점 탐색, 제약 생명주기 |
+| `dev-docs/spec/build-spec-compile.md` | Build Spec 구조, Compile Defense 규칙 (L1/L2/L3) |
+| `dev-docs/design/` | 설계 제안서 (Adaptive Align) |
 
 ## 현재 규모
 

@@ -14,3 +14,4 @@
 - 동일 시스템에서 이벤트 스트림(구조적 상태)과 파일(의미적 맥락) 두 경로로 데이터를 전달할 때, source of truth와 불일치 시 우선순위를 계약으로 명시해야 함 (출처: exploration 승격 리뷰, 2026-03-13)
 - source of truth 이전(migration) 시, 기존 문서의 "정의 권한" 규칙과 새 시스템의 "source of truth" 선언이 공존하면 의존 방향이 이중화됨. source of truth를 이전할 때는 기존 문서의 권한 규칙도 함께 갱신해야 함 (출처: Schema-as-Ontology 리뷰, 2026-03-14)
 - 문서 분리(knowledge/ 등) 작업의 실행 시점은 "분리할 내용이 준비되었는가"가 아니라 "참조 대상이 확정되었는가"와 "source of truth 규칙이 갱신되었는가"로 판단해야 함. 참조 대상 부재 상태에서의 분리는 참조 무결성을 검증할 수 없게 만듦 (출처: Schema-as-Ontology 리뷰 Round 2, 2026-03-14)
+- [사실] ScanSkipped 인터페이스의 필드(previous_hash/cached_hash)는 이벤트 페이로드로 전파되지 않고 sourceHashes에 값만 복사된 후 소멸함. 따라서 ScanSkipped 필드명 변경은 이벤트 스키마 하위 호환성에 영향을 주지 않음 (출처: 속도 개선 #2-#5 작업설계 리뷰, 2026-03-15)

@@ -20,9 +20,9 @@ vi.mock("./scan-local.js", () => ({
   })),
 }));
 
-import { scanTarball, isScanError } from "./scan-tarball.js";
+import { scanTarball } from "./scan-tarball.js";
 import { execSync } from "node:child_process";
-import { isScanSkipped } from "./types.js";
+import { isScanError, isScanSkipped } from "./types.js";
 import type { ScanResult, ScanError, ScanSkipped, SourceEntry } from "./types.js";
 
 const mockedExecSync = vi.mocked(execSync);
@@ -281,7 +281,7 @@ describe("isScanError", () => {
     const skipped: ScanSkipped = {
       skipped: true,
       source: makeSource("https://github.com/a/b"),
-      previous_hash: "abc",
+      cached_hash: "abc",
     };
     expect(isScanError(skipped)).toBe(false);
   });
@@ -337,7 +337,7 @@ describe("ETag caching", () => {
     const skipped = result as ScanSkipped;
     expect(skipped.skipped).toBe(true);
     expect(skipped.source).toBe(source);
-    expect(skipped.previous_hash).toBe("prev-hash-123");
+    expect(skipped.cached_hash).toBe("prev-hash-123");
   });
 
   it("returns network error on 304 without previousHash", async () => {

@@ -158,7 +158,7 @@ If a major undiscovered constraint appears at Gate 2, it is a process failure.
 ## Constraint Discovery
 
 Constraint discovery is the core mechanism, not a side feature.
-Details are defined in `docs/constraint-discovery.md`.
+Details are defined in `dev-docs/spec/constraint-discovery.md`.
 
 ### Discovery Lifecycle
 
@@ -192,7 +192,7 @@ This ID flows through all artifacts: Align Packet → Draft Packet → Build Spe
 
 Note: `constraint.invalidated`는 사용자 결정이 아닌 시스템 이벤트입니다.
 re-discovery에서 방향 변경으로 더 이상 관련 없는 constraint를 시스템이 자동으로 제외합니다.
-상세는 `docs/constraint-discovery.md`의 Invalidation 섹션 참조.
+상세는 `dev-docs/spec/constraint-discovery.md`의 Invalidation 섹션 참조.
 
 ### Discovery Timing
 
@@ -422,7 +422,7 @@ compiled → grounded                    (stale snapshot detected after compile)
 Terminal states: `deferred`, `rejected`
 Any state except `closed` can transition to `deferred` or `rejected`.
 
-Complete State × Event matrix is defined in `docs/event-state-contract.md`.
+Complete State × Event matrix is defined in `dev-docs/spec/event-state-contract.md`.
 
 ## Blocking Rules
 

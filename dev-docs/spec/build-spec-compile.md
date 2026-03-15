@@ -2,7 +2,7 @@
 
 이 문서는 Compile 단계의 입출력, Build Spec 템플릿, delta-set.json 스키마, validation-plan 구조를 정의합니다.
 
-Compile의 핵심 원칙은 `docs/architecture.md`의 Compile Boundary 참조:
+Compile의 핵심 원칙은 `dev-docs/spec/architecture.md`의 Compile Boundary 참조:
 **Compile은 새로운 제품 결정을 하지 않습니다.** 확정된 target을 코드 delta로 변환할 뿐입니다.
 
 ---
@@ -340,4 +340,4 @@ Compile 중 새로운 제품 결정이 필요한 모호함을 발견하면:
 | `validation.started` | 검증 시작 | validation-plan 기반 검증 |
 | `validation.completed` | 검증 완료 | pass/fail + 상세 결과 |
 
-이벤트 정의와 payload는 `docs/event-state-contract.md`에서 확정합니다 (이 문서는 소유하지 않음).
+이벤트 정의와 payload는 `dev-docs/spec/event-state-contract.md`에서 확정합니다 (이 문서는 소유하지 않음).

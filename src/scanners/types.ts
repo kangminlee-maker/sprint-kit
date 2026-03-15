@@ -86,6 +86,10 @@ export function toGroundingSource(entry: SourceEntry): { type: SourceType; path_
       return { type: "obsidian-vault", path_or_url: entry.path };
     case "mcp":
       return { type: "mcp", path_or_url: entry.provider };
+    default: {
+      const _exhaustive: never = entry;
+      throw new Error(`Unknown source type: ${(entry as any).type}`);
+    }
   }
 }
 
@@ -110,7 +114,7 @@ export function emptyScanResult(source: SourceEntry): ScanResult {
 export interface ScanSkipped {
   skipped: true;
   source: SourceEntry;
-  previous_hash: string;
+  cached_hash: string;
 }
 
 export function isScanSkipped(
@@ -125,4 +129,9 @@ export interface ScanError {
   source: SourceEntry;
   error_type: "network" | "auth" | "not_found" | "timeout" | "parse" | "io";
   message: string;
+}
+
+/** Type guard for ScanError */
+export function isScanError(result: ScanResult | ScanError | ScanSkipped): result is ScanError {
+  return "error_type" in result;
 }

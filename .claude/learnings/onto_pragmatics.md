@@ -17,3 +17,4 @@
 - 상태 정보가 두 곳에 분산되어 사용자가 조합해야 현재 위치를 파악할 수 있는 구조는, 세션 재개 시점에서 특히 취약 (출처: exploration 승격 리뷰, 2026-03-13)
 - sprint-kit의 코드 source of truth는 `kernel/types.ts`이지 `blueprint.md`가 아님. 17개 파일이 types.ts를 import하며, PayloadMap이 이벤트 타입-payload 1:1 매핑을 강제. blueprint.md는 인간 독자용 문서. drift가 발생한다면 blueprint.md ↔ types.ts 사이 (출처: Schema-as-Ontology 재구성 리뷰, 2026-03-14)
 - 에이전트 프로토콜 8개 파일이 appendScopeEvent() 50회+, 필드명 47회를 직접 참조. 이 구조에서 "진짜 drift"는 프로토콜 문서(.md)의 API 호출 예시와 실제 TypeScript 시그니처 사이에서 발생. 이 drift 검증은 프로토콜 문서에서 코드 스니펫을 추출하여 PayloadMap과 대조하는 스크립트로 대응 가능 (출처: Schema-as-Ontology 재구성 리뷰 Round 2, 2026-03-14)
+- TypeScript discriminated union의 switch 문에서 exhaustive check 없이도 반환 타입 명시 시 호출 사이트에서 컴파일 오류 발생. 그러나 오류 위치가 원인(case 누락)이 아닌 소비 지점에 분산됨. exhaustive check(`const _exhaustive: never = x`) 패턴의 핵심 가치는 "오류 위치를 원인 지점에 집중"시키는 것 (출처: 속도 개선 #4 exhaustive check 검증, 2026-03-15)

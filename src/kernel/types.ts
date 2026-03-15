@@ -194,6 +194,10 @@ export function sourceKey(entry: SourceEntry): string {
       return `obsidian-vault:${entry.path}`;
     case "mcp":
       return `mcp:${entry.provider}`;
+    default: {
+      const _exhaustive: never = entry;
+      throw new Error(`Unknown source type: ${(entry as any).type}`);
+    }
   }
 }
 

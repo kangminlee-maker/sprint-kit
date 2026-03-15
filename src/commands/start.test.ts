@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -407,5 +407,53 @@ describe("findExistingScope", () => {
 
     const result = findExistingScope(scopesDir, "target");
     expect(result).toBe("target-20260310-001");
+  });
+});
+
+// ─── ScanSkipped integration test (ETag cache hit) ───
+
+describe("ScanSkipped integration (ETag cache hit)", () => {
+  it("reuses cached hash when scanTarball returns ScanSkipped", async () => {
+    // Mock scanTarball to return ScanSkipped for github-tarball source
+    const { scanTarball } = await import("../scanners/scan-tarball.js");
+    const scanTarballSpy = vi.spyOn(
+      await import("../scanners/scan-tarball.js"),
+      "scanTarball",
+    );
+    scanTarballSpy.mockResolvedValue({
+      skipped: true,
+      source: { type: "github-tarball", url: "https://github.com/acme/repo" },
+      cached_hash: "cached-hash-abc",
+    });
+
+    // Also need a local source so grounding doesn't fail (needs at least 1 scanResult or scanSkipped)
+    const srcDir = join(projectDir, "local-src");
+    mkdirSync(srcDir, { recursive: true });
+    writeFileSync(join(srcDir, "app.ts"), "const a = 1;");
+
+    // Create .sprint-kit.yaml with github-tarball source
+    writeFileSync(
+      join(projectDir, ".sprint-kit.yaml"),
+      `default_sources:\n  - type: github-tarball\n    url: https://github.com/acme/repo\n    description: test repo\n`,
+    );
+
+    const result = await executeStart(makeInput({
+      rawInput: `기능 추가 --add-dir ${srcDir}`,
+    }));
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    // Verify cached hash is in sourceHashes
+    expect(result.sourceHashes["github-tarball:https://github.com/acme/repo"]).toBe("cached-hash-abc");
+
+    // Verify grounding.completed event contains the cached hash in source_hashes
+    const events = readEvents(result.paths.events);
+    const groundingCompleted = events.find(e => e.type === "grounding.completed");
+    expect(groundingCompleted).toBeDefined();
+    expect((groundingCompleted!.payload as any).source_hashes["github-tarball:https://github.com/acme/repo"])
+      .toBe("cached-hash-abc");
+
+    scanTarballSpy.mockRestore();
   });
 });

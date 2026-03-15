@@ -14,3 +14,4 @@
 - "정의 문서"와 "명세 문서" 계층 분리 시, 경계 기준은 "이것을 모르면 의도를 잘못 해석하는가?" (출처: blueprint 온톨로지 설계 리뷰, 2026-03-09)
 - event-pipeline.ts Step 5의 "이벤트 파일 재읽기 생략(배열 concat)"과 "reduce() 내부의 증분 순회"는 다른 계층의 최적화. 전자는 이미 구현됨. 후자를 도입하려면 reducer.ts의 18개+ 로컬 변수를 이전 상태에서 복원하는 매핑이 필요하며 누락 시 파생 필드(stale, convergence_blocked 등) 불일치 발생 (출처: 속도 개선 설계 구조적 완전성 리뷰, 2026-03-14)
 - computeDirectoryHash의 해시는 source_hashes로 grounding 이벤트에 영구 기록되므로, 해시 계산 알고리즘(정렬 순서, 결합 방식) 변경은 이벤트 스키마 호환성 파괴와 동일한 영향. 스캔 해시는 이벤트 소싱 시스템의 불변 데이터 (출처: 속도 개선 설계 구조적 완전성 리뷰, 2026-03-14)
+- [사실] SourceEntry union type을 switch하는 함수는 현재 4개: sourceKey() (kernel/types.ts), toGroundingSource() (scanners/types.ts), scanSource() (commands/start.ts), toBriefSourceEntry() (commands/start.ts). scanSource()만 exhaustive check 존재 (출처: 속도 개선 #2-#5 작업설계 리뷰, 2026-03-15)

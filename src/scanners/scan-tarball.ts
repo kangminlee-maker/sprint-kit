@@ -17,7 +17,7 @@ import type { ScanResult, SourceEntry, ScanError, ScanSkipped } from "./types.js
 export async function scanTarball(
   source: SourceEntry & { type: "github-tarball" },
   etag?: string,
-  previousHash?: string,
+  cachedHash?: string,
 ): Promise<ScanResult | ScanError | ScanSkipped> {
   const tmpDir = mkdtempSync(join(tmpdir(), "sprint-kit-tarball-"));
 
@@ -74,8 +74,8 @@ export async function scanTarball(
     }
 
     // Handle 304 Not Modified (ETag cache hit)
-    if (response.status === 304 && previousHash) {
-      return { skipped: true, source, previous_hash: previousHash };
+    if (response.status === 304 && cachedHash) {
+      return { skipped: true, source, cached_hash: cachedHash };
     }
 
     // Handle HTTP error responses
@@ -121,9 +121,4 @@ export async function scanTarball(
       // Best effort cleanup
     }
   }
-}
-
-/** Type guard for ScanError */
-export function isScanError(result: ScanResult | ScanError | ScanSkipped): result is ScanError {
-  return "error_type" in result;
 }

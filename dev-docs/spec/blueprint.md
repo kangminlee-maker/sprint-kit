@@ -622,7 +622,7 @@ draft → grounded → exploring → align_proposed → align_locked → surface
 **자기전이** (상태 변경 없이 이벤트만 기록):
 `align.revised`, `surface.revision_applied`, `snapshot.marked_stale`, `constraint.discovered` (target_locked/compiled에서), `compile.started`, `apply.started`, `validation.started` 등
 
-전체 State × Event 매트릭스는 `docs/event-state-contract.md`에 명세되어 있습니다.
+전체 State × Event 매트릭스는 `dev-docs/spec/event-state-contract.md`에 명세되어 있습니다.
 
 
 
@@ -709,7 +709,7 @@ scopes/{scope-id}/
 - **전역**: 모든 비터미널 상태에서 터미널로 전이 (`scope.deferred`, `scope.rejected`)
 - **관찰**: 상태 변경 없음 (`feedback.classified`, `convergence.*`, `draft_packet.rendered`, `constraint.evidence_updated`, `prd.rendered`, `pre_apply.review_completed`)
 
-이벤트 유형 전체 목록과 payload 상세는 `docs/event-state-contract.md`에 명세되어 있습니다.
+이벤트 유형 전체 목록과 payload 상세는 `dev-docs/spec/event-state-contract.md`에 명세되어 있습니다.
 
 ### 핵심 함수
 

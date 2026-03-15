@@ -150,9 +150,9 @@ function render(r: ParseResult): string {
   lines.push(`| Gate Guard rules (GC-005~018) | src/kernel/gate-guard.ts |`);
   lines.push(`| Compile Defense L1-L3 | src/compilers/compile-defense.ts |`);
   lines.push(`| Compile I/O types (ImplementationItem, ChangeItem, DeltaSet, etc.) | src/compilers/compile.ts, compile-defense.ts |`);
-  lines.push(`| Global Constraints GC-001~022 | docs/blueprint.md §7 |`);
+  lines.push(`| Global Constraints GC-001~022 | dev-docs/spec/blueprint.md §7 |`);
   lines.push(`| Convergence Safety (3/5/7 thresholds) | src/kernel/constants.ts, gate-guard.ts |`);
-  lines.push(`| Stale Detection (2-point: gate + command) | docs/blueprint.md §4 |`);
+  lines.push(`| Stale Detection (2-point: gate + command) | dev-docs/spec/blueprint.md §4 |`);
   lines.push(`| Exploration 6-Phase protocol | docs/agent-protocol/exploration.md |`);
   lines.push(`| Pre-Apply Review 3-perspective | docs/agent-protocol/draft-compile.md |`);
   lines.push(`| Feedback Classification rules | docs/agent-protocol/draft-surface.md |`);

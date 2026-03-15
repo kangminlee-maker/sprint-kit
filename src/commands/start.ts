@@ -37,8 +37,8 @@ import {
 } from "../config/project-config.js";
 import { scanLocal } from "../scanners/scan-local.js";
 import { scanVault } from "../scanners/scan-vault.js";
-import { scanTarball, isScanError } from "../scanners/scan-tarball.js";
-import { sourceKey, toGroundingSource, isScanSkipped, type SourceEntry, type ScanResult, type ScanError, type ScanSkipped } from "../scanners/types.js";
+import { scanTarball } from "../scanners/scan-tarball.js";
+import { sourceKey, toGroundingSource, isScanError, isScanSkipped, type SourceEntry, type ScanResult, type ScanError, type ScanSkipped } from "../scanners/types.js";
 import { buildBrownfield } from "../scanners/brownfield-builder.js";
 import { parseBrief } from "../parsers/brief-parser.js";
 import { TERMINAL_STATES } from "../kernel/types.js";
@@ -509,7 +509,7 @@ async function executeGrounding(
   // Add skipped source hashes (ETag cache hit → previous hash reuse)
   for (const skipped of scanSkipped) {
     const key = sourceKey(skipped.source);
-    sourceHashes[key] = skipped.previous_hash;
+    sourceHashes[key] = skipped.cached_hash;
   }
 
   // Compute snapshot_revision from previous grounding events
@@ -611,6 +611,10 @@ function toBriefSourceEntry(entry: SourceEntry): BriefSourceEntry {
       return { type: "obsidian-vault", identifier: entry.path, description: entry.description };
     case "mcp":
       return { type: "mcp", identifier: entry.provider, description: entry.description };
+    default: {
+      const _exhaustive: never = entry;
+      throw new Error(`Unknown source type: ${(entry as any).type}`);
+    }
   }
 }
 
