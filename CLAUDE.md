@@ -23,7 +23,8 @@ These principles apply to all artifacts and documents produced by the system.
 
 ## System Structure
 
-- **Ontology Map**: `docs/ontology-map.md` — 도메인 엔티티, union type, 관계 구조 (자동 생성, `npm run ontology-map`)
+- **Ontology Map**: `docs/ontology-map.md` — 도메인 엔티티, union type, 관계 구조, Reverse Index (자동 생성, `npm run ontology-map`)
+- **Gate Guard**: `npm run check-deps` — kernel/ 모듈의 의존 방향 검증 (외부 모듈 import 차단)
 
 ## Agent Review
 

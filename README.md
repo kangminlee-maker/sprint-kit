@@ -137,8 +137,10 @@ default_sources:
 ## 프로젝트 구조
 
 ```text
-src/              시스템 코드
-docs/             설계 문서, 에이전트 프로토콜
+src/              시스템 코드 (kernel, commands, scanners, compilers, renderers 등)
+docs/             런타임 문서 (에이전트 프로토콜, ontology-map)
+dev-docs/         개발 문서 (spec, design, guide, deprecated)
+scripts/          도구 스크립트 (ontology-map 생성, 의존 방향 검증 등)
 scopes/           scope 작업 공간 (프로젝트별로 생성)
 sources/          로컬 참고 자료 (디자인 가이드, 이용약관 등)
 .sprint-kit.yaml  프로젝트 설정 (소스 목록, 기술 스택)
@@ -166,8 +168,8 @@ sources/          로컬 참고 자료 (디자인 가이드, 이용약관 등)
 
 ## 현재 규모
 
-- 소스 파일 45+개, 테스트 44파일 1008건
-- 상태 15개 (`exploring` 포함), 이벤트 40종+, Compile Defense 규칙 15개
+- 소스 파일 45+개, 테스트 44파일 1,025건
+- 상태 15개 (`exploring` 포함), 이벤트 44종, Compile Defense 규칙 15개
 - Exploration 이벤트 3종 (전이 이벤트), Pre-Apply Review 이벤트 1종
 
 ## License

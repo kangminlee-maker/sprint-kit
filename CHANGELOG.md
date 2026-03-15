@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.3.4 (2026-03-15)
+
+속도 개선 #2-#5 구현, docs 재구성(런타임/개발 분리), Reverse Index + Gate Guard 도입.
+
+### 코드 변경 (8-Agent Panel Review 합의)
+
+- **#2 `previous_hash` → `cached_hash`**: ScanSkipped 인터페이스 필드 + scanTarball 매개변수 명칭 변경. "시점 모호성" → "출처 명확성". HTTP 304 캐시 시맨틱 일치
+- **#3 `isScanError` 이동**: `scan-tarball.ts` → `types.ts`로 이동. `isScanSkipped`과 동일 파일 배치. re-export 없이 완전 제거. 의존 방향 개선 (start.ts → scan-tarball.ts 의존이 scanTarball 함수 1개로 축소)
+- **#4 exhaustive check 추가**: `sourceKey()`, `toGroundingSource()`, `toBriefSourceEntry()` 3개 함수에 `const _exhaustive: never` 패턴 추가. SourceType union 계약 강화
+- **#5 ScanSkipped 통합 테스트**: `start.test.ts`에 ETag 캐시 적중 경로 통합 테스트 추가. `types.test.ts`에 `mcp` 소스 타입 테스트 + `isScanError` 단위 테스트 추가
+
+### docs 재구성 — 런타임/개발 분리
+
+- **`docs/`**: 런타임 전용으로 축소 — `agent-protocol/` (8파일) + `ontology-map.md` (자동 생성)
+- **`dev-docs/spec/`**: 시스템 명세 이동 — `blueprint.md`, `architecture.md`, `event-state-contract.md`, `build-spec-compile.md`, `constraint-discovery.md`
+- **`dev-docs/design/`**: 설계 문서 이동 — Adaptive Align 3파일
+- **`dev-docs/guide/`**: 구현 참고 이동 — `implementation-plan.md`
+- **`dev-docs/deprecated/`**: 교체된 문서 이동 — `align-draft-templates.md`, `golden-example.md`, `schema-as-ontology-restructuring.md` + 기존 deprecated 8파일
+- **상호 참조 경로 전면 업데이트**: README, exploration.md, generate-ontology-map.ts, spec/ 내부
+
+### Reverse Index
+
+- **ontology-map.md 확장**: `generate-ontology-map.ts`에 import 스캐너 추가. 14개 도메인 개념 → 타입 매핑 정의. src/ 전체 파일 스캔으로 9개 도메인 개념 × 29파일 역방향 인덱스 자동 생성
+- **소비자**: 1차 AI 에이전트 / 2차 PO(에이전트 경유)
+- **목적**: "이 도메인 개념을 변경하면 어떤 파일이 영향을 받는가?"에 O(1)로 답변
+
+### Gate Guard
+
+- **`scripts/check-dependency-direction.ts`**: kernel/ 파일이 다른 src/ 모듈(commands, scanners, compilers 등)을 import하면 에러. 현재 DAG 건전성(kernel 외부 import 0건) 보호
+- **`npm run check-deps`**: CI/수동 실행 가능
+
+### 테스트
+
+- 44파일 1,025건 (0.3.3 대비 +17건)
+- ScanSkipped 통합 테스트 1건, mcp sourceKey/toGroundingSource 2건, isScanError 3건
+
 ## 0.3.3 (2026-03-13)
 
 Exploration을 정식 상태(`exploring`)로 승격. 6-Agent Panel Review (6/6 합의) 기반.
