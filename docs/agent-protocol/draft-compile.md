@@ -173,6 +173,8 @@ compile 또는 apply 단계에서 `constraint_gap_found` 또는 `decision_gap_fo
 2. **왜 이전에 발견되지 않았는지**: "이 제약은 구현 수준의 상세 분석에서 드러난 것으로, 방향/대상 수준의 탐색에서는 발견되지 않았습니다."
 3. **기존 결정의 유지 여부**: "이전에 결정하신 항목들은 모두 유지됩니다. 이번에는 새로 발견된 CST-{N}에 대해서만 결정해 주시면 됩니다."
 
+역전이 후 상태가 `constraints_resolved`로 변경됩니다. 진입점(`.claude/commands/draft.md`)의 상태→파일 매핑 표를 다시 확인하고 해당 파일(`draft-constraint.md`)로 전환하세요.
+
 ---
 
 ## compile.completed 직후 → Pre-Apply Review (필수)

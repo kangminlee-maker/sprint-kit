@@ -41,6 +41,11 @@ Surface 생성 전에, `usage_hint: context` 또는 `usage_hint: full`로 태깅
 - 서브 에이전트(Agent tool)에 Surface 생성을 위임하는 경우, 디자인 온톨로지 원문을 프롬프트에 직접 포함해야 합니다.
 - 온톨로지를 요약하거나 핵심 토큰만 발췌하여 전달하면 안 됩니다. 전문 포함이 불가능한 경우, 메인 에이전트가 직접 Surface를 생성해야 합니다.
 
+**200k 컨텍스트 제한 시:**
+- 디자인 온톨로지 전문 주입은 유지합니다 (요약 금지 규칙 변경 없음).
+- 앱 소스코드(`usage_hint: context`)는 변경 대상 디렉토리의 파일만 선택적으로 로드합니다. 전체 소스코드 대신 `target_stack` 설정 파일(tailwind.config.*, package.json)과 변경 대상 컴포넌트만 포함합니다.
+- 상세 전략: `start.md`의 "컨텍스트 제한 모델 대응" 참조.
+
 **target_stack 참조:**
 `.sprint-kit.yaml`의 `target_stack` 필드에 프로젝트의 기술 스택이 기록되어 있습니다. Surface 생성 시 이 스택 정보를 참조하여, PO가 실제 제품 맥락에서 판단할 수 있는 기술 선택을 해야 합니다. (예: 프로젝트가 Tailwind v3을 사용하면 v4 문법을 사용하지 않음)
 

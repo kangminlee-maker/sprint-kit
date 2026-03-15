@@ -25,33 +25,15 @@ scope를 생성하거나, 이미 존재하는 scope를 이어서 진행합니다
 
 ```yaml
 default_sources:
-  # ── Code ──
-  - type: github-tarball          # GitHub 레포를 tarball로 다운로드
-    url: https://github.com/org/backend
-    description: 백엔드 소스
-
-  - type: add-dir                 # 로컬 파일 또는 디렉토리
-    path: ./src
-    description: 프론트엔드 소스
-
-  # ── Policy ──
   - type: github-tarball
-    url: https://github.com/org/ontology
-    description: 도메인 모델 (온톨로지)
-
+    url: https://github.com/org/app
+    description: 앱 소스코드
   - type: add-dir
-    path: ./scopes/terms-of-service.md
-    description: 서비스 이용약관
-
-  - type: obsidian-vault           # Obsidian vault 디렉토리
-    path: /vaults/company-docs
-    description: 회사 정책 문서
-
-  # ── Design ──
-  - type: figma-mcp               # Figma 파일 (MCP로 조회)
-    file_key: xxxxx
-    description: 디자인 시스템
+    path: ./sources
+    description: 디자인 가이드, 이용약관
 ```
+
+전체 소스 타입은 아래 테이블 참조.
 
 허용되는 `type` 값:
 
@@ -273,15 +255,6 @@ appendScopeEvent(paths, {
 });
 ```
 
-#### 소스 접근 방법
-
-| 소스 유형 | 접근 방법 |
-|-----------|----------|
-| `--add-dir` | 파일 시스템에서 직접 읽기 |
-| `github-tarball` | URL에서 다운로드 후 파싱 |
-| `figma-mcp` | MCP 서버를 통해 Figma 데이터 조회 |
-| `obsidian-vault` | 파일 시스템에서 마크다운 파일 읽기 |
-
 #### 3-Perspective 탐색 체크리스트
 
 **Experience** — 사용자가 보고 만지는 것에서 제약을 찾습니다:
@@ -430,46 +403,18 @@ exploration에서 생성된 `build/exploration-log.md`의 Phase 6 결과가 Alig
 
 ### 5. Align Packet 렌더링
 
+`AlignPacketContent` 타입(kernel/types.ts)의 모든 필드를 채워서 렌더러에 전달합니다.
+
 ```typescript
-import { reduce } from "src/kernel/reducer";
-import { readEvents } from "src/kernel/event-store";
-import { renderAlignPacket } from "src/renderers/align-packet";
-
 const state = reduce(readEvents(paths.events));
-
-const content: AlignPacketContent = {
-  user_original_text: "사용자 원문",
-  interpreted_direction: "시스템이 해석한 방향 한 문장",
-  proposed_scope: {
-    in: ["포함할 기능 목록"],
-    out: ["제외할 기능 목록"],
-  },
-  scenarios: ["시나리오 1: 행위자가 행동을 합니다..."],
-  as_is: {
-    experience: "Experience 관점 현재 상태 서술",
-    policy: "Policy 관점 현재 상태 서술",
-    code: "Code 관점 현재 상태 서술 (비즈니스 영향 중심)",
-    code_details: "기술 상세 (Builder 참고용)",
-  },
-  tensions: [
-    {
-      constraint_id: "CST-001",
-      what: "이것이 무엇인가",
-      why_conflict: "왜 충돌하는가",
-      scale: "변경 규모",
-      options: ["선택지 (방향 판단에 필요한 경우만)"],
-      details: "기술 상세 (<details> 안에 표시)",
-    },
-  ],
-  decision_questions: [
-    "위 범위(포함/제외)에 동의하십니까?",
-    "이 N건의 충돌을 인지한 상태에서 이 방향으로 진행하겠습니까?",
-  ],
-};
-
+const content: AlignPacketContent = { /* 모든 필드 채우기 — 타입 정의 참조 */ };
 const markdown = renderAlignPacket(state, content);
 writeFileSync(join(paths.build, "align-packet.md"), markdown);
 ```
+
+**필수 필드**: `user_original_text`, `interpreted_direction`, `proposed_scope`(in/out), `scenarios`, `as_is`(experience/policy/code/code_details), `tensions`(constraint별 what/why_conflict/scale/options/details), `decision_questions`.
+
+Exploration을 수행한 경우, `exploration.md`의 Phase→AlignPacketContent 매핑 규칙을 따릅니다.
 
 ### 6. Align Proposed 이벤트 기록
 
@@ -492,6 +437,37 @@ appendScopeEvent(paths, {
 ### 7. 사용자에게 Align Packet 제시
 
 생성된 `build/align-packet.md`를 사용자에게 보여주고, `/align` 명령으로 결정을 요청합니다.
+
+## 컨텍스트 제한 모델 대응 (200k 이하)
+
+200k 컨텍스트 모델에서는 프로토콜 문서(~22k 토큰, 200k의 ~11%)가 아니라 **소스 데이터**가 병목입니다. 다음 계층화 전략으로 컨텍스트를 관리합니다.
+
+### Tier 1 — Grounding 스캔 결과 요약 (필수)
+
+소스 스캔 후 전체 결과를 컨텍스트에 유지하지 않고, 아래 형식으로 요약합니다:
+
+| 항목 | 포함 | 제외 |
+|------|------|------|
+| constraint 목록 (CST-*) | 전체 유지 | — |
+| 파일 목록 (files[]) | 카테고리별 상위 10건 | 나머지 |
+| 의존 그래프 (dependency_graph[]) | 진입점에서 depth 2까지 | 나머지 |
+| API 패턴 (api_patterns[]) | 변경 대상 엔드포인트만 | 나머지 |
+| 스키마 패턴 (schema_patterns[]) | 변경 대상 테이블만 | 나머지 |
+
+### Tier 2 — Surface/Compile 시 소스 재주입
+
+`usage_hint: context` 소스의 전문 주입(draft-surface.md 참조)은 200k에서도 필수입니다. 단, 다음을 적용합니다:
+
+- **디자인 온톨로지**: 전문 필수 (요약 금지 — draft-surface.md 규칙 유지)
+- **앱 소스코드**: 변경 대상 디렉토리의 파일만 선택적 로드. `target_stack`의 프레임워크 규칙 파일(tailwind.config.*, package.json) 우선
+- **정책 문서**: constraint의 `source_refs`가 가리키는 섹션만 선택적 로드
+
+### Tier 3 — Exploration 대화 압축
+
+exploration-log.md에 대화 전문이 기록되므로, 에이전트 컨텍스트에서는:
+- 현재 Phase의 대화만 유지
+- 이전 Phase의 결정 사항은 `exploration_progress`(이벤트 기반)에서 복원
+- 5 round 초과 시 중간 정리 결과만 유지하고 개별 round 대화는 drop
 
 ## 렌더링 규칙
 
