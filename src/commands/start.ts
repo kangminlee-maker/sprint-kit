@@ -75,6 +75,11 @@ export interface StartResult {
   scanSkipped: ScanSkipped[];
   sourceHashes: Record<string, string>;
   totalFiles: number;
+  /** Brief validation result — present when brief was incomplete (exploration conversation mode) */
+  briefValidation?: {
+    isComplete: boolean;
+    missingFields: string[];
+  };
 }
 
 export interface StartInitResult {
@@ -219,18 +224,13 @@ async function handleBriefExecution(
   const briefContent = readFileSync(paths.brief, "utf-8");
   const parsedBrief = parseBrief(briefContent);
 
-  // B-2: Validation check
-  if (!parsedBrief.validation.isComplete) {
-    const missing = parsedBrief.validation.missingFields.join(", ");
-    return {
-      success: false,
-      reason: `다음 필수 항목이 비어 있습니다: ${missing}. 작성 후 다시 실행해 주세요.`,
-      step: "brief_validation",
-    };
-  }
+  // B-2: Brief validation — incomplete brief is allowed (exploration conversation mode)
+  const briefValidation = !parsedBrief.validation.isComplete
+    ? { isComplete: false, missingFields: parsedBrief.validation.missingFields }
+    : undefined;
 
-  // B-3: Extract info from brief
-  const title = parsedBrief.title;
+  // B-3: Extract info from brief (use projectName as fallback for empty title)
+  const title = parsedBrief.title || projectNameFromScopeId(scopeId);
   const description = parsedBrief.description;
 
   // B-4: 3-way source collection
@@ -265,7 +265,7 @@ async function handleBriefExecution(
   }
 
   // B-6: Continue with grounding
-  return executeGrounding(paths, scopeId, sources, progress, input.projectRoot);
+  return executeGrounding(paths, scopeId, sources, progress, input.projectRoot, briefValidation);
 }
 
 // ─── Path B direct: backward compatibility (old interface) ───
@@ -407,6 +407,7 @@ async function executeGrounding(
   sources: SourceEntry[],
   progress: (msg: string) => void,
   projectRoot: string,
+  briefValidation?: StartResult["briefValidation"],
 ): Promise<StartResult | StartFailure> {
   // Write sources.yaml
   writeSourcesYaml(paths.sourcesYaml, sources);
@@ -562,6 +563,7 @@ async function executeGrounding(
     scanSkipped,
     sourceHashes,
     totalFiles,
+    ...(briefValidation ? { briefValidation } : {}),
   };
 }
 
@@ -595,6 +597,13 @@ function writeEtagCache(projectRoot: string, cache: EtagCacheData): void {
 }
 
 // ─── Helpers ───
+
+/**
+ * Extract project name from scopeId (e.g. "free-trial-20260316-001" → "free-trial").
+ */
+function projectNameFromScopeId(scopeId: string): string {
+  return scopeId.replace(/-\d{8}-\d{3}$/, "");
+}
 
 /**
  * Convert a SourceEntry to BriefSourceEntry format for the brief template.

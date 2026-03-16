@@ -6,3 +6,4 @@
 - "compile 에이전트 ≠ validate 에이전트" 구조에서 validation-plan.md가 유일한 세션 간 맥락 전달 경로. 이 전제를 명시하지 않으면 렌더러의 행동 지침 내재화 필요성이 간과됨 (출처: validation-plan 업그레이드 설계 리뷰, 2026-03-12)
 - edge_case 강제(compile-defense L2)와 edge_case 실행 추적(validate 프로토콜+타입)은 분리된 설계 과제. 코드가 존재를 강제해도 실행을 강제하지 않으면 enforcement 고리가 끊어짐 (출처: validation-plan 업그레이드 설계 리뷰, 2026-03-12) (→ 글로벌 승격 완료, 2026-03-15)
 - discriminated union의 switch exhaustive check 추가는 "개별 함수 보강"이 아니라 "union type의 계약 강화"로 프레이밍해야 합니다. 개별 함수 단위로 기술하면 동일 패턴의 다른 함수가 누락될 수 있고, union type 계약 단위로 기술하면 대상 열거가 "이 union을 switch하는 모든 함수"로 자연스럽게 확장됩니다 (출처: 속도 개선 #4 exhaustive check 리뷰, 2026-03-15) (→ 글로벌 승격 완료, 2026-03-15)
+- [판단] appendScopeEvent의 공개 API 포함 여부는 dispatch script 논의에 선행하는 독립 과제. "에이전트에게 어느 수준의 API를 노출할 것인가"라는 시스템 정체성 수준의 질문이며, 해결 방향은 (A) 공개 API 승격 또는 (B) command 함수 경유로 변경. 이 결정 없이 dispatch script를 설계하면 문제 구조가 뒤집힘 (출처: dispatch script 설계 리뷰, 2026-03-16)

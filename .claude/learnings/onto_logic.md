@@ -22,3 +22,4 @@
 - 작업설계에서 동일 함수명이 복수 파일에 존재할 때, 변경 대상 열거의 검색 범위를 특정 파일로 한정하면 누락이 구조적으로 발생. 전수 조사(grep) 결과를 명시해야 범위 불일치를 방지 (출처: 속도 개선 작업설계 리뷰, 2026-03-14) (→ 글로벌 승격 완료, 2026-03-15)
 - 위 원칙의 확장: 동일 함수명이 아닌 **동일 패턴**(같은 discriminated union의 switch without default)으로 검색 범위를 설정해야 누락을 방지. 함수명 기반 전수 조사보다 패턴 기반 전수 조사가 더 넓은 범위를 포착. 예: SourceEntry switch 함수 4개 중 toBriefSourceEntry() 누락 사례 (출처: 속도 개선 #2-#5 작업설계 리뷰, 2026-03-15)
 - [사실] sprint-kit의 kernel/types.ts는 21개 파일에서 29회 import됨. ScopeState가 ConstraintPool을 포함하므로 도메인별 디렉토리 분리(scope/ + constraint/) 시 순환 의존이 구조적으로 발생함. 현재의 기술 역할별 분류(kernel/commands/scanners/...)가 단방향 DAG를 유지하는 구조적 기반 (출처: 파일시스템 구조 리뷰, 2026-03-15)
+- [사실] sprint-kit의 프로토콜 문서(docs/agent-protocol/)의 코드 조각은 kernel 함수 개별 호출을 안내하지만, src/commands/의 executeStart 등 command 함수가 이미 동일 오케스트레이션을 수행하고 src/index.ts에서 export되고 있음. 프로토콜 문서와 공개 API의 정합성 검증이 필요한 상태 (출처: dispatch script 설계 리뷰, 2026-03-16)

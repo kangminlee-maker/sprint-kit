@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { executeStart, findExistingScope, type StartInput, type StartInitResult, type StartResumeResult, type StartFailure } from "./start.js";
+import { executeStart, findExistingScope, type StartInput, type StartResult, type StartInitResult, type StartResumeResult, type StartFailure } from "./start.js";
 import { readEvents } from "../kernel/event-store.js";
 import { reduce } from "../kernel/reducer.js";
 import { createScope } from "../kernel/scope-manager.js";
@@ -268,8 +268,8 @@ describe("executeStart — Path B: Brief filled", () => {
   });
 });
 
-describe("executeStart — Path B fail: Brief incomplete", () => {
-  it("returns StartFailure with missing fields listed", async () => {
+describe("executeStart — Path B: Brief incomplete → exploration conversation mode", () => {
+  it("succeeds with briefValidation indicating missing fields", async () => {
     // Step 1: Create scope via Path A
     const initResult = await executeStart({
       rawInput: "",
@@ -297,7 +297,16 @@ describe("executeStart — Path B fail: Brief incomplete", () => {
 `;
     writeFileSync(initResult.briefPath, incompleteBrief, "utf-8");
 
-    // Step 3: Run /start again
+    // Step 2.5: Create a local source and .sprint-kit.yaml so grounding can proceed
+    const srcDir = join(projectDir, "src-incomplete");
+    mkdirSync(srcDir, { recursive: true });
+    writeFileSync(join(srcDir, "index.ts"), "export const x = 1;");
+    writeFileSync(
+      join(projectDir, ".sprint-kit.yaml"),
+      `default_sources:\n  - type: add-dir\n    path: ${srcDir}\n    description: test source\n`,
+    );
+
+    // Step 3: Run /start again — should succeed with briefValidation
     const result = await executeStart({
       rawInput: "",
       projectRoot: projectDir,
@@ -305,11 +314,13 @@ describe("executeStart — Path B fail: Brief incomplete", () => {
       projectName: "incomplete-brief",
     });
 
-    expect(result.success).toBe(false);
-    const failure = result as StartFailure;
-    expect(failure.step).toBe("brief_validation");
-    expect(failure.reason).toContain("대상 사용자");
-    expect(failure.reason).toContain("기대 결과");
+    expect(result.success).toBe(true);
+    const success = result as StartResult;
+    expect(success.briefValidation).toBeDefined();
+    expect(success.briefValidation!.isComplete).toBe(false);
+    expect(success.briefValidation!.missingFields).toContain("대상 사용자");
+    expect(success.briefValidation!.missingFields).toContain("기대 결과");
+    expect(success.totalFiles).toBeGreaterThan(0);
   });
 });
 
