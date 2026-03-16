@@ -389,7 +389,8 @@ describe("ETag caching", () => {
 
     await scanTarball(source, '"etag"', "hash");
 
-    // tar should NOT be called
-    expect(mockedExecSync).not.toHaveBeenCalled();
+    // tar should NOT be called (gh auth token may be called for token resolution)
+    const tarCalls = mockedExecSync.mock.calls.filter(([cmd]) => String(cmd).includes("tar"));
+    expect(tarCalls).toHaveLength(0);
   });
 });

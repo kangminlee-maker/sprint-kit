@@ -6,6 +6,20 @@ import { scanLocal } from "./scan-local.js";
 import type { ScanResult, SourceEntry, ScanError, ScanSkipped } from "./types.js";
 
 /**
+ * Resolve GitHub token: GITHUB_TOKEN env var first, then `gh auth token` fallback.
+ */
+function resolveGitHubToken(): string | undefined {
+  if (process.env.GITHUB_TOKEN) {
+    return process.env.GITHUB_TOKEN;
+  }
+  try {
+    return execSync("gh auth token", { timeout: 5_000, stdio: "pipe" }).toString().trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Download a GitHub tarball and scan its contents.
  *
  * Uses Node.js built-in `fetch` to download the tarball, extracts to a temp
@@ -47,7 +61,7 @@ export async function scanTarball(
       Accept: "application/vnd.github+json",
       "User-Agent": "sprint-kit",
     };
-    const token = process.env.GITHUB_TOKEN;
+    const token = resolveGitHubToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
