@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.5 (2026-03-16)
+## 0.3.6 (2026-03-16)
 
 빈 brief로 /start 실행 허용 (Exploration conversation 모드). Brownfield 불변 제약 기록 절차 도입 (Phase 1: api_contract). 설계 과제 5건 종결.
 
