@@ -25,6 +25,10 @@ export type { CloseOutput } from "./commands/close.js";
 export { checkStale, checkAndRecordStale } from "./commands/stale-check.js";
 export type { StaleCheckResult } from "./commands/stale-check.js";
 
+// ─── Event Pipeline ───
+
+export { appendScopeEvent } from "./kernel/event-pipeline.js";
+
 // ─── Scope Management ───
 
 export { resolveScopePaths, generateScopeId, createScope, normalizeProjectName } from "./kernel/scope-manager.js";
