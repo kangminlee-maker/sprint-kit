@@ -19,7 +19,7 @@ import type { Event, ScopeState, ValidationPlanItem } from "./kernel/types.js";
 
 // ─── Golden data ───
 
-const GOLDEN_DIR = resolve(import.meta.dirname, "../scopes/example-tutor-block");
+const GOLDEN_DIR = resolve(import.meta.dirname, "kernel/__fixtures__/example-tutor-block");
 
 function readGoldenEvents(): Event[] {
   return readFileSync(resolve(GOLDEN_DIR, "events.ndjson"), "utf-8")

@@ -592,7 +592,7 @@ describe("gate-guard — golden data integration", () => {
   it("every golden event passes validation against its preceding state", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
-    const goldenPath = resolve(import.meta.dirname, "../../scopes/example-tutor-block/events.ndjson");
+    const goldenPath = resolve(import.meta.dirname, "__fixtures__/example-tutor-block/events.ndjson");
     const allEvents: Event[] = readFileSync(goldenPath, "utf-8")
       .trimEnd()
       .split("\n")

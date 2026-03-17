@@ -424,15 +424,15 @@ describe("event-pipeline — golden data replay", () => {
   it("replays all 29 golden events and produces matching materialized views", () => {
     const goldenEventsPath = resolve(
       import.meta.dirname,
-      "../../scopes/example-tutor-block/events.ndjson",
+      "__fixtures__/example-tutor-block/events.ndjson",
     );
     const goldenPoolPath = resolve(
       import.meta.dirname,
-      "../../scopes/example-tutor-block/state/constraint-pool.json",
+      "__fixtures__/example-tutor-block/state/constraint-pool.json",
     );
     const goldenVerdictPath = resolve(
       import.meta.dirname,
-      "../../scopes/example-tutor-block/state/verdict-log.json",
+      "__fixtures__/example-tutor-block/state/verdict-log.json",
     );
 
     const goldenEvents: Event[] = readFileSync(goldenEventsPath, "utf-8")

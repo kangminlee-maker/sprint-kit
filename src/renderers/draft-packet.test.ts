@@ -74,7 +74,7 @@ function builderDet(id: string): ConstraintDetailBuilder {
 
 describe("draft-packet — golden data structure", () => {
   it("renders Draft Packet matching golden structure", () => {
-    const goldenPath = resolve(import.meta.dirname, "../../scopes/example-tutor-block/events.ndjson");
+    const goldenPath = resolve(import.meta.dirname, "../kernel/__fixtures__/example-tutor-block/events.ndjson");
     const events: Event[] = readFileSync(goldenPath, "utf-8").trimEnd().split("\n").map((l) => JSON.parse(l) as Event);
 
     // State at surface_confirmed + all constraints discovered (first 18 events)

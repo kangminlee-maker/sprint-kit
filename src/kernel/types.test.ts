@@ -12,7 +12,7 @@ import {
 
 const GOLDEN_PATH = resolve(
   import.meta.dirname,
-  "../../scopes/example-tutor-block/events.ndjson",
+  "__fixtures__/example-tutor-block/events.ndjson",
 );
 
 function readGoldenEvents(): Event[] {

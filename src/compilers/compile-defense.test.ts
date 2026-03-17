@@ -379,8 +379,8 @@ describe("compile-defense — golden data", () => {
     const { resolve } = await import("node:path");
     const { reduce } = await import("../kernel/reducer.js");
 
-    const eventsPath = resolve(import.meta.dirname, "../../scopes/example-tutor-block/events.ndjson");
-    const deltaSetPath = resolve(import.meta.dirname, "../../scopes/example-tutor-block/build/delta-set.json");
+    const eventsPath = resolve(import.meta.dirname, "../kernel/__fixtures__/example-tutor-block/events.ndjson");
+    const deltaSetPath = resolve(import.meta.dirname, "../kernel/__fixtures__/example-tutor-block/build/delta-set.json");
 
     const events = readFileSync(eventsPath, "utf-8").trimEnd().split("\n").map((l) => JSON.parse(l));
     const state = reduce(events);

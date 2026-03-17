@@ -48,7 +48,7 @@ describe("event-store", () => {
     it("reads golden data successfully", () => {
       const goldenPath = join(
         import.meta.dirname,
-        "../../scopes/example-tutor-block/events.ndjson",
+        "__fixtures__/example-tutor-block/events.ndjson",
       );
       const events = readEvents(goldenPath);
       expect(events).toHaveLength(29);

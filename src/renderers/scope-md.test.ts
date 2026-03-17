@@ -41,7 +41,7 @@ describe("scope-md — golden data", () => {
   it("renders scope.md from golden events", () => {
     const goldenPath = resolve(
       import.meta.dirname,
-      "../../scopes/example-tutor-block/events.ndjson",
+      "../kernel/__fixtures__/example-tutor-block/events.ndjson",
     );
     const events: Event[] = readFileSync(goldenPath, "utf-8")
       .trimEnd()
