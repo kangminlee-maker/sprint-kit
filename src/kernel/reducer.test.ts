@@ -6,7 +6,7 @@ import type { Event, ScopeState, ConstraintPool, VerdictLogEntry } from "./types
 
 // ─── Golden data helpers ───
 
-const GOLDEN_DIR = resolve(import.meta.dirname, "../../scopes/example-tutor-block");
+const GOLDEN_DIR = resolve(import.meta.dirname, "__fixtures__/example-tutor-block");
 
 function readGoldenEvents(): Event[] {
   return readFileSync(resolve(GOLDEN_DIR, "events.ndjson"), "utf-8")

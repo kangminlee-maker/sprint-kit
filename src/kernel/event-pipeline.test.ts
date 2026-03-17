@@ -421,21 +421,13 @@ describe("event-pipeline — golden data replay", () => {
   beforeEach(setup);
   afterEach(teardown);
 
-  it("replays all 29 golden events and produces matching materialized views", () => {
-    const goldenEventsPath = resolve(
-      import.meta.dirname,
-      "../../scopes/example-tutor-block/events.ndjson",
-    );
-    const goldenPoolPath = resolve(
-      import.meta.dirname,
-      "../../scopes/example-tutor-block/state/constraint-pool.json",
-    );
-    const goldenVerdictPath = resolve(
-      import.meta.dirname,
-      "../../scopes/example-tutor-block/state/verdict-log.json",
-    );
+  const GOLDEN_DIR = resolve(import.meta.dirname, "__fixtures__/example-tutor-block");
+  const GOLDEN_EVENTS_PATH = resolve(GOLDEN_DIR, "events.ndjson");
+  const GOLDEN_POOL_PATH = resolve(GOLDEN_DIR, "state/constraint-pool.json");
+  const GOLDEN_VERDICT_PATH = resolve(GOLDEN_DIR, "state/verdict-log.json");
 
-    const goldenEvents: Event[] = readFileSync(goldenEventsPath, "utf-8")
+  it("replays all 29 golden events and produces matching materialized views", () => {
+    const goldenEvents: Event[] = readFileSync(GOLDEN_EVENTS_PATH, "utf-8")
       .trimEnd()
       .split("\n")
       .map((line) => JSON.parse(line) as Event);
@@ -458,13 +450,13 @@ describe("event-pipeline — golden data replay", () => {
     expect(replayedEvents).toHaveLength(29);
 
     // Verify constraint-pool.json matches golden
-    const expectedPool = JSON.parse(readFileSync(goldenPoolPath, "utf-8")) as ConstraintPool;
+    const expectedPool = JSON.parse(readFileSync(GOLDEN_POOL_PATH, "utf-8")) as ConstraintPool;
     const actualPool = JSON.parse(readFileSync(paths.constraintPool, "utf-8")) as ConstraintPool;
     expect(actualPool.summary).toEqual(expectedPool.summary);
     expect(actualPool.constraints).toEqual(expectedPool.constraints);
 
     // Verify verdict-log.json matches golden (structure, not timestamps)
-    const expectedLog = JSON.parse(readFileSync(goldenVerdictPath, "utf-8")) as VerdictLogEntry[];
+    const expectedLog = JSON.parse(readFileSync(GOLDEN_VERDICT_PATH, "utf-8")) as VerdictLogEntry[];
     const actualLog = JSON.parse(readFileSync(paths.verdictLog, "utf-8")) as VerdictLogEntry[];
     expect(actualLog).toHaveLength(expectedLog.length);
     for (let i = 0; i < expectedLog.length; i++) {

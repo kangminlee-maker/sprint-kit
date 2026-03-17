@@ -12,11 +12,11 @@ import type { Event, ConstraintPool, ConstraintEntry } from "./types.js";
 
 const GOLDEN_EVENTS_PATH = resolve(
   import.meta.dirname,
-  "../../scopes/example-tutor-block/events.ndjson",
+  "__fixtures__/example-tutor-block/events.ndjson",
 );
 const GOLDEN_POOL_PATH = resolve(
   import.meta.dirname,
-  "../../scopes/example-tutor-block/state/constraint-pool.json",
+  "__fixtures__/example-tutor-block/state/constraint-pool.json",
 );
 
 function readGoldenEvents(): Event[] {

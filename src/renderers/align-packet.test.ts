@@ -93,7 +93,7 @@ describe("align-packet — golden data structure", () => {
   it("renders Align Packet matching golden structure", () => {
     const goldenPath = resolve(
       import.meta.dirname,
-      "../../scopes/example-tutor-block/events.ndjson",
+      "../kernel/__fixtures__/example-tutor-block/events.ndjson",
     );
     const events: Event[] = readFileSync(goldenPath, "utf-8")
       .trimEnd()
