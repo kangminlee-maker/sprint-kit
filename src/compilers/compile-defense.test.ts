@@ -379,12 +379,13 @@ describe("compile-defense — golden data", () => {
     const { resolve } = await import("node:path");
     const { reduce } = await import("../kernel/reducer.js");
 
-    const eventsPath = resolve(import.meta.dirname, "../kernel/__fixtures__/example-tutor-block/events.ndjson");
-    const deltaSetPath = resolve(import.meta.dirname, "../kernel/__fixtures__/example-tutor-block/build/delta-set.json");
+    const GOLDEN_DIR = resolve(import.meta.dirname, "../kernel/__fixtures__/example-tutor-block");
+    const GOLDEN_EVENTS_PATH = resolve(GOLDEN_DIR, "events.ndjson");
+    const GOLDEN_DELTA_SET_PATH = resolve(GOLDEN_DIR, "build/delta-set.json");
 
-    const events = readFileSync(eventsPath, "utf-8").trimEnd().split("\n").map((l) => JSON.parse(l));
+    const events = readFileSync(GOLDEN_EVENTS_PATH, "utf-8").trimEnd().split("\n").map((l) => JSON.parse(l));
     const state = reduce(events);
-    const deltaSet: DeltaSet = JSON.parse(readFileSync(deltaSetPath, "utf-8"));
+    const deltaSet: DeltaSet = JSON.parse(readFileSync(GOLDEN_DELTA_SET_PATH, "utf-8"));
 
     // Build Section 3 from pool (auto-generated)
     const section3 = state.constraint_pool.constraints
