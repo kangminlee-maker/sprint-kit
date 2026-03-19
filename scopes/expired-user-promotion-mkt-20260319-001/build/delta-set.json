@@ -1,0 +1,45 @@
+{
+  "scope_id": "expired-user-promotion-mkt-20260319-001",
+  "surface_hash": "a07026c1cf5d2dffcd17c4df0df70ab2066f585ea2ea946725adbfe58eb3f3fc",
+  "build_spec_hash": "14e3f875011b5763767b194dfff543732cd61813a71b02b6c1063dab62007a54",
+  "changes": [
+    {
+      "change_id": "CHG-001",
+      "action": "modify",
+      "file_path": "src/main/resources/config/common/marketing-config.yml",
+      "description": "풀페이지 팝업 콘텐츠 설정 변경: 헤드라인, 서브카피, 이미지 URL, CTA 텍스트, 닫기 텍스트",
+      "related_impl": [
+        "IMPL-001"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-002",
+        "CST-003"
+      ],
+      "before_context": "현재: 신규기능 런칭 메시지",
+      "after_context": "변경: 손실 회피 + 가격 강조 메시지",
+      "acceptance_criteria": [
+        "헤드라인이 \"지금 역대 최대 할인가로 다시 시작하세요!\"로 표시됨",
+        "서브카피가 \"포도와 열심히 쌓은 외국어 실력이 사라지고 있어요ㅠㅠ\"로 표시됨",
+        "CTA가 \"4만원대로 다시 시작 >\"로 표시되고 세그먼트별 URL로 이동",
+        "닫기가 \"할인 혜택 포기하기\"로 표시됨"
+      ]
+    },
+    {
+      "change_id": "CHG-002",
+      "action": "modify",
+      "file_path": "public/assets/promotion/",
+      "description": "월 4만원대 프로모션 이미지 에셋 추가 (디자이너 제작)",
+      "related_impl": [
+        "IMPL-002"
+      ],
+      "related_cst": [
+        "CST-001"
+      ],
+      "acceptance_criteria": [
+        "이미지가 팝업에 정상 로드됨",
+        "월 4만원대 가격이 명확히 보임"
+      ]
+    }
+  ]
+}

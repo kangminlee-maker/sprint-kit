@@ -1,0 +1,13 @@
+{
+  "scope_id": "expired-user-promotion-mkt-20260319-001",
+  "snapshot_revision": 1,
+  "source_hashes": {
+    "add-dir:./sources": "1ad6c40bb077493f457f814dffd54085e753f8a5c846423f1b4a8bd687d7e7af"
+  },
+  "perspective_summary": {
+    "experience": 961,
+    "code": 13144,
+    "policy": 1197
+  },
+  "scanned_at": "2026-03-19T04:29:20.034Z"
+}

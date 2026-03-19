@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gray-900: #1C1C1C;
+  --color-gray-500: #757575;
+  --color-gray-400: #A5A5A5;
+  --color-gray-300: #D6D6D6;
+  --color-gray-200: #E8E8E8;
+  --color-gray-100: #F5F5F5;
+  --color-podo-green: #B5FD4C;
+  --color-green-500: #6ABE36;
+  --color-green-300: #9BEB26;
+  --color-green-100: #F2FCEC;
+  --color-red-500: #FD6771;
+  --color-red-100: #FFF0F1;
+  --color-blue-500: #6184FF;
+  --color-podo-white: #FBFBF9;
+  --shadow-modal: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+}
+
+body {
+  font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: #f0f0f0;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--color-podo-white);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

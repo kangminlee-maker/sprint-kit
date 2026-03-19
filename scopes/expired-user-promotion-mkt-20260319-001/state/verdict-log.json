@@ -1,0 +1,32 @@
+[
+  {
+    "type": "align.locked",
+    "revision": 20,
+    "ts": "2026-03-19T06:06:01.758Z",
+    "locked_direction": "LOW/MEDIUM 세그먼트 만료자(D+4 이후) 풀페이지 팝업 메시지를 손실 회피 + 가격 강조로 교체하여 재구매율(현재 2.21%)을 향상시킨다. 2주간 최종 결제 전환율로 성과 측정."
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 24,
+    "ts": "2026-03-19T06:23:50.671Z",
+    "constraint_id": "CST-001",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 25,
+    "ts": "2026-03-19T06:23:50.674Z",
+    "constraint_id": "CST-002",
+    "decision": "inject",
+    "decision_owner": "product_owner"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 26,
+    "ts": "2026-03-19T06:23:50.674Z",
+    "constraint_id": "CST-003",
+    "decision": "inject",
+    "decision_owner": "builder"
+  }
+]
