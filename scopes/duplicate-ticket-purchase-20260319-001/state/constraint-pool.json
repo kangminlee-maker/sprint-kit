@@ -1,0 +1,241 @@
+{
+  "constraints": [
+    {
+      "constraint_id": "CST-001",
+      "perspective": "experience",
+      "summary": "수강권 관리 UI에 비활성(INACTIVE) 상태 개념이 없음 — 현재 사용중/보너스/사용종료 3그룹만 존재",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "비활성 수강권이 UI에 표시되지 않아 고객이 보관 중인 수강권을 확인/활성화할 수 없음",
+      "source_refs": [
+        {
+          "source": "podo-app/views/my-podo-plan/plan-list-view.tsx",
+          "detail": "Line 36-52: status groups에 INACTIVE 없음"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "plan-list-view.tsx에서 사용중/홀딩중/종료예정/보너스/일괄결제/사용종료만 분류",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 4
+    },
+    {
+      "constraint_id": "CST-002",
+      "perspective": "experience",
+      "summary": "홈 팝업이 서버 기반 extendingPaymentPopup 단일 구조 — 6단계 phase별 분기 없음",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "만료 임박 시점별 차등 메시지(리포트→쿠폰→긴급)를 전달할 수 없어 리텐션 효과 감소",
+      "source_refs": [
+        {
+          "source": "podo-backend/applications/popup/usecase/PopupServiceImpl.java",
+          "detail": "Line 135-225: makeExtendingPaymentPopupList()가 단일 팝업만 생성"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "PopupServiceImpl.java에서 D-0~D-25 범위 단일 팝업만 생성, phase 분기 없음",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 5
+    },
+    {
+      "constraint_id": "CST-003",
+      "perspective": "experience",
+      "summary": "결제 페이지가 신규 회원/체험 전환만 지원 — 기존 회원 전용 프로모션 배너/쿠폰 섹션 없음",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "기존 회원이 프로모션 혜택을 인지하지 못해 전환율 저하",
+      "source_refs": [
+        {
+          "source": "podo-app/views/subscribe-payment-success/view.tsx",
+          "detail": "기존 결제 완료 후 홈으로만 이동, 수강권 관리로의 안내 없음"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "현재 결제 페이지(/subscribes/payment)에 프로모션 배너/쿠폰 섹션 컴포넌트 없음",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 6
+    },
+    {
+      "constraint_id": "CST-004",
+      "perspective": "code",
+      "summary": "InvalidTicketDuplicate 예외가 동일 언어 복수 티켓 시 throw — 중복 구매 허용 시 getActiveTicket() 전면 수정 필요",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "중복 구매 허용 시 기존 예약/수업/환불 등 getActiveTicket()에 의존하는 모든 로직이 오류 발생",
+      "source_refs": [
+        {
+          "source": "podo-backend/applications/ticket/service/TicketServiceImpl.java",
+          "detail": "Line 176: activeTickets.size() > 1이면 InvalidTicketDuplicate throw"
+        },
+        {
+          "source": "podo-backend/modules/exception/InvalidTicketDuplicate.java",
+          "detail": "동일 기간에 수강권이 여러개 존재합니다"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "TicketServiceImpl.java Line 158-180에서 단일 Ticket 반환 전제. 예약, 출석, 환불 등 다수 서비스가 이 메서드에 의존",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 7
+    },
+    {
+      "constraint_id": "CST-005",
+      "perspective": "code",
+      "summary": "DUPLICATE_SUBSCRIPTION 검증이 payment 도메인에서 동일 언어/커리큘럼 중복 구독 차단",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "결제 시 동일 언어 구매가 여전히 차단되어 중복 구매 기능 자체가 작동하지 않음",
+      "source_refs": [
+        {
+          "source": "podo-backend/podo-docs/domains/payment/policies.md",
+          "detail": "Line 152-175: 동일 langType/curriculumType 활성 구독 존재 시 DUPLICATE_SUBSCRIPTION 에러"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "PaymentGateway에서 구독 중복 검증 수행. SMART_TALK만 유지하고 나머지 제거 필요",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 8
+    },
+    {
+      "constraint_id": "CST-006",
+      "perspective": "code",
+      "summary": "TicketStatus가 별도 enum 없이 날짜/카운트 조합으로 상태 판별 — INACTIVE/DEPLETED/REFUNDED 상태 미정의",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "5상태 전이 로직을 구현할 기반이 없어 비활성 보관, 횟수 소진, 환불 상태를 구분할 수 없음",
+      "source_refs": [
+        {
+          "source": "podo-backend/applications/ticket/domain/Ticket.java",
+          "detail": "Line 22-100: eventType/refundCount/destroyCount/날짜로 상태 판별, 명시적 status 필드 없음"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "Ticket.java에 status enum 없음. findActivePodoTicket 쿼리가 날짜 범위+카운트 조합으로 활성 판별",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 9
+    },
+    {
+      "constraint_id": "CST-007",
+      "perspective": "code",
+      "summary": "기존 알림톡 3종(D-25/D-7/당일)과 신규 4회 스케줄(D-25/D-14/D-7/H-12) 병행 시 중복 발송 위험",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "같은 고객에게 동일 시점에 구버전+신버전 알림톡이 중복 발송되어 고객 피로도 증가",
+      "source_refs": [
+        {
+          "source": "podo-backend/applications/log/enums/ToastTemplateCode.java",
+          "detail": "기존 pd_mkt_reg_remind 시리즈 템플릿 존재"
+        },
+        {
+          "source": "podo-backend/applications/notification/enums/NotificationCode.java",
+          "detail": "PD_MKT_REG_REMIND_4/5 등 기존 리마인드 코드"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "기존 ToastTemplateCode에 연장 유도 알림톡 템플릿 존재. 신규 템플릿과 병행 기간 필요",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 10
+    },
+    {
+      "constraint_id": "CST-008",
+      "perspective": "policy",
+      "summary": "약관 제15조 환불 규정이 개별 수강권 단위 환불을 명시적으로 전제하지 않음 — 복수 보유 시 산정 기준 모호",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "복수 수강권 환불 시 누적결제액 산정이 모호해 CS 분쟁 발생 가능",
+      "source_refs": [
+        {
+          "source": "sources/terms-of-service.md",
+          "detail": "제15조: 환불 공식이 단일 수강권 전제. 복수 보유 시 originPrice/누적결제액 기준 미정의"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "terms-of-service.md 제15조에서 확인. PRD에서 개별 수강권 단위 환불로 결정(FR24-1)",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 11
+    },
+    {
+      "constraint_id": "CST-009",
+      "perspective": "policy",
+      "summary": "수강확인증 발급 시 환불 완전 차단(제16조 4항) — 복수 수강권 보유 시 어느 수강권에 대한 발급인지 선택 필요",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "수강확인증 발급 대상이 불명확하면 의도치 않은 수강권의 환불이 차단될 수 있음",
+      "source_refs": [
+        {
+          "source": "sources/terms-of-service.md",
+          "detail": "제16조 4항: 수강확인증 발급 수강권은 환불/해지 불가"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "terms-of-service.md에서 확인. PRD에서 수강권 선택 UI로 해결(FR26)",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 12
+    },
+    {
+      "constraint_id": "CST-010",
+      "perspective": "policy",
+      "summary": "구독(BILLING) 결제는 즉시 ACTIVE — 동일 언어 중복구매 시 일괄결제(LUMP_SUM)만 허용해야 하는 구조적 제약",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "구독 결제로 중복 구매 시 두 수강권이 동시 ACTIVE 되어 예약/수업/환불 로직 충돌",
+      "source_refs": [
+        {
+          "source": "podo-backend/podo-docs/domains/payment/policies.md",
+          "detail": "BILLING 타입은 결제 즉시 데이터 생성 + ACTIVE. Card Parking 후 자동 스케줄"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "payment/policies.md에서 BILLING 결제 플로우 확인. 결제 즉시 ACTIVE 전환 구조",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 13
+    },
+    {
+      "constraint_id": "CST-011",
+      "perspective": "policy",
+      "summary": "카카오 알림톡 정보성/광고성 분류 미확정 — 리텐션 알림이 광고성으로 분류되면 마케팅 수신 동의 유저만 대상",
+      "severity": "recommended",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "카카오 심사에서 광고성으로 판정되면 발송 대상이 대폭 축소되어 리텐션 효과 감소",
+      "source_refs": [
+        {
+          "source": "podo-backend/podo-docs/domains/notification/policies.md",
+          "detail": "카카오 발신키 분리: 일반(정보성) vs 마케팅(광고성)"
+        }
+      ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "notification/policies.md에서 발신키 분리 확인. 카카오 심사 결과에 따라 정책 변경 필요",
+      "requires_policy_change": false,
+      "status": "undecided",
+      "discovered_at": 14
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "required": 10,
+    "recommended": 1,
+    "decided": 0,
+    "clarify_pending": 0,
+    "invalidated": 0,
+    "undecided": 11
+  }
+}
