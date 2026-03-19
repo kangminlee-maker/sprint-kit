@@ -22,7 +22,7 @@ default_sources:
     url: https://github.com/re-speak/podo-ontology
     description: "podo 온톨로지"
   - type: github-tarball
-    url: https://github.com/re-speak/vibe-design/tree/feature/design-system-ontology
+    url: https://github.com/re-speak/vibe-design/tree/feat/prevent-purchase-duplication
     description: "podo Design System, 디자인 온톨로지, 디자인 assets"
     usage_hint: context
   - type: add-dir
