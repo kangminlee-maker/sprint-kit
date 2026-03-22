@@ -1,5 +1,51 @@
 # Changelog
 
+## 1.0.0 (2026-03-22)
+
+온톨로지 기반 제약 발견(Ontology-Guided Constraint Discovery) 도입. 도메인 온톨로지에서 6개 관점의 코드 청크를 자동 수집하여, 제약 발견의 정밀도를 높입니다.
+
+### 온톨로지 기반 코드 선택 (Ontology-Guided Code Selection)
+
+- **4단계 파이프라인**: `buildOntologyIndex` → `queryOntology` → `resolveCodeLocations` → `collectRelevantChunks`. 도메인 온톨로지(YAML)에서 brief 키워드와 관련된 코드 위치를 자동 식별
+- **6관점 코드 청크 수집**: Semantics(의미), Dependency(의존), Logic(로직), Structure(구조), Pragmatics(활용), Evolution(확장). 각 관점별로 제약 발견에 필요한 코드 조각을 선별
+- **`/start` grounding 통합**: 온톨로지 소스가 존재하면 grounding 단계에서 자동 실행. 실패해도 grounding은 성공 (선택적 보강)
+- **tarball 온톨로지 지원**: `github-tarball` 타입 소스에서 GitHub API로 YAML 파일(code-mapping.yaml, behavior.yaml, model.yaml) 직접 fetch. `add-dir`(로컬)과 동일한 파이프라인 사용
+
+### 새 모듈
+
+- **`scanners/viewpoint-collectors.ts`**: 6관점별 코드 청크 수집 함수 (collectSemantics, collectDependency, collectLogic, collectStructure, collectPragmatics, collectEvolution)
+- **`scanners/code-chunk-collector.ts`**: 6관점 수집 오케스트레이션. CoverageGap 감지
+- **`scanners/ontology-resolve.ts`**: OntologyQueryResult의 코드 위치를 ScanResult 파일 목록과 매칭하여 실제 경로로 해석
+
+### 공개 API 확장
+
+- **`appendScopeEvent`**: 이벤트 파이프라인 직접 접근 export 추가
+- **온톨로지 파이프라인 전체 export**: `buildOntologyIndex`, `queryOntology`, `resolveCodeLocations`, `collectRelevantChunks` + 관련 타입 15개
+- **`CollectionViewpoint`, `CodeChunk`**: 관점별 코드 조각 타입 export
+
+### 기타 변경
+
+- **`gh auth token` fallback**: `GITHUB_TOKEN` 환경변수 미설정 시 `gh auth token` 명령으로 대체
+- **golden test fixture 이동**: `scopes/` → `src/kernel/__fixtures__/`로 이동. 테스트 데이터의 소스 코드 귀속 명확화
+- **`.sprint-kit.yaml`**: vibe-design 소스 브랜치를 `feat/prevent-purchase-duplication`으로 변경
+
+### 설계 문서
+
+- **`dev-docs/design/ontology-guided-constraint-discovery.md`**: 온톨로지 기반 제약 발견 설계서 (6관점 정의, 파이프라인 구조, Entry→Summary 변환)
+- **`dev-docs/design/podo-ontology-enhancement.md`**: podo 온톨로지 보강 제안
+- **`dev-docs/design/rlm-deep-analysis-integration.md`**: RLM 심층 분석 통합 설계서
+- **`dev-docs/design/deep-analysis-research-log.md`**: 심층 분석 연구 기록
+
+### 에이전트 프로토콜
+
+- **`start.md`**: 온톨로지 기반 코드 선택 결과(relevant_chunks)를 grounding 산출물에 포함하는 절차 추가
+
+### 테스트
+
+- 46파일 1,042건 (0.3.6 대비 +17건, 테스트 파일 +2)
+- `ontology-resolve.test.ts`: 코드 위치 해석 테스트 4건
+- `code-chunk-collector.test.ts`: 6관점 통합 수집 테스트 13건
+
 ## 0.3.6 (2026-03-16)
 
 빈 brief로 /start 실행 허용 (Exploration conversation 모드). Brownfield 불변 제약 기록 절차 도입 (Phase 1: api_contract). 설계 과제 5건 종결.

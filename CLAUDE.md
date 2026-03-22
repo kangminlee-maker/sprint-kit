@@ -25,6 +25,8 @@ These principles apply to all artifacts and documents produced by the system.
 
 - **Ontology Map**: `docs/ontology-map.md` — 도메인 엔티티, union type, 관계 구조, Reverse Index (자동 생성, `npm run ontology-map`)
 - **Gate Guard**: `npm run check-deps` — kernel/ 모듈의 의존 방향 검증 (외부 모듈 import 차단)
+- **Protocol Refs Check**: `npm run check-refs` — 에이전트 프로토콜 문서의 타입/이벤트 참조가 코드와 일치하는지 검증
+- **Ontology Pipeline**: `scanners/ontology-index.ts` → `ontology-query.ts` → `ontology-resolve.ts` → `code-chunk-collector.ts` — 도메인 온톨로지 기반 6관점 코드 청크 자동 수집
 
 ## Agent Review
 

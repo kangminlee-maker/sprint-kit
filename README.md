@@ -166,13 +166,28 @@ sources/          로컬 참고 자료 (디자인 가이드, 이용약관 등)
 | `dev-docs/spec/event-state-contract.md` | 이벤트 분류, 상태 전이 매트릭스 |
 | `dev-docs/spec/constraint-discovery.md` | 3개 관점 탐색, 제약 생명주기 |
 | `dev-docs/spec/build-spec-compile.md` | Build Spec 구조, Compile Defense 규칙 (L1/L2/L3) |
-| `dev-docs/design/` | 설계 제안서 (Adaptive Align) |
+| `dev-docs/design/` | 설계 제안서 (Adaptive Align, 온톨로지 기반 제약 발견, RLM 심층 분석) |
+
+## 온톨로지 기반 제약 발견
+
+v1.0.0에서 추가된 기능입니다. 도메인 온톨로지(YAML 파일)가 소스에 포함되어 있으면, grounding 단계에서 자동으로 6개 관점의 코드 청크를 수집합니다.
+
+| 관점 | 수집 대상 |
+|------|----------|
+| **Semantics** | 도메인 용어가 정의된 코드 위치 |
+| **Dependency** | 변경 대상 엔티티의 의존 관계 |
+| **Logic** | 상태 전이, 조건 분기, 비즈니스 규칙 |
+| **Structure** | API 엔드포인트, 스키마, 설정 파일 |
+| **Pragmatics** | 실제 사용 패턴, 호출 빈도 |
+| **Evolution** | 변경 이력, 확장 가능성 |
+
+이 기능은 선택적입니다. 온톨로지 소스가 없으면 기존 방식(3개 관점 소스 스캔)으로 동작합니다.
 
 ## 현재 규모
 
-- 소스 파일 45+개, 테스트 44파일 1,025건
-- 상태 15개 (`exploring` 포함), 이벤트 44종, Compile Defense 규칙 15개
-- Exploration 이벤트 3종 (전이 이벤트), Pre-Apply Review 이벤트 1종
+- 소스 파일 48개, 테스트 46파일 1,042건
+- 상태 15개 (`exploring` 포함), 이벤트 45종, Compile Defense 규칙 16개
+- 온톨로지 파이프라인 4단계 (index → query → resolve → collect)
 
 ## License
 
