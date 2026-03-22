@@ -37,7 +37,7 @@ import {
 } from "../config/project-config.js";
 import { scanLocal } from "../scanners/scan-local.js";
 import { scanVault } from "../scanners/scan-vault.js";
-import { scanTarball } from "../scanners/scan-tarball.js";
+import { scanTarball, resolveGitHubToken } from "../scanners/scan-tarball.js";
 import { sourceKey, toGroundingSource, isScanError, isScanSkipped, type SourceEntry, type ScanResult, type ScanError, type ScanSkipped } from "../scanners/types.js";
 import { buildBrownfield } from "../scanners/brownfield-builder.js";
 import { parseBrief } from "../parsers/brief-parser.js";
@@ -560,59 +560,78 @@ async function executeGrounding(
   progress(`소스 스캔 완료 (파일 ${totalFiles}개)`);
 
   // ── Ontology-Guided Code Selection (optional) ──
-  // 온톨로지 소스(add-dir)가 스캔되었으면, 6관점 코드 청크를 사전 생성한다.
+  // 온톨로지 소스가 스캔되었으면, 6관점 코드 청크를 사전 생성한다.
   // 이 단계는 grounding의 선택적 보강이며, 실패해도 grounding은 성공한다.
-  // tarball 소스는 파일이 이미 정리되어 읽을 수 없으므로, add-dir만 지원한다.
+  // add-dir: 로컬 파일 직접 읽기. tarball: GitHub API로 YAML 파일 fetch.
   try {
     const ontologySource = scanResults.find(
       (r) => r.source.type === "add-dir" && (r.source as { path: string }).path?.includes("ontology"),
+    ) ?? scanResults.find(
+      (r) => r.source.type === "github-tarball" && (r.source as { url: string }).url?.includes("ontology"),
     );
 
-    if (ontologySource && ontologySource.source.type === "add-dir") {
+    // YAML 파일 읽기 — add-dir은 로컬, tarball은 GitHub API
+    const yamlNames = ["code-mapping.yaml", "behavior.yaml", "model.yaml"];
+    let yamlContents: string[] = ["", "", ""];
+
+    if (ontologySource?.source.type === "add-dir") {
       const ontoDir = (ontologySource.source as { path: string }).path;
-      const yamlNames = ["code-mapping.yaml", "behavior.yaml", "model.yaml"];
-      const yamlContents = yamlNames.map((name) => {
+      yamlContents = yamlNames.map((name) => {
         const candidates = ontologySource.files.filter((f) => f.path.endsWith(name));
         if (candidates.length === 0) return "";
         try { return readFileSync(join(ontoDir, candidates[0].path), "utf-8"); } catch { return ""; }
       });
+    } else if (ontologySource?.source.type === "github-tarball") {
+      const url = (ontologySource.source as { url: string }).url;
+      const repoMatch = url.match(/github\.com\/([^/]+\/[^/]+)/);
+      if (repoMatch) {
+        const repo = repoMatch[1].replace(/\.git$/, "");
+        const token = resolveGitHubToken();
+        const headers: Record<string, string> = { Accept: "application/vnd.github.raw", "User-Agent": "sprint-kit" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const [glossaryYaml, actionsYaml, transitionsYaml] = yamlContents;
-      if (glossaryYaml || actionsYaml || transitionsYaml) {
-        const index = buildOntologyIndex(glossaryYaml, actionsYaml, transitionsYaml);
-        // 모든 non-tarball 소스의 ScanResult를 합산하여 파일 목록 확보
-        const mergedFiles = scanResults.flatMap((r) => r.files);
-        const mergedDeps = scanResults.flatMap((r) => r.dependency_graph);
-        const mergedApis = scanResults.flatMap((r) => r.api_patterns);
-        const mergedSchemas = scanResults.flatMap((r) => r.schema_patterns);
-        const mergedConfigs = scanResults.flatMap((r) => r.config_patterns);
+        yamlContents = await Promise.all(yamlNames.map(async (name) => {
+          try {
+            const resp = await fetch(`https://api.github.com/repos/${repo}/contents/${name}`, { headers });
+            return resp.ok ? await resp.text() : "";
+          } catch { return ""; }
+        }));
+      }
+    }
 
-        // glossary의 모든 키워드 + meaning을 keywords로 사용
-        const keywords = [...index.glossary.values()].flatMap((g) => [
-          g.canonical, g.meaning, ...g.legacy_aliases,
-        ]).filter(Boolean);
+    const [glossaryYaml, actionsYaml, transitionsYaml] = yamlContents;
+    if (ontologySource && (glossaryYaml || actionsYaml || transitionsYaml)) {
+      const index = buildOntologyIndex(glossaryYaml, actionsYaml, transitionsYaml);
+      const mergedFiles = scanResults.flatMap((r) => r.files);
+      const mergedDeps = scanResults.flatMap((r) => r.dependency_graph);
+      const mergedApis = scanResults.flatMap((r) => r.api_patterns);
+      const mergedSchemas = scanResults.flatMap((r) => r.schema_patterns);
+      const mergedConfigs = scanResults.flatMap((r) => r.config_patterns);
 
-        const queryResult = queryOntology(index, keywords);
-        if (queryResult.matched_entities.length > 0) {
-          const resolved = resolveCodeLocations(queryResult.code_locations, mergedFiles);
-          const chunks = collectRelevantChunks(resolved, queryResult, {
-            source: ontologySource.source,
-            scanned_at: ontologySource.scanned_at,
-            files: mergedFiles,
-            content_hashes: {},
-            dependency_graph: mergedDeps,
-            api_patterns: mergedApis,
-            schema_patterns: mergedSchemas,
-            config_patterns: mergedConfigs,
-            doc_structure: [],
-          }, keywords);
+      const keywords = [...index.glossary.values()].flatMap((g) => [
+        g.canonical, g.meaning, ...g.legacy_aliases,
+      ]).filter(Boolean);
 
-          const chunksPath = join(paths.build, "relevant-chunks.json");
-          writeFileSync(chunksPath, JSON.stringify(chunks, null, 2) + "\n", "utf-8");
-          progress(`온톨로지 6관점 코드 선별 완료 (${chunks.total_chunks}건, ${queryResult.matched_entities.length}개 엔티티 매칭)`);
-        } else {
-          progress("온톨로지 매칭 0건 — 에이전트 직접 탐색으로 진행");
-        }
+      const queryResult = queryOntology(index, keywords);
+      if (queryResult.matched_entities.length > 0) {
+        const resolved = resolveCodeLocations(queryResult.code_locations, mergedFiles);
+        const chunks = collectRelevantChunks(resolved, queryResult, {
+          source: ontologySource.source,
+          scanned_at: ontologySource.scanned_at,
+          files: mergedFiles,
+          content_hashes: {},
+          dependency_graph: mergedDeps,
+          api_patterns: mergedApis,
+          schema_patterns: mergedSchemas,
+          config_patterns: mergedConfigs,
+          doc_structure: [],
+        }, keywords);
+
+        const chunksPath = join(paths.build, "relevant-chunks.json");
+        writeFileSync(chunksPath, JSON.stringify(chunks, null, 2) + "\n", "utf-8");
+        progress(`온톨로지 6관점 코드 선별 완료 (${chunks.total_chunks}건, ${queryResult.matched_entities.length}개 엔티티 매칭)`);
+      } else {
+        progress("온톨로지 매칭 0건 — 에이전트 직접 탐색으로 진행");
       }
     }
   } catch {

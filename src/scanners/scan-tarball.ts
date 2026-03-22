@@ -8,7 +8,7 @@ import type { ScanResult, SourceEntry, ScanError, ScanSkipped } from "./types.js
 /**
  * Resolve GitHub token: GITHUB_TOKEN env var first, then `gh auth token` fallback.
  */
-function resolveGitHubToken(): string | undefined {
+export function resolveGitHubToken(): string | undefined {
   if (process.env.GITHUB_TOKEN) {
     return process.env.GITHUB_TOKEN;
   }
