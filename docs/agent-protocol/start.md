@@ -318,6 +318,86 @@ Grounding 단계는 **방향 수준**입니다. "이 방향으로 가면 어떤 
 }
 ```
 
+### 3. 온톨로지 유도 코드 선별 (Ontology-Guided Code Selection)
+
+온톨로지 소스(glossary/actions/transitions YAML)가 `default_sources`에 포함된 경우, grounding 완료 후 **6관점 코드 선별**을 수행하여 brief와 관련된 코드를 사전 분류합니다.
+
+#### 3.1. 작동 조건
+
+- 온톨로지 소스가 스캔되었고 `OntologyIndex`가 구축된 경우에만 실행
+- 온톨로지가 없으면 이 단계를 건너뛰고 기존 방식(에이전트 직접 탐색)으로 진행
+- 이 단계가 실패해도 grounding은 성공
+
+#### 3.2. 에이전트 수행 절차
+
+**Step 1**: brief.md에서 변경 목표와 관련된 **도메인 키워드**를 추출합니다.
+
+- brief의 핵심 명사/동사를 추출합니다 (예: "체험 수업 3회 무료 제공" → ["체험", "수업", "수강권", "결제"])
+- 한국어 키워드와 영어 키워드 모두 포함합니다
+
+**Step 2**: 추출된 키워드로 `queryOntology()`를 호출합니다.
+
+```typescript
+import { buildOntologyIndex, queryOntology } from './src/index.ts';
+
+const index = buildOntologyIndex(glossaryYaml, actionsYaml, transitionsYaml);
+const result = queryOntology(index, keywords);
+// result: { matched_entities, code_locations, db_tables, related_actions, related_transitions, value_filters }
+```
+
+- 매칭 0건이면: "온톨로지 매칭 결과 없음. 에이전트 직접 탐색으로 진행합니다." 안내 후 §4로 이동
+
+**Step 3**: `resolveCodeLocations()`로 source_code 참조를 파일 경로로 해석합니다.
+
+```typescript
+import { resolveCodeLocations } from './src/index.ts';
+
+const resolved = resolveCodeLocations(result.code_locations, scanResult.files);
+```
+
+**Step 4**: `collectRelevantChunks()`로 6관점 코드 청크를 수집합니다.
+
+```typescript
+import { collectRelevantChunks } from './src/index.ts';
+
+const chunks = collectRelevantChunks(resolved, result, scanResult, keywords);
+// chunks.by_viewpoint: { semantics, dependency, logic, structure, pragmatics, evolution }
+// chunks.coverage_gaps: [] (에이전트가 §3.3에서 채움)
+```
+
+결과를 `build/relevant-chunks.json`에 저장합니다.
+
+#### 3.3. 6관점 코드 분석 + Coverage Gap 식별
+
+`build/relevant-chunks.json`이 존재하면, 다음 순서로 6관점을 참조합니다:
+
+1. **logic** — 기존 guard/조건이 brief와 충돌하는지 우선 확인. `⚠️` 표시가 있는 항목을 특히 주의
+2. **semantics** — 온톨로지 직접 매칭 코드. 변경 대상의 핵심 구현
+3. **dependency** — import 관계에서 추가 영향 범위 (파일 수준. 함수 호출 관계는 파일 내부에서 직접 확인)
+4. **pragmatics** — 사용자 접점 API/알림. Experience 관점 제약 발견
+5. **structure** — 테스트/DDL/설정. 구조적 제약 + DB 제약조건
+6. **evolution** — 레거시/세대 혼재. 호환성 제약
+
+각 청크의 `context` 필드를 먼저 읽고, "왜 이 파일이 선별되었는가"를 파악한 뒤 파일을 확인합니다.
+
+6관점 분석이 완료되면, **brief에 필요하지만 코드에 없는 영역**(Coverage Gap)을 식별합니다:
+- 코드가 제공하는 것: "이 엔티티에 어떤 actions/transitions가 존재한다"
+- 에이전트가 판별하는 것: "brief가 요구하는데 코드에 없는 것"
+
+Coverage Gap의 분류:
+- **"기존 코드와의 충돌"** → `constraint.discovered`로 기록 (예: "boolean 판정이 3회와 충돌")
+- **"신규 구현 필요"** → Build Spec의 implementation item으로 기록 (예: "3회 추적 로직 구현 필요")
+
+#### 3.4. search_confidence 안내
+
+`search_confidence.method`에 따라 PO에게 안내합니다:
+- `"ontology"` + chunks > 0 → "시스템이 관련 코드를 6관점으로 선별했습니다"
+- `"ontology"` + chunks = 0 → "온톨로지 매칭 결과가 없습니다. 관련 코드가 없거나 온톨로지 등록이 필요합니다"
+- `"keyword_only"` → "온톨로지 없이 실행 중입니다. 용어-코드 매핑 누락이 있을 수 있습니다"
+
+`value_filters`가 있으면 에이전트에게 추가 안내:
+- "TrialLesson은 GT_CLASS 테이블에서 CITY='PODO_TRIAL'인 레코드입니다. 코드에서 이 값을 사용하는 쿼리가 관련 로직입니다."
+
 ### 4. Constraint 발견 기록
 
 **이벤트 기록 순서 (필수):**

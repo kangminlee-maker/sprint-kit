@@ -555,6 +555,28 @@ async function executeGrounding(
 
   progress(`소스 스캔 완료 (파일 ${totalFiles}개)`);
 
+  // ── Ontology-Guided Code Selection (optional) ──
+  // 온톨로지 소스가 스캔되었고 brief keywords가 있으면, 6관점 코드 청크를 생성한다.
+  // 이 단계는 grounding의 선택적 보강이며, 실패해도 grounding은 성공한다.
+  try {
+    const ontologySource = scanResults.find(
+      (r) => r.source.type === "github-tarball" && r.source.url?.includes("ontology"),
+    ) ?? scanResults.find(
+      (r) => r.source.type === "add-dir" && r.source.path?.includes("ontology"),
+    );
+
+    if (ontologySource) {
+      // 온톨로지 YAML을 ScanResult에서 추출하여 인덱스 구축
+      const ontologyFiles = ontologySource.doc_structure;
+      // buildOntologyIndex가 YAML 문자열을 받으므로, 소스에서 직접 읽어야 함
+      // 현재는 에이전트 프로토콜에서 키워드 추출 + queryOntology 호출을 위임
+      // relevant-chunks.json은 에이전트가 queryOntology 결과로 생성
+      progress("온톨로지 소스 감지 — 에이전트 프로토콜에서 6관점 코드 선별 활용 가능");
+    }
+  } catch {
+    // 온톨로지 코드 선별 실패는 무시 — graceful degradation
+  }
+
   return {
     success: true,
     paths,

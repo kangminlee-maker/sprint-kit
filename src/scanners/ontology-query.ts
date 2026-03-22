@@ -3,9 +3,18 @@ import type {
   GlossaryEntry,
   ActionEntry,
   TransitionEntry,
+  ValueFilter,
+  Precondition,
 } from "./ontology-index.js";
 
 // ─── Query Result Types ───
+
+export interface ValueFilterResult {
+  entity: string;
+  column: string;
+  value: string;
+  description: string;
+}
 
 export interface OntologyQueryResult {
   matched_entities: string[];
@@ -13,6 +22,7 @@ export interface OntologyQueryResult {
   db_tables: string[];
   related_actions: ActionSummary[];
   related_transitions: TransitionSummary[];
+  value_filters: ValueFilterResult[];
 }
 
 export interface CodeLocation {
@@ -25,6 +35,8 @@ export interface ActionSummary {
   id: string;
   display_name: string;
   source_code: string;
+  guard_note?: string;
+  preconditions?: Precondition[];
 }
 
 export interface TransitionSummary {
@@ -63,6 +75,7 @@ export function queryOntology(
   const related_actions = collectRelatedActions(index, matched_entities);
   const code_locations = collectCodeLocations(related_actions);
   const related_transitions = collectRelatedTransitions(index, matched_entities);
+  const value_filters = collectValueFilters(matchedEntries);
 
   return {
     matched_entities,
@@ -70,6 +83,7 @@ export function queryOntology(
     db_tables,
     related_actions,
     related_transitions,
+    value_filters,
   };
 }
 
@@ -82,6 +96,7 @@ function emptyResult(): OntologyQueryResult {
     db_tables: [],
     related_actions: [],
     related_transitions: [],
+    value_filters: [],
   };
 }
 
@@ -150,6 +165,8 @@ function collectRelatedActions(
         id: action.id,
         display_name: action.display_name,
         source_code: action.source_code,
+        guard_note: action.guard_note,
+        preconditions: action.preconditions,
       });
     }
   }
@@ -201,5 +218,24 @@ function collectRelatedTransitions(
     }
   }
 
+  return results;
+}
+
+/**
+ * 매칭된 glossary 항목에서 value_filters를 수집합니다.
+ */
+function collectValueFilters(entries: GlossaryEntry[]): ValueFilterResult[] {
+  const results: ValueFilterResult[] = [];
+  for (const entry of entries) {
+    if (!entry.value_filters) continue;
+    for (const vf of entry.value_filters) {
+      results.push({
+        entity: entry.canonical,
+        column: vf.column,
+        value: vf.value,
+        description: vf.description,
+      });
+    }
+  }
   return results;
 }
