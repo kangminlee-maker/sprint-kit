@@ -42,6 +42,10 @@ import { sourceKey, toGroundingSource, isScanError, isScanSkipped, type SourceEn
 import { buildBrownfield } from "../scanners/brownfield-builder.js";
 import { parseBrief } from "../parsers/brief-parser.js";
 import { TERMINAL_STATES } from "../kernel/types.js";
+import { buildOntologyIndex } from "../scanners/ontology-index.js";
+import { queryOntology } from "../scanners/ontology-query.js";
+import { resolveCodeLocations } from "../scanners/ontology-resolve.js";
+import { collectRelevantChunks } from "../scanners/code-chunk-collector.js";
 
 // ─── Input ───
 
@@ -556,22 +560,60 @@ async function executeGrounding(
   progress(`소스 스캔 완료 (파일 ${totalFiles}개)`);
 
   // ── Ontology-Guided Code Selection (optional) ──
-  // 온톨로지 소스가 스캔되었고 brief keywords가 있으면, 6관점 코드 청크를 생성한다.
+  // 온톨로지 소스(add-dir)가 스캔되었으면, 6관점 코드 청크를 사전 생성한다.
   // 이 단계는 grounding의 선택적 보강이며, 실패해도 grounding은 성공한다.
+  // tarball 소스는 파일이 이미 정리되어 읽을 수 없으므로, add-dir만 지원한다.
   try {
     const ontologySource = scanResults.find(
-      (r) => r.source.type === "github-tarball" && r.source.url?.includes("ontology"),
-    ) ?? scanResults.find(
-      (r) => r.source.type === "add-dir" && r.source.path?.includes("ontology"),
+      (r) => r.source.type === "add-dir" && (r.source as { path: string }).path?.includes("ontology"),
     );
 
-    if (ontologySource) {
-      // 온톨로지 YAML을 ScanResult에서 추출하여 인덱스 구축
-      const ontologyFiles = ontologySource.doc_structure;
-      // buildOntologyIndex가 YAML 문자열을 받으므로, 소스에서 직접 읽어야 함
-      // 현재는 에이전트 프로토콜에서 키워드 추출 + queryOntology 호출을 위임
-      // relevant-chunks.json은 에이전트가 queryOntology 결과로 생성
-      progress("온톨로지 소스 감지 — 에이전트 프로토콜에서 6관점 코드 선별 활용 가능");
+    if (ontologySource && ontologySource.source.type === "add-dir") {
+      const ontoDir = (ontologySource.source as { path: string }).path;
+      const yamlNames = ["code-mapping.yaml", "behavior.yaml", "model.yaml"];
+      const yamlContents = yamlNames.map((name) => {
+        const candidates = ontologySource.files.filter((f) => f.path.endsWith(name));
+        if (candidates.length === 0) return "";
+        try { return readFileSync(join(ontoDir, candidates[0].path), "utf-8"); } catch { return ""; }
+      });
+
+      const [glossaryYaml, actionsYaml, transitionsYaml] = yamlContents;
+      if (glossaryYaml || actionsYaml || transitionsYaml) {
+        const index = buildOntologyIndex(glossaryYaml, actionsYaml, transitionsYaml);
+        // 모든 non-tarball 소스의 ScanResult를 합산하여 파일 목록 확보
+        const mergedFiles = scanResults.flatMap((r) => r.files);
+        const mergedDeps = scanResults.flatMap((r) => r.dependency_graph);
+        const mergedApis = scanResults.flatMap((r) => r.api_patterns);
+        const mergedSchemas = scanResults.flatMap((r) => r.schema_patterns);
+        const mergedConfigs = scanResults.flatMap((r) => r.config_patterns);
+
+        // glossary의 모든 키워드 + meaning을 keywords로 사용
+        const keywords = [...index.glossary.values()].flatMap((g) => [
+          g.canonical, g.meaning, ...g.legacy_aliases,
+        ]).filter(Boolean);
+
+        const queryResult = queryOntology(index, keywords);
+        if (queryResult.matched_entities.length > 0) {
+          const resolved = resolveCodeLocations(queryResult.code_locations, mergedFiles);
+          const chunks = collectRelevantChunks(resolved, queryResult, {
+            source: ontologySource.source,
+            scanned_at: ontologySource.scanned_at,
+            files: mergedFiles,
+            content_hashes: {},
+            dependency_graph: mergedDeps,
+            api_patterns: mergedApis,
+            schema_patterns: mergedSchemas,
+            config_patterns: mergedConfigs,
+            doc_structure: [],
+          }, keywords);
+
+          const chunksPath = join(paths.build, "relevant-chunks.json");
+          writeFileSync(chunksPath, JSON.stringify(chunks, null, 2) + "\n", "utf-8");
+          progress(`온톨로지 6관점 코드 선별 완료 (${chunks.total_chunks}건, ${queryResult.matched_entities.length}개 엔티티 매칭)`);
+        } else {
+          progress("온톨로지 매칭 0건 — 에이전트 직접 탐색으로 진행");
+        }
+      }
     }
   } catch {
     // 온톨로지 코드 선별 실패는 무시 — graceful degradation

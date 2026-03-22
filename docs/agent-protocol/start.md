@@ -369,7 +369,11 @@ const chunks = collectRelevantChunks(resolved, result, scanResult, keywords);
 
 #### 3.3. 6관점 코드 분석 + Coverage Gap 식별
 
-`build/relevant-chunks.json`이 존재하면, 다음 순서로 6관점을 참조합니다:
+`build/relevant-chunks.json`이 존재하면, **선별된 파일부터 읽습니다**. 전체 ScanResult.files를 순회하기 전에 6관점 청크에 포함된 파일을 먼저 확인하고, 부족할 때만 추가 탐색합니다.
+
+**"부족" 판정 기준**: 6관점 중 2개 이상의 관점에서 청크가 0건이면, 해당 관점에 대해 ScanResult.files에서 추가 탐색을 수행합니다. 특정 관점의 청크가 0건이면 해당 관점을 건너뛰고 다음 관점으로 진행합니다.
+
+다음 순서로 6관점을 참조합니다:
 
 1. **logic** — 기존 guard/조건이 brief와 충돌하는지 우선 확인. `⚠️` 표시가 있는 항목을 특히 주의
 2. **semantics** — 온톨로지 직접 매칭 코드. 변경 대상의 핵심 구현
@@ -377,6 +381,8 @@ const chunks = collectRelevantChunks(resolved, result, scanResult, keywords);
 4. **pragmatics** — 사용자 접점 API/알림. Experience 관점 제약 발견
 5. **structure** — 테스트/DDL/설정. 구조적 제약 + DB 제약조건
 6. **evolution** — 레거시/세대 혼재. 호환성 제약
+
+`search_hint`가 있는 청크(예: `grep:PODO_TRIAL`)는 해당 패턴으로 코드베이스를 검색하여 관련 파일을 추가로 발견합니다.
 
 각 청크의 `context` 필드를 먼저 읽고, "왜 이 파일이 선별되었는가"를 파악한 뒤 파일을 확인합니다.
 

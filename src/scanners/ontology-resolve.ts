@@ -15,6 +15,7 @@ export interface ResolvedLocation {
   reference: string;
   resolved_files: string[];
   resolution_method: "filename" | "unresolved";
+  entity?: string;  // CodeLocation.entity를 보존. resolution 실패 시에도 엔티티 정보 유지
 }
 
 // ─── Resolve ───
@@ -34,7 +35,7 @@ export function resolveCodeLocations(
   return locations.map((loc) => {
     const className = extractClassName(loc.reference);
     if (!className) {
-      return { reference: loc.reference, resolved_files: [], resolution_method: "unresolved" as const };
+      return { reference: loc.reference, resolved_files: [], resolution_method: "unresolved" as const, entity: loc.entity || undefined };
     }
 
     const matched = files
@@ -45,6 +46,7 @@ export function resolveCodeLocations(
       reference: loc.reference,
       resolved_files: matched,
       resolution_method: matched.length > 0 ? "filename" as const : "unresolved" as const,
+      entity: loc.entity || undefined,
     };
   });
 }

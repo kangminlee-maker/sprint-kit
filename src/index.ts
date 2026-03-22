@@ -58,6 +58,22 @@ export { validate } from "./validators/validate.js";
 
 export { contentHash } from "./kernel/hash.js";
 
+// ─── Ontology-Guided Code Selection ───
+
+export { buildOntologyIndex } from "./scanners/ontology-index.js";
+export type { OntologyIndex, GlossaryEntry, ActionEntry, TransitionEntry, ValueFilter, Precondition, TransitionGuard } from "./scanners/ontology-index.js";
+
+export { queryOntology } from "./scanners/ontology-query.js";
+export type { OntologyQueryResult, CodeLocation, ActionSummary, TransitionSummary, ValueFilterResult } from "./scanners/ontology-query.js";
+
+export { resolveCodeLocations } from "./scanners/ontology-resolve.js";
+export type { ResolvedLocation } from "./scanners/ontology-resolve.js";
+
+export { collectRelevantChunks } from "./scanners/code-chunk-collector.js";
+export type { RelevantCodeChunks, CoverageGap, CollectOptions } from "./scanners/code-chunk-collector.js";
+
+export type { CodeChunk, CollectionViewpoint } from "./scanners/viewpoint-collectors.js";
+
 // ─── Core types (read-only access to kernel types) ───
 
 export type {

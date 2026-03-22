@@ -52,6 +52,7 @@ export interface TransitionGuard {
 }
 
 export interface TransitionEntry {
+  id?: string;
   entity: string;
   field_name: string;
   from: string;
@@ -193,7 +194,9 @@ function parseTransitions(yaml_str: string): Map<string, TransitionEntry[]> {
         const fromValue = rawFrom === null || rawFrom === undefined ? "(none)"
           : Array.isArray(rawFrom) ? rawFrom.join("|")
           : String(rawFrom);
+        const transitionId = t.id ? String(t.id) : undefined;
         entries.push({
+          id: transitionId,
           entity: entityName,
           field_name: fieldName,
           from: fromValue,

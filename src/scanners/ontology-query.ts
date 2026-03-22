@@ -3,6 +3,7 @@ import type {
   GlossaryEntry,
   ActionEntry,
   TransitionEntry,
+  TransitionGuard,
   ValueFilter,
   Precondition,
 } from "./ontology-index.js";
@@ -23,6 +24,7 @@ export interface OntologyQueryResult {
   related_actions: ActionSummary[];
   related_transitions: TransitionSummary[];
   value_filters: ValueFilterResult[];
+  total_glossary_count: number;  // 전체 glossary 항목 수. 에이전트가 "N개 중 M개 매칭"을 파악하여 coverage gap 식별
 }
 
 export interface CodeLocation {
@@ -37,14 +39,20 @@ export interface ActionSummary {
   source_code: string;
   guard_note?: string;
   preconditions?: Precondition[];
+  results?: string[];
+  state_transitions?: string[];
+  side_effects?: string[];
 }
 
 export interface TransitionSummary {
+  id?: string;
   entity: string;
+  field_name: string;
   from: string;
   to: string;
   trigger: string;
   source_code: string;
+  guards?: TransitionGuard[];
 }
 
 // ─── Query Function ───
@@ -62,12 +70,12 @@ export function queryOntology(
   keywords: string[],
 ): OntologyQueryResult {
   if (keywords.length === 0) {
-    return emptyResult();
+    return { ...emptyResult(), total_glossary_count: index.glossary.size };
   }
 
   const matchedEntries = findMatchingGlossaryEntries(index, keywords);
   if (matchedEntries.length === 0) {
-    return emptyResult();
+    return { ...emptyResult(), total_glossary_count: index.glossary.size };
   }
 
   const matched_entities = matchedEntries.map((e) => e.canonical);
@@ -84,6 +92,7 @@ export function queryOntology(
     related_actions,
     related_transitions,
     value_filters,
+    total_glossary_count: index.glossary.size,
   };
 }
 
@@ -97,6 +106,7 @@ function emptyResult(): OntologyQueryResult {
     related_actions: [],
     related_transitions: [],
     value_filters: [],
+    total_glossary_count: 0,
   };
 }
 
@@ -167,6 +177,9 @@ function collectRelatedActions(
         source_code: action.source_code,
         guard_note: action.guard_note,
         preconditions: action.preconditions,
+        results: action.results,
+        state_transitions: action.state_transitions,
+        side_effects: action.side_effects,
       });
     }
   }
@@ -209,11 +222,14 @@ function collectRelatedTransitions(
 
     for (const t of transitions) {
       results.push({
+        id: t.id,
         entity: t.entity,
+        field_name: t.field_name,
         from: t.from,
         to: t.to,
         trigger: t.trigger,
         source_code: t.source_code,
+        guards: t.guards,
       });
     }
   }
