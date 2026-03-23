@@ -1,49 +1,41 @@
+# Sprint Kit 프로젝트 설정
+# 아래는 예시입니다. 프로젝트에 맞게 수정하세요.
+
 target_stack:
   framework: "Next.js 15"
   runtime: "React 19"
   language: "TypeScript"
-  styling: "Tailwind CSS v3 + class-variance-authority (CVA)"
-  state_management: "@tanstack/react-query"
-  animation: "motion (Framer Motion v12) + react-lottie-player"
-  carousel: "embla-carousel-react"
-  icons: "lucide-react"
-  monorepo: "pnpm + Turborepo"
-  package_manager: "pnpm@10"
+  # styling: "Tailwind CSS v3"
+  # state_management: "@tanstack/react-query"
+  # animation: "motion (Framer Motion)"
+  # icons: "lucide-react"
+  # monorepo: "pnpm + Turborepo"
+  # package_manager: "pnpm@10"
 
 default_sources:
-  - type: github-tarball
-    url: https://github.com/re-speak/podo-backend
-    description: "podo 백엔드"
-  - type: github-tarball
-    url: https://github.com/re-speak/podo-app
-    description: "podo 앱"
-    usage_hint: context
-  - type: github-tarball
-    url: https://github.com/re-speak/podo-ontology
-    description: "podo 온톨로지"
-  - type: github-tarball
-    url: https://github.com/re-speak/vibe-design/tree/feat/prevent-purchase-duplication
-    description: "podo Design System, 디자인 온톨로지, 디자인 assets"
-    usage_hint: context
-  - type: add-dir
-    path: ./sources
-    description: "로컬 참고 자료 (디자인 가이드, 이용약관)"
-    usage_hint: context
+  # - type: github-tarball
+  #   url: https://github.com/your-org/your-backend
+  #   description: "백엔드 서비스"
+  # - type: github-tarball
+  #   url: https://github.com/your-org/your-app
+  #   description: "프론트엔드 앱"
+  #   usage_hint: context
+  # - type: add-dir
+  #   path: ./sources
+  #   description: "로컬 참고 자료"
+  #   usage_hint: context
 
   # ── Analytics ──
-  - type: mcp
-    provider: clickhouse
-    description: "사용자 행동 이벤트 분석 (퍼널 전환율, 상태별 분포, 이탈 지점)"
-    usage_hint: context
-    tools:
-      - mcp__mcp-clickhouse__list_databases
-      - mcp__mcp-clickhouse__list_tables
-      - mcp__mcp-clickhouse__run_select_query
-    query_policy:
-      allowed:
-        - "집계 쿼리 (COUNT, SUM, AVG, 퍼널 전환율, 상태별 분포)"
-        - "시점별 패턴 (이벤트 간 시간 분포)"
-        - "예외 빈도 (노쇼, 취소, 소진 발생 건수)"
-      prohibited:
-        - "개별 사용자 행동 추적 (특정 user_id 기반 조회)"
-        - "PO가 요청하지 않은 범위의 탐색적 쿼리"
+  # - type: mcp
+  #   provider: clickhouse
+  #   description: "사용자 행동 이벤트 분석"
+  #   usage_hint: context
+  #   tools:
+  #     - mcp__mcp-clickhouse__list_databases
+  #     - mcp__mcp-clickhouse__list_tables
+  #     - mcp__mcp-clickhouse__run_select_query
+  #   query_policy:
+  #     allowed:
+  #       - "집계 쿼리 (COUNT, SUM, AVG, 퍼널 전환율, 상태별 분포)"
+  #     prohibited:
+  #       - "개별 사용자 행동 추적 (특정 user_id 기반 조회)"

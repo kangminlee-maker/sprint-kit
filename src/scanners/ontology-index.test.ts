@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { buildOntologyIndex } from "./ontology-index.js";
 
-// ─── Fixtures (실제 podo-ontology 구조 기반 소규모 데이터) ───
+// ─── Fixtures (소규모 테스트 데이터) ───
 
 const ONTOLOGY_YAML = `
 version: "1.0"

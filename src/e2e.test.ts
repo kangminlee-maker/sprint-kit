@@ -130,9 +130,9 @@ describe("E2E — tutor-block full lifecycle", () => {
       brownfieldDetail: {
         scope_id: "SC-TEST",
         sections: [
-          { anchor: "matching-engine", source: "podo-backend", title: "MatchingEngine", content: "매칭 엔진 상세" },
-          { anchor: "api-matching", source: "podo-backend", title: "Matching API", content: "매칭 API 상세" },
-          { anchor: "dep-matching-tutor-block", source: "podo-backend", title: "matching → tutor-block", content: "의존성 상세" },
+          { anchor: "matching-engine", source: "example-backend", title: "MatchingEngine", content: "매칭 엔진 상세" },
+          { anchor: "api-matching", source: "example-backend", title: "Matching API", content: "매칭 API 상세" },
+          { anchor: "dep-matching-tutor-block", source: "example-backend", title: "matching → tutor-block", content: "의존성 상세" },
         ],
       },
       surfaceSummary: "튜터 프로필에서 차단 버튼 → 확인 → 차단 완료. 설정에서 차단 관리.",
