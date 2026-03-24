@@ -22,6 +22,7 @@ import type {
   CallSite,
   EntryPoint,
   EntryPointPattern,
+  DomainFlowSeed,
   ExtractMeta,
   SupportedLanguage,
 } from "./types.js";
@@ -71,6 +72,14 @@ export function extractStructure(
   // 진입점 변환
   const entryPoints = entryPointPatterns.map(patternToEntryPoint);
 
+  // DomainFlowSeed 생성 (primary 진입점만)
+  const domainFlowSeeds = buildDomainFlowSeeds(
+    entryPoints.filter((ep) => ep.primary),
+    callGraph,
+    entityCandidates,
+    transitionCandidates,
+  );
+
   // 메타데이터
   const languages = Array.from(new Set(modules.map((m) => m.language)));
   const meta: ExtractMeta = {
@@ -89,6 +98,7 @@ export function extractStructure(
     transition_candidates: transitionCandidates,
     relation_candidates: relationCandidates,
     policy_constant_candidates: policyConstantCandidates,
+    domain_flow_seeds: domainFlowSeeds,
     meta,
   };
 }
@@ -379,8 +389,68 @@ function patternToEntryPoint(pattern: EntryPointPattern): EntryPoint {
     kind: pattern.kind,
     file_path: pattern.file,
     line: pattern.line,
+    primary: pattern.kind !== "auxiliary_service_method",
     http_method: pattern.http_method,
     http_path: pattern.http_path,
     annotation: pattern.annotation,
   };
+}
+
+// ── DomainFlowSeed 생성 ──
+
+function buildDomainFlowSeeds(
+  primaryEntryPoints: EntryPoint[],
+  callGraph: CallSite[],
+  entities: EntityCandidate[],
+  transitions: StateAssignment[],
+): DomainFlowSeed[] {
+  const entityNames = new Set(entities.map((e) => e.name));
+  const seeds: DomainFlowSeed[] = [];
+
+  for (const ep of primaryEntryPoints) {
+    const visited = new Set<string>();
+    const queue: { symbol: string; depth: number }[] = [{ symbol: ep.symbol, depth: 0 }];
+    const entitiesTouched: string[] = [];
+    const reachableFiles = new Set<string>();
+    let maxDepth = 0;
+
+    while (queue.length > 0) {
+      const { symbol, depth } = queue.shift()!;
+      if (visited.has(symbol)) continue;
+      visited.add(symbol);
+
+      for (const site of callGraph) {
+        if (site.caller !== symbol && !site.caller.endsWith(`.${symbol}`)) continue;
+        reachableFiles.add(site.file_path);
+
+        // callee가 엔티티명이면 기록
+        const calleeName = site.callee.split(".")[0];
+        if (entityNames.has(calleeName) && !entitiesTouched.includes(calleeName)) {
+          entitiesTouched.push(calleeName);
+          maxDepth = Math.max(maxDepth, depth + 1);
+        }
+
+        if (site.kind === "direct") {
+          queue.push({ symbol: site.callee, depth: depth + 1 });
+        }
+      }
+    }
+
+    // 도달 가능한 파일의 상태 전이 수집
+    const transitionsTriggered = transitions
+      .filter((tc) => reachableFiles.has(tc.file_path))
+      .map((tc) => tc.id);
+
+    // 엔티티 또는 전이가 있는 경우만 seed 생성
+    if (entitiesTouched.length > 0 || transitionsTriggered.length > 0) {
+      seeds.push({
+        entry_point: ep.symbol,
+        entities_touched: entitiesTouched,
+        transitions_triggered: transitionsTriggered,
+        max_depth: maxDepth,
+      });
+    }
+  }
+
+  return seeds;
 }

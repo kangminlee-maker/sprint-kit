@@ -20,9 +20,29 @@ import type {
 
 export interface CallGraphOptions {
   maxDepth?: number;
+  /** 상태 변경 메서드 진입 시 추가 탐색 깊이 (기본 5) */
+  stateChangeDepthBonus?: number;
 }
 
 const DEFAULT_MAX_DEPTH = 20;
+const DEFAULT_STATE_CHANGE_DEPTH_BONUS = 5;
+
+// ── 상태 변경 관용 메서드 패턴 (개선안 F) ──
+
+const STATE_CHANGE_METHOD_PATTERNS: RegExp[] = [
+  /^(?:change|update|set|transition(?:To)?|move(?:To)?|advance|switch)Status$/i,
+  /^(?:change|update|set)State$/i,
+  /^transition(?:To)?$/i,
+  /^(?:mark|flag)(?:As)?(?:Completed|Active|Deleted|Archived|Suspended|Cancelled|Approved|Rejected|Published|Draft)$/i,
+  /^(?:activate|deactivate|complete|cancel|approve|reject|publish|archive|suspend|resume|expire|close|open|lock|unlock|enable|disable)$/i,
+];
+
+/** callee 심볼이 상태 변경 관용 메서드인지 판별합니다. */
+export function isStateChangeMethod(callee: string): boolean {
+  // "ClassName.methodName" → methodName 추출
+  const methodName = callee.includes(".") ? callee.split(".").pop()! : callee;
+  return STATE_CHANGE_METHOD_PATTERNS.some((p) => p.test(methodName));
+}
 
 /**
  * 진입점에서 도달 가능한 모든 CallSite를 수집합니다.
@@ -38,6 +58,7 @@ export function buildCallGraph(
   options?: CallGraphOptions,
 ): CallSite[] {
   const maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
+  const stateChangeBonus = options?.stateChangeDepthBonus ?? DEFAULT_STATE_CHANGE_DEPTH_BONUS;
 
   // 인덱스 구축: 파일 경로 → ParsedModule
   const moduleByFile = new Map<string, ParsedModule>();
@@ -68,6 +89,7 @@ export function buildCallGraph(
       startFile,
       0,
       maxDepth,
+      stateChangeBonus,
       moduleByFile,
       importIndex,
       symbolIndex,
@@ -87,6 +109,7 @@ function bfsTraverse(
   filePath: string,
   depth: number,
   maxDepth: number,
+  stateChangeBonus: number,
   moduleByFile: Map<string, ParsedModule>,
   importIndex: Map<string, string[]>,
   symbolIndex: Map<string, string>,
@@ -123,11 +146,17 @@ function bfsTraverse(
         symbolIndex,
       );
       if (calleeFile) {
+        // 개선안 F: 상태 변경 메서드면 깊이 보너스 적용
+        const nextDepth = isStateChangeMethod(site.callee)
+          ? Math.min(depth + 1, maxDepth - stateChangeBonus)
+          : depth + 1;
+
         bfsTraverse(
           site.callee,
           calleeFile,
-          depth + 1,
+          nextDepth,
           maxDepth,
+          stateChangeBonus,
           moduleByFile,
           importIndex,
           symbolIndex,
@@ -157,11 +186,17 @@ function bfsTraverse(
         collectedSites.push(site);
 
         if (site.kind === "direct") {
+          // 개선안 F: 상태 변경 메서드면 깊이 보너스 적용
+          const nextDepth = isStateChangeMethod(site.callee)
+            ? Math.min(depth + 1, maxDepth - stateChangeBonus)
+            : depth + 1;
+
           bfsTraverse(
             site.callee,
             resolvedFile,
-            depth + 1,
+            nextDepth,
             maxDepth,
+            stateChangeBonus,
             moduleByFile,
             importIndex,
             symbolIndex,

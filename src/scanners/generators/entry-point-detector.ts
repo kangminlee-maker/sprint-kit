@@ -9,7 +9,7 @@
  * 생성↔소비 파이프라인 분리 원칙에 따라 PatternResult union에는 포함하지 않습니다.
  */
 
-import type { EntryPointPattern, EntryPointKind } from "./types.js";
+import type { EntryPointPattern, EntryPointKind, ParsedModule } from "./types.js";
 
 // ── 탐지 패턴 정의 ──
 
@@ -201,4 +201,150 @@ export function detectEntryPoints(
   }
 
   return results;
+}
+
+// ── 보조 진입점: 서비스 public 메서드 (개선안 D) ──
+
+const SERVICE_ANNOTATIONS = ["@Service", "@Component", "@Injectable"];
+
+/** @Service/@Component 클래스를 탐지하기 위한 정규식 */
+const SERVICE_CLASS_RE =
+  /(?:@(?:Service|Component|Injectable)\b[\s\S]*?)class\s+(\w+)/g;
+
+/** public 메서드 시그니처 패턴 (Kotlin/Java/TypeScript) */
+const PUBLIC_METHOD_PATTERNS: RegExp[] = [
+  /^\s+fun\s+(\w+)\s*\(/,                           // Kotlin: fun methodName(
+  /^\s+(?:public\s+)?(?:\w+\s+)?(\w+)\s*\([^)]*\)\s*(?::\s*\w+)?\s*\{/, // Java: public ReturnType methodName(
+  /^\s+(?:async\s+)?(\w+)\s*\([^)]*\)\s*(?::\s*\w+)?\s*\{/, // TypeScript class method
+];
+
+/** private/protected/companion/constructor 등 제외 패턴 */
+const EXCLUDED_METHOD_RE = /^\s+(?:private|protected|internal|companion|constructor|init|static\s*\{)/;
+
+/**
+ * 2nd pass: @Service/@Component 클래스의 public 메서드 중,
+ * 1st pass 호출 그래프에서 도달되지 않은 것을 보조 진입점으로 수집합니다.
+ *
+ * @param files - 파일 경로 → content 맵
+ * @param reachedSymbols - 1st pass 호출 그래프에서 도달된 심볼 세트
+ */
+export function detectAuxiliaryServiceMethods(
+  files: Map<string, string>,
+  reachedSymbols: Set<string>,
+): EntryPointPattern[] {
+  const results: EntryPointPattern[] = [];
+
+  for (const [filePath, content] of files) {
+    const lines = content.split("\n");
+
+    // 파일에서 @Service/@Component 클래스 찾기
+    const serviceClasses = findServiceClasses(content);
+    if (serviceClasses.length === 0) continue;
+
+    // 각 서비스 클래스의 범위에서 public 메서드 수집
+    for (const svc of serviceClasses) {
+      const methods = findPublicMethods(lines, svc.startLine, svc.className);
+
+      for (const method of methods) {
+        const symbol = `${svc.className}.${method.name}`;
+
+        // 이미 호출 그래프에서 도달된 심볼은 건너뜀
+        if (reachedSymbols.has(symbol) || reachedSymbols.has(method.name)) continue;
+
+        results.push({
+          file: filePath,
+          symbol,
+          kind: "auxiliary_service_method",
+          line: method.line,
+          annotation: svc.annotation,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+interface ServiceClassInfo {
+  className: string;
+  startLine: number;
+  annotation: string;
+}
+
+interface MethodInfo {
+  name: string;
+  line: number;
+}
+
+function findServiceClasses(content: string): ServiceClassInfo[] {
+  const results: ServiceClassInfo[] = [];
+  const lines = content.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // @Service/@Component/@Injectable 어노테이션 탐지
+    for (const ann of SERVICE_ANNOTATIONS) {
+      if (!line.includes(ann)) continue;
+
+      // 이 줄 또는 다음 몇 줄에서 class 선언 찾기
+      for (let offset = 0; offset <= 3 && i + offset < lines.length; offset++) {
+        const classMatch = lines[i + offset].match(/class\s+(\w+)/);
+        if (classMatch) {
+          results.push({
+            className: classMatch[1],
+            startLine: i + offset,
+            annotation: ann,
+          });
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  return results;
+}
+
+function findPublicMethods(
+  lines: string[],
+  classStartLine: number,
+  className: string,
+): MethodInfo[] {
+  const methods: MethodInfo[] = [];
+  let braceDepth = 0;
+  let inClass = false;
+
+  for (let i = classStartLine; i < lines.length; i++) {
+    const line = lines[i];
+
+    // 중괄호 깊이 추적으로 클래스 범위 파악
+    for (const ch of line) {
+      if (ch === "{") {
+        if (!inClass) inClass = true;
+        braceDepth++;
+      }
+      if (ch === "}") braceDepth--;
+    }
+
+    // 클래스 범위를 벗어나면 종료
+    if (inClass && braceDepth === 0) break;
+
+    // 클래스 본문 (depth 1)에서만 메서드 탐색
+    if (!inClass || braceDepth !== 1) continue;
+
+    // private/protected 메서드 제외
+    if (EXCLUDED_METHOD_RE.test(line)) continue;
+
+    // public 메서드 패턴 매칭
+    for (const pattern of PUBLIC_METHOD_PATTERNS) {
+      const match = line.match(pattern);
+      if (match) {
+        methods.push({ name: match[1], line: i + 1 });
+        break;
+      }
+    }
+  }
+
+  return methods;
 }

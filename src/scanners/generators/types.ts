@@ -133,7 +133,20 @@ export interface CodeStructureExtract {
   transition_candidates: StateAssignment[];
   relation_candidates: RelationCandidate[];
   policy_constant_candidates: PolicyConstantCandidate[];
+  domain_flow_seeds: DomainFlowSeed[];
   meta: ExtractMeta;
+}
+
+/** 행위 흐름의 골격. Stage 1이 호출 그래프에서 추출하고, Stage 2가 비즈니스 의미를 부여합니다. */
+export interface DomainFlowSeed {
+  /** 진입점 symbol (EntryPoint.symbol과 동일) */
+  entry_point: string;
+  /** 경유하는 엔티티 목록 (BFS 최초 도달 순서) */
+  entities_touched: string[];
+  /** 유발하는 상태 전이 ID 목록 (StateAssignment.id 참조) */
+  transitions_triggered: string[];
+  /** 호출 깊이 (entry_point에서 가장 먼 도달 엔티티까지의 hop 수) */
+  max_depth: number;
 }
 
 export interface ExtractMeta {
@@ -151,6 +164,8 @@ export interface EntryPoint {
   kind: EntryPointKind;
   file_path: string;
   line: number;
+  /** true = 기존 진입점 (HTTP, 스케줄러 등), false = 보조 진입점 (서비스 public 메서드) */
+  primary: boolean;
   http_method?: string;
   http_path?: string;
   annotation?: string;
@@ -162,7 +177,8 @@ export type EntryPointKind =
   | "event_listener"
   | "message_consumer"
   | "batch"
-  | "main";
+  | "main"
+  | "auxiliary_service_method";
 
 // ── 엔티티 후보 ──
 

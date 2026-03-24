@@ -2,7 +2,7 @@
 
 > 출처: `ontology-auto-generation.md` §11 + `ontology-auto-generation-improvements.md` §4
 > 최종 업데이트: 2026-03-24
-> 커밋: `f2f1e6a` (Phase 1 완료)
+> 커밋: `f2f1e6a` (Phase 1 완료), 2.1 프로토콜 완료
 
 ---
 
@@ -33,10 +33,10 @@
 
 | # | 작업 | 의존성 | 산출물 | 내용 |
 |---|------|--------|--------|------|
-| 2.1 | **Stage 2 에이전트 프로토콜 설계** | Phase 1 | `docs/agent-protocol/ontology-generate.md` | Stage 2의 소비자 계약 정의. LLM이 `CodeStructureExtract`의 각 필드를 어떤 순서로 소비하여 YAML을 생성하는지 명시. DomainFlowSeed + domain_flows YAML 스키마 확장 포함 |
-| 2.2 | **서비스 public 메서드 보조 진입점** (개선안 D) | Phase 1 | `entry-point-detector.ts` 확장 | `@Service`/`@Component` 클래스의 public 메서드를 `EntryPoint(kind: "auxiliary_service_method")`로 수집. 2-pass 처리: 1st pass 기존 진입점 → 2nd pass 미도달 서비스 메서드. `EntryPoint.primary: boolean` 필드 추가 |
-| 2.3 | **상태 변경 메서드 추적 심화** (개선안 F) | 2.2 | `call-graph-builder.ts` 확장 | `changeStatus`, `updateStatus`, `setStatus`, `transitionTo` 등 상태 변경 관용 메서드를 호출 그래프에서 추적. 해당 메서드 내부의 상태 할당까지 탐색 깊이 확장 |
-| 2.4 | **설정 파일 스캔** (개선안 H) | 2.2 | `config-adapter.ts` 신규 | `GeneratorInput.config_files` 경로로 application.yml/properties/.env 파서 구현. `PolicyConstantCandidate.source_type: "config"` |
+| 2.1 | **Stage 2 에이전트 프로토콜 설계** ✅ | Phase 1 | `docs/agent-protocol/ontology-generate.md` | Stage 2의 소비자 계약 정의. LLM이 `CodeStructureExtract`의 각 필드를 어떤 순서로 소비하여 YAML을 생성하는지 명시. DomainFlowSeed + domain_flows YAML 스키마 확장 포함 |
+| 2.2 | **서비스 public 메서드 보조 진입점** ✅ (개선안 D) | Phase 1 | `entry-point-detector.ts` 확장 | `@Service`/`@Component` 클래스의 public 메서드를 `EntryPoint(kind: "auxiliary_service_method")`로 수집. 2-pass 처리: 1st pass 기존 진입점 → 2nd pass 미도달 서비스 메서드. `EntryPoint.primary: boolean` 필드 추가 |
+| 2.3 | **상태 변경 메서드 추적 심화** ✅ (개선안 F) | 2.2 | `call-graph-builder.ts` 확장 | `changeStatus`, `updateStatus`, `setStatus`, `transitionTo` 등 상태 변경 관용 메서드를 호출 그래프에서 추적. 해당 메서드 내부의 상태 할당까지 탐색 깊이 확장 |
+| 2.4 | **설정 파일 스캔** ✅ (개선안 H) | 2.2 | `config-adapter.ts` 신규 | `GeneratorInput.config_files` 경로로 application.yml/properties/.env 파서 구현. `PolicyConstantCandidate.source_type: "config"` |
 
 ### 2.1 상세: Stage 2 프로토콜에 포함해야 할 것
 

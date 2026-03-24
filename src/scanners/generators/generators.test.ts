@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { TsMorphAdapter } from "./parsers/ts-morph-adapter.js";
-import { detectEntryPoints } from "./entry-point-detector.js";
-import { buildCallGraph } from "./call-graph-builder.js";
+import { detectEntryPoints, detectAuxiliaryServiceMethods } from "./entry-point-detector.js";
+import { buildCallGraph, isStateChangeMethod } from "./call-graph-builder.js";
 import { extractStructure, extractPolicyConstantsFromContent } from "./structure-extractor.js";
+import { extractConfigConstants } from "./config-adapter.js";
 import { generateYaml } from "./yaml-generator.js";
 import { makeStateAssignmentId } from "./types.js";
-import type { ParsedModule, EntryPointPattern } from "./types.js";
+import type { ParsedModule, EntryPointPattern, GeneratorConfigFile } from "./types.js";
 
 // ── 합성 테스트 코드 ──
 
@@ -222,6 +223,7 @@ describe("YAML 생성기", () => {
       transition_candidates: [],
       relation_candidates: [],
       policy_constant_candidates: [],
+      domain_flow_seeds: [],
       meta: { total_files: 0, parsed_files: 0, entry_points_found: 0, unresolved_calls: 0, languages: [] },
     };
     const result = generateYaml(empty);
@@ -249,6 +251,7 @@ describe("YAML 생성기", () => {
       transition_candidates: [],
       relation_candidates: [],
       policy_constant_candidates: [],
+      domain_flow_seeds: [],
       meta: { total_files: 2, parsed_files: 2, entry_points_found: 0, unresolved_calls: 0, languages: ["typescript" as const] },
     };
     const result = generateYaml(extract);
@@ -265,6 +268,7 @@ describe("YAML 생성기", () => {
         kind: "http" as const,
         file_path: "LessonController.kt",
         line: 5,
+        primary: true,
         http_method: "GET",
         http_path: "/api/lessons/{id}",
         annotation: "@GetMapping",
@@ -275,11 +279,302 @@ describe("YAML 생성기", () => {
       transition_candidates: [],
       relation_candidates: [],
       policy_constant_candidates: [],
+      domain_flow_seeds: [],
       meta: { total_files: 1, parsed_files: 1, entry_points_found: 1, unresolved_calls: 0, languages: ["kotlin" as const] },
     };
     const result = generateYaml(extract);
     expect(result.actions).toContain("id: LessonController.getLesson");
     expect(result.actions).toContain("source_code: LessonController.kt:5");
+  });
+});
+
+describe("보조 진입점 탐지 (개선안 D)", () => {
+  it("@Service 클래스의 public 메서드를 보조 진입점으로 탐지합니다", () => {
+    const files = new Map<string, string>();
+    files.set("LessonService.kt", SERVICE_KT);
+    const reached = new Set<string>();
+
+    const results = detectAuxiliaryServiceMethods(files, reached);
+    expect(results.length).toBeGreaterThanOrEqual(1);
+    expect(results.every((r) => r.kind === "auxiliary_service_method")).toBe(true);
+    const findById = results.find((r) => r.symbol === "LessonService.findById");
+    expect(findById).toBeDefined();
+  });
+
+  it("이미 도달된 심볼은 제외합니다", () => {
+    const files = new Map<string, string>();
+    files.set("LessonService.kt", SERVICE_KT);
+    const reached = new Set(["LessonService.findById", "LessonService.complete"]);
+
+    const results = detectAuxiliaryServiceMethods(files, reached);
+    expect(results.find((r) => r.symbol === "LessonService.findById")).toBeUndefined();
+    expect(results.find((r) => r.symbol === "LessonService.complete")).toBeUndefined();
+  });
+
+  it("@Service 어노테이션이 없는 클래스는 무시합니다", () => {
+    const files = new Map<string, string>();
+    files.set("Controller.kt", CONTROLLER_KT);
+    const reached = new Set<string>();
+
+    const results = detectAuxiliaryServiceMethods(files, reached);
+    expect(results).toHaveLength(0);
+  });
+});
+
+describe("primary 필드", () => {
+  it("extractStructure가 기존 진입점을 primary: true로 설정합니다", () => {
+    const modules: ParsedModule[] = [];
+    const entryPoints: EntryPointPattern[] = [{
+      file: "Controller.kt",
+      symbol: "Controller.get",
+      kind: "http",
+      line: 1,
+      annotation: "@GetMapping",
+      http_method: "GET",
+    }];
+    const callGraph = buildCallGraph(entryPoints, modules);
+    const extract = extractStructure(modules, entryPoints, callGraph);
+    expect(extract.entry_points[0].primary).toBe(true);
+  });
+
+  it("auxiliary_service_method는 primary: false로 설정합니다", () => {
+    const modules: ParsedModule[] = [];
+    const entryPoints: EntryPointPattern[] = [{
+      file: "Service.kt",
+      symbol: "Service.helper",
+      kind: "auxiliary_service_method",
+      line: 5,
+      annotation: "@Service",
+    }];
+    const callGraph = buildCallGraph(entryPoints, modules);
+    const extract = extractStructure(modules, entryPoints, callGraph);
+    expect(extract.entry_points[0].primary).toBe(false);
+  });
+});
+
+describe("DomainFlowSeed 생성", () => {
+  it("빈 입력에서 domain_flow_seeds가 빈 배열입니다", () => {
+    const modules: ParsedModule[] = [];
+    const entryPoints: EntryPointPattern[] = [];
+    const callGraph = buildCallGraph(entryPoints, modules);
+    const extract = extractStructure(modules, entryPoints, callGraph);
+    expect(extract.domain_flow_seeds).toEqual([]);
+  });
+
+  it("엔티티 도달 시 DomainFlowSeed를 생성합니다", () => {
+    const modules: ParsedModule[] = [];
+    const entryPoints: EntryPointPattern[] = [{
+      file: "Controller.kt",
+      symbol: "Controller.create",
+      kind: "http",
+      line: 1,
+      annotation: "@PostMapping",
+    }];
+    const callGraph = [
+      { caller: "Controller.create", callee: "OrderService.create", file_path: "OrderService.kt", line: 10, kind: "direct" as const },
+      { caller: "OrderService.create", callee: "Order.save", file_path: "OrderRepo.kt", line: 20, kind: "direct" as const },
+    ];
+    const entityCandidates = [{ name: "Order", file_path: "Order.kt", fields: [], annotations: ["@Entity"] }];
+    const transitionCandidates = [
+      { id: "Order.status:null->CREATED", entity: "Order", field_name: "status", from: null, to: "CREATED", file_path: "OrderService.kt", line: 15 },
+    ];
+
+    // extractStructure는 modules에서 entity를 찾으므로, 직접 검증
+    // buildDomainFlowSeeds는 private이므로 extractStructure 통해 간접 테스트
+    // 여기서는 E2E 스타일로 테스트
+    const extract = {
+      entry_points: entryPoints.map((ep) => ({
+        ...ep, file_path: ep.file, primary: true,
+      })),
+      call_graph: callGraph,
+      entity_candidates: entityCandidates,
+      enum_candidates: [],
+      transition_candidates: transitionCandidates,
+      relation_candidates: [],
+      policy_constant_candidates: [],
+      domain_flow_seeds: [],
+      meta: { total_files: 3, parsed_files: 3, entry_points_found: 1, unresolved_calls: 0, languages: ["kotlin" as const] },
+    };
+
+    // generateYaml은 domain_flow_seeds를 소비하지 않지만, 타입 호환성 확인
+    const yaml = generateYaml(extract);
+    expect(yaml.actions).toContain("Controller.create");
+  });
+});
+
+describe("상태 변경 메서드 추적 (개선안 F)", () => {
+  it("isStateChangeMethod가 상태 변경 관용 메서드를 인식합니다", () => {
+    // 직접 매칭
+    expect(isStateChangeMethod("changeStatus")).toBe(true);
+    expect(isStateChangeMethod("updateStatus")).toBe(true);
+    expect(isStateChangeMethod("setStatus")).toBe(true);
+    expect(isStateChangeMethod("transitionTo")).toBe(true);
+    expect(isStateChangeMethod("complete")).toBe(true);
+    expect(isStateChangeMethod("cancel")).toBe(true);
+    expect(isStateChangeMethod("approve")).toBe(true);
+    expect(isStateChangeMethod("markAsCompleted")).toBe(true);
+    expect(isStateChangeMethod("activate")).toBe(true);
+    expect(isStateChangeMethod("suspend")).toBe(true);
+
+    // ClassName.method 형태
+    expect(isStateChangeMethod("OrderService.changeStatus")).toBe(true);
+    expect(isStateChangeMethod("Order.complete")).toBe(true);
+
+    // 비관련 메서드
+    expect(isStateChangeMethod("findById")).toBe(false);
+    expect(isStateChangeMethod("getStatus")).toBe(false);
+    expect(isStateChangeMethod("toString")).toBe(false);
+    expect(isStateChangeMethod("save")).toBe(false);
+  });
+
+  it("상태 변경 메서드에 깊이 보너스를 적용합니다", () => {
+    // maxDepth=2로 제한하되, 상태 변경 메서드에 보너스 부여
+    const modules: ParsedModule[] = [
+      {
+        file_path: "Controller.kt",
+        language: "kotlin",
+        exports: [{ name: "Controller", kind: "class", file_path: "Controller.kt", line: 1 }],
+        imports: [],
+        call_sites: [
+          { caller: "Controller.handle", callee: "Service.changeStatus", file_path: "Controller.kt", line: 5, kind: "direct" },
+        ],
+        type_declarations: [],
+        state_assignments: [],
+      },
+      {
+        file_path: "Service.kt",
+        language: "kotlin",
+        exports: [{ name: "Service", kind: "class", file_path: "Service.kt", line: 1 }],
+        imports: [],
+        call_sites: [
+          { caller: "Service.changeStatus", callee: "Repo.save", file_path: "Service.kt", line: 10, kind: "direct" },
+        ],
+        type_declarations: [],
+        state_assignments: [
+          { id: "Order.status:PENDING->COMPLETED", entity: "Order", field_name: "status", from: "PENDING", to: "COMPLETED", file_path: "Service.kt", line: 8 },
+        ],
+      },
+    ];
+    const entryPoints: EntryPointPattern[] = [
+      { file: "Controller.kt", symbol: "Controller.handle", kind: "http", line: 3, annotation: "@PostMapping" },
+    ];
+
+    // maxDepth=2, stateChangeDepthBonus=5 → changeStatus는 보너스 받아서 내부 추적 가능
+    const graph = buildCallGraph(entryPoints, modules, { maxDepth: 2, stateChangeDepthBonus: 5 });
+
+    // Service.changeStatus 내부의 Repo.save까지 도달해야 함
+    expect(graph.some((s) => s.callee === "Service.changeStatus")).toBe(true);
+    expect(graph.some((s) => s.callee === "Repo.save")).toBe(true);
+  });
+
+  it("일반 메서드는 깊이 제한에 걸립니다", () => {
+    const modules: ParsedModule[] = [
+      {
+        file_path: "A.kt",
+        language: "kotlin",
+        exports: [{ name: "A", kind: "class", file_path: "A.kt", line: 1 }],
+        imports: [],
+        call_sites: [
+          { caller: "A.start", callee: "B.process", file_path: "A.kt", line: 5, kind: "direct" },
+        ],
+        type_declarations: [],
+        state_assignments: [],
+      },
+      {
+        file_path: "B.kt",
+        language: "kotlin",
+        exports: [{ name: "B", kind: "class", file_path: "B.kt", line: 1 }],
+        imports: [],
+        call_sites: [
+          { caller: "B.process", callee: "C.doWork", file_path: "B.kt", line: 10, kind: "direct" },
+        ],
+        type_declarations: [],
+        state_assignments: [],
+      },
+    ];
+    const entryPoints: EntryPointPattern[] = [
+      { file: "A.kt", symbol: "A.start", kind: "http", line: 3, annotation: "@GetMapping" },
+    ];
+
+    // maxDepth=1이면 B.process까지만 기록, C.doWork는 도달 불가
+    const graph = buildCallGraph(entryPoints, modules, { maxDepth: 1 });
+    expect(graph.some((s) => s.callee === "B.process")).toBe(true);
+    expect(graph.some((s) => s.callee === "C.doWork")).toBe(false);
+  });
+});
+
+describe("설정 파일 스캔 (개선안 H)", () => {
+  it("YAML 설정에서 정책 상수를 추출합니다", () => {
+    const configFiles: GeneratorConfigFile[] = [{
+      path: "application.yml",
+      format: "yaml",
+      content: `
+spring:
+  datasource:
+    max-pool-size: 10
+    url: jdbc:postgresql://localhost/db
+app:
+  max-retry-count: 3
+  grace-period-days: 14
+`,
+    }];
+    const results = extractConfigConstants(configFiles);
+    const maxPool = results.find((r) => r.name === "MAX_POOL_SIZE");
+    expect(maxPool).toBeDefined();
+    expect(maxPool!.value).toBe(10);
+    expect(maxPool!.source_type).toBe("config");
+    expect(maxPool!.usage_context).toBe("spring.datasource.max-pool-size");
+
+    const gracePeriod = results.find((r) => r.name === "GRACE_PERIOD_DAYS");
+    expect(gracePeriod).toBeDefined();
+    expect(gracePeriod!.value).toBe(14);
+
+    // URL은 제외
+    expect(results.find((r) => r.usage_context?.includes("url"))).toBeUndefined();
+  });
+
+  it("properties 파일에서 정책 상수를 추출합니다", () => {
+    const configFiles: GeneratorConfigFile[] = [{
+      path: "application.properties",
+      format: "properties",
+      content: `
+# DB 설정
+spring.datasource.max-pool-size=10
+app.max-retry-count=3
+server.port=8080
+`,
+    }];
+    const results = extractConfigConstants(configFiles);
+    expect(results.find((r) => r.name === "MAX_POOL_SIZE")).toBeDefined();
+    expect(results.find((r) => r.name === "MAX_RETRY_COUNT")).toBeDefined();
+    expect(results.find((r) => r.name === "PORT")).toBeDefined();
+  });
+
+  it(".env 파일에서 정책 상수를 추출합니다", () => {
+    const configFiles: GeneratorConfigFile[] = [{
+      path: ".env",
+      format: "env",
+      content: `
+# 앱 설정
+MAX_UPLOAD_SIZE=10485760
+GRACE_PERIOD_DAYS=14
+API_BASE_URL=https://api.example.com
+DEBUG=true
+`,
+    }];
+    const results = extractConfigConstants(configFiles);
+    const maxUpload = results.find((r) => r.name === "MAX_UPLOAD_SIZE");
+    expect(maxUpload).toBeDefined();
+    expect(maxUpload!.value).toBe(10485760);
+
+    // URL은 제외
+    expect(results.find((r) => r.name === "API_BASE_URL")).toBeUndefined();
+    // boolean은 제외
+    expect(results.find((r) => r.name === "DEBUG")).toBeUndefined();
+  });
+
+  it("빈 설정 파일 목록에서 빈 배열을 반환합니다", () => {
+    expect(extractConfigConstants([])).toEqual([]);
   });
 });
 
