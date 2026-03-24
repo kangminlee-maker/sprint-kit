@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+온톨로지 자동 생성 Phase 2a: 입력 범위 확장 (~88% → ~93%). Stage 2 에이전트 프로토콜 정의, 보조 진입점, 상태 변경 메서드 추적, 설정 파일 스캔 도입.
+
+### 온톨로지 자동 생성 — Phase 2a
+
+- **Stage 2 에이전트 프로토콜** (`docs/agent-protocol/ontology-generate.md`): Stage 2(LLM)가 `CodeStructureExtract`를 소비하여 YAML을 생성하는 규칙 정의. 소비 순서(S1~S7), YAML 필드별 생성 규칙, fallback/warning 체계, code_aliases vs semantic_aliases 병합 규칙, 캐시 키 규칙
+- **DomainFlowSeed**: 진입점에서 시작하는 행위 흐름의 골격을 IR에 기록. `domain_flows` YAML 스키마 + `buildOntologyIndex()` 확장 방향 정의
+- **보조 진입점 (개선안 D)**: `@Service`/`@Component`/`@Injectable` 클래스의 public 메서드를 `EntryPoint(kind: "auxiliary_service_method")`로 수집. 2-pass 처리: 1st pass 기존 진입점 → 2nd pass 미도달 서비스 메서드. `EntryPoint.primary` 필드 추가
+- **상태 변경 메서드 추적 (개선안 F)**: `changeStatus`, `setStatus`, `transitionTo`, `complete`, `approve` 등 상태 변경 관용 메서드에 BFS 깊이 보너스 적용. 메서드 내부의 상태 할당까지 도달 보장
+- **설정 파일 스캔 (개선안 H)**: `config-adapter.ts` 신규. application.yml, application.properties, .env 파서. `PolicyConstantCandidate.source_type: "config"`
+
+### 타입 변경
+
+- `EntryPoint.primary: boolean` 추가
+- `EntryPointKind`에 `"auxiliary_service_method"` 추가
+- `DomainFlowSeed` 타입 신규
+- `CodeStructureExtract.domain_flow_seeds` 필드 추가
+- `CallGraphOptions.stateChangeDepthBonus` 옵션 추가
+
+### 테스트
+
+- 47파일 1,079건 (1.0.0 대비 +37건)
+- 보조 진입점 탐지 3건, primary 필드 2건, DomainFlowSeed 2건
+- 상태 변경 메서드 패턴 인식 + 깊이 보너스 3건
+- 설정 파일 스캔 (YAML/properties/.env) 4건
+
 ## 1.0.0 (2026-03-22)
 
 온톨로지 기반 제약 발견(Ontology-Guided Constraint Discovery) 도입. 도메인 온톨로지에서 6개 관점의 코드 청크를 자동 수집하여, 제약 발견의 정밀도를 높입니다.
