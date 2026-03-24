@@ -62,11 +62,76 @@ for (const file of files) {
   }
 }
 
+// ── Rule 2: generators/ ↔ ontology-*.ts 양방향 차단 ──
+// 생성 파이프라인(generators/)과 소비 파이프라인(ontology-*.ts)은 YAML로만 연결됩니다.
+// 코드 수준의 import는 양방향 모두 금지합니다.
+
+const GENERATORS_DIR = join(ROOT, "src/scanners/generators");
+const SCANNERS_DIR = join(ROOT, "src/scanners");
+
+// generators/ → ontology-*.ts import 차단
+try {
+  const generatorFiles = collectTsFiles(GENERATORS_DIR);
+  for (const file of generatorFiles) {
+    const content = readFileSync(file, "utf-8");
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.includes("import")) continue;
+      if (/from\s+["'][^"']*ontology-/.test(line)) {
+        violations.push({
+          file: relative(ROOT, file),
+          line: i + 1,
+          import: line.trim(),
+        });
+      }
+      // generators/ → scanners/types.ts import 차단 (ScanResult 직접 참조 금지)
+      // "../types"는 generators/types.ts 참조이므로 허용. "../../types" 이상이 scanners/types.ts
+      if (/from\s+["'][^"']*\.\.\/\.\.\/types/.test(line)) {
+        violations.push({
+          file: relative(ROOT, file),
+          line: i + 1,
+          import: line.trim(),
+        });
+      }
+    }
+  }
+} catch {
+  // generators/ 디렉토리가 없으면 건너뜀
+}
+
+// ontology-*.ts → generators/ import 차단
+try {
+  const ontologyFiles = readdirSync(SCANNERS_DIR)
+    .filter((f) => f.startsWith("ontology-") && f.endsWith(".ts") && !f.endsWith(".test.ts"))
+    .map((f) => join(SCANNERS_DIR, f));
+
+  for (const file of ontologyFiles) {
+    const content = readFileSync(file, "utf-8");
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.includes("import")) continue;
+      if (/from\s+["'][^"']*generators\//.test(line)) {
+        violations.push({
+          file: relative(ROOT, file),
+          line: i + 1,
+          import: line.trim(),
+        });
+      }
+    }
+  }
+} catch {
+  // scanners/ 디렉토리 없으면 건너뜀
+}
+
+// ── 결과 출력 ──
+
 if (violations.length === 0) {
-  console.log("✓ kernel/ dependency direction: no violations");
+  console.log("✓ dependency direction: no violations");
   process.exit(0);
 } else {
-  console.error(`✗ kernel/ dependency direction: ${violations.length} violation(s)`);
+  console.error(`✗ dependency direction: ${violations.length} violation(s)`);
   for (const v of violations) {
     console.error(`  ${v.file}:${v.line} — ${v.import}`);
   }
