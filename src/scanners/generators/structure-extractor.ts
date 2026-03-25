@@ -25,7 +25,10 @@ import type {
   DomainFlowSeed,
   ExtractMeta,
   SupportedLanguage,
+  GeneratorConfigFile,
 } from "./types.js";
+
+import { extractConfigConstants } from "./config-adapter.js";
 
 // ── 어노테이션 패턴 ──
 
@@ -45,6 +48,8 @@ export function extractStructure(
   modules: ParsedModule[],
   entryPointPatterns: EntryPointPattern[],
   callGraph: CallSite[],
+  fileContents?: Map<string, string>,
+  configFiles?: GeneratorConfigFile[],
 ): CodeStructureExtract {
   // 호출 그래프에서 도달 가능한 파일 세트
   const reachableFiles = new Set<string>();
@@ -66,8 +71,22 @@ export function extractStructure(
   // 관계 추출 (개선안 C: 일원화)
   const relationCandidates = extractRelations(modules, entityCandidates, reachableFiles);
 
-  // 정책 상수 추출
-  const policyConstantCandidates = extractPolicyConstants(modules, reachableFiles);
+  // 정책 상수 추출: 파일 content + 설정 파일에서 통합 수집
+  const policyConstantCandidates: PolicyConstantCandidate[] = [];
+
+  if (fileContents) {
+    fileContents.forEach((content, filePath) => {
+      policyConstantCandidates.push(
+        ...extractPolicyConstantsFromContent(content, filePath),
+      );
+    });
+  }
+
+  if (configFiles) {
+    policyConstantCandidates.push(
+      ...extractConfigConstants(configFiles),
+    );
+  }
 
   // 진입점 변환
   const entryPoints = entryPointPatterns.map(patternToEntryPoint);

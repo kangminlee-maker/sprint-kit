@@ -5,6 +5,8 @@ import { buildCallGraph, isStateChangeMethod } from "./call-graph-builder.js";
 import { extractStructure, extractPolicyConstantsFromContent } from "./structure-extractor.js";
 import { extractConfigConstants } from "./config-adapter.js";
 import { generateYaml } from "./yaml-generator.js";
+import { runGeneratorPipeline } from "./run-pipeline.js";
+import { buildOntologyIndex } from "../ontology-index.js";
 import { makeStateAssignmentId } from "./types.js";
 import type { ParsedModule, EntryPointPattern, GeneratorConfigFile } from "./types.js";
 
@@ -591,5 +593,197 @@ describe("E2E: 호출 그래프 + 구조 추출 + YAML 생성", () => {
     expect(yaml.glossary).toBe("");
     expect(yaml.actions).toBe("");
     expect(yaml.transitions).toBe("");
+  });
+});
+
+describe("통합: generateYaml → buildOntologyIndex (YAML 계약 검증)", () => {
+  it("엔티티가 있는 glossary YAML이 소비 파이프라인을 통과합니다", () => {
+    const extract = {
+      entry_points: [],
+      call_graph: [],
+      entity_candidates: [{
+        name: "Lesson",
+        file_path: "Lesson.ts",
+        fields: [{ name: "status", type_name: "LessonStatus", is_fk: false }],
+        annotations: ["@Entity"],
+        db_table: "gt_lesson",
+      }],
+      enum_candidates: [{
+        name: "LessonStatus",
+        file_path: "LessonStatus.ts",
+        values: ["DRAFT", "IN_PROGRESS", "COMPLETED"],
+        used_by_fields: ["Lesson.status"],
+      }],
+      transition_candidates: [],
+      relation_candidates: [],
+      policy_constant_candidates: [],
+      domain_flow_seeds: [],
+      meta: { total_files: 2, parsed_files: 2, entry_points_found: 0, unresolved_calls: 0, languages: ["typescript" as const] },
+    };
+    const yaml = generateYaml(extract);
+    const index = buildOntologyIndex(yaml.glossary, yaml.actions, yaml.transitions);
+
+    expect(index.glossary.size).toBe(1);
+    expect(index.glossary.get("lesson")).toBeDefined();
+    expect(index.glossary.get("lesson")!.canonical).toBe("Lesson");
+    expect(index.glossary.get("lesson")!.db_table).toBe("gt_lesson");
+    expect(index.glossary.get("lesson")!.value_filters).toHaveLength(3);
+  });
+
+  it("진입점이 있는 actions YAML이 소비 파이프라인을 통과합니다", () => {
+    const extract = {
+      entry_points: [{
+        symbol: "LessonController.getLesson",
+        kind: "http" as const,
+        file_path: "LessonController.kt",
+        line: 5,
+        primary: true,
+        http_method: "GET",
+        http_path: "/api/lessons/{id}",
+        annotation: "@GetMapping",
+      }],
+      call_graph: [],
+      entity_candidates: [],
+      enum_candidates: [],
+      transition_candidates: [],
+      relation_candidates: [],
+      policy_constant_candidates: [],
+      domain_flow_seeds: [],
+      meta: { total_files: 1, parsed_files: 1, entry_points_found: 1, unresolved_calls: 0, languages: ["kotlin" as const] },
+    };
+    const yaml = generateYaml(extract);
+    const index = buildOntologyIndex(yaml.glossary, yaml.actions, yaml.transitions);
+
+    expect(index.actions.size).toBe(1);
+    expect(index.actions.get("LessonController.getLesson")).toBeDefined();
+    expect(index.actions.get("LessonController.getLesson")!.source_code).toBe("LessonController.kt:5");
+  });
+
+  it("상태 전이가 있는 transitions YAML이 소비 파이프라인을 통과합니다", () => {
+    const extract = {
+      entry_points: [],
+      call_graph: [],
+      entity_candidates: [],
+      enum_candidates: [],
+      transition_candidates: [
+        { id: "Order.status:null->CREATED", entity: "Order", field_name: "status", from: null, to: "CREATED", file_path: "OrderService.kt", line: 15 },
+        { id: "Order.status:CREATED->CONFIRMED", entity: "Order", field_name: "status", from: "CREATED", to: "CONFIRMED", file_path: "OrderService.kt", line: 25, guard_expression: "order.valid === true" },
+      ],
+      relation_candidates: [],
+      policy_constant_candidates: [],
+      domain_flow_seeds: [],
+      meta: { total_files: 1, parsed_files: 1, entry_points_found: 0, unresolved_calls: 0, languages: ["kotlin" as const] },
+    };
+    const yaml = generateYaml(extract);
+    const index = buildOntologyIndex(yaml.glossary, yaml.actions, yaml.transitions);
+
+    expect(index.transitions.size).toBe(1);
+    const orderTransitions = index.transitions.get("order");
+    expect(orderTransitions).toBeDefined();
+    expect(orderTransitions).toHaveLength(2);
+    expect(orderTransitions![0].from).toBe("(none)");
+    expect(orderTransitions![0].to).toBe("CREATED");
+    expect(orderTransitions![1].from).toBe("CREATED");
+    expect(orderTransitions![1].guards).toBeDefined();
+  });
+
+  it("빈 입력에서 소비 파이프라인이 빈 Map을 반환합니다", () => {
+    const extract = {
+      entry_points: [],
+      call_graph: [],
+      entity_candidates: [],
+      enum_candidates: [],
+      transition_candidates: [],
+      relation_candidates: [],
+      policy_constant_candidates: [],
+      domain_flow_seeds: [],
+      meta: { total_files: 0, parsed_files: 0, entry_points_found: 0, unresolved_calls: 0, languages: [] as const[] },
+    };
+    const yaml = generateYaml(extract);
+    const index = buildOntologyIndex(yaml.glossary, yaml.actions, yaml.transitions);
+
+    expect(index.glossary.size).toBe(0);
+    expect(index.actions.size).toBe(0);
+    expect(index.transitions.size).toBe(0);
+  });
+});
+
+describe("오케스트레이터 (runGeneratorPipeline)", () => {
+  it("TypeScript 소스에서 파이프라인을 일괄 실행합니다", () => {
+    const result = runGeneratorPipeline({
+      files: [
+        { path: "Lesson.ts", content: ENTITY_TS },
+        { path: "LessonStatus.ts", content: ENUM_TS },
+        { path: "constants.ts", content: CONSTANTS_TS },
+      ],
+      dependency_graph: [],
+    });
+
+    expect(result.meta.parsed_files).toBe(3);
+    expect(result.meta.unsupported_files).toHaveLength(0);
+    expect(result.yaml.glossary).toContain("Lesson");
+    expect(result.yaml.warnings).not.toContain("auto_generated_no_entities");
+  });
+
+  it("미지원 파일을 건너뛰고 unsupported_files에 기록합니다", () => {
+    const result = runGeneratorPipeline({
+      files: [
+        { path: "Lesson.ts", content: ENTITY_TS },
+        { path: "Service.kt", content: SERVICE_KT },
+      ],
+      dependency_graph: [],
+    });
+
+    expect(result.meta.parsed_files).toBe(1);
+    expect(result.meta.unsupported_files).toContain("Service.kt");
+  });
+
+  it("오케스트레이터 출력이 소비 파이프라인을 통과합니다", () => {
+    const result = runGeneratorPipeline({
+      files: [
+        { path: "Lesson.ts", content: ENTITY_TS },
+        { path: "LessonStatus.ts", content: ENUM_TS },
+      ],
+      dependency_graph: [],
+    });
+
+    const index = buildOntologyIndex(
+      result.yaml.glossary,
+      result.yaml.actions,
+      result.yaml.transitions,
+    );
+    expect(index.glossary.size).toBeGreaterThan(0);
+  });
+});
+
+describe("TsMorphAdapter call_sites 생성", () => {
+  const adapter = new TsMorphAdapter();
+
+  it("함수 호출을 call_sites로 추출합니다", () => {
+    const code = `
+export function processOrder(order: Order) {
+  validateOrder(order);
+  const result = orderService.save(order);
+  return result;
+}`;
+    const result = adapter.parse(code, "order.ts");
+    expect(result.call_sites.length).toBeGreaterThanOrEqual(1);
+    const validateCall = result.call_sites.find((s) => s.callee === "validateOrder");
+    expect(validateCall).toBeDefined();
+    expect(validateCall!.caller).toBe("processOrder");
+  });
+
+  it("클래스 메서드 내부의 호출을 추적합니다", () => {
+    const code = `
+export class OrderService {
+  create(data: OrderData) {
+    this.validate(data);
+    repo.save(data);
+  }
+}`;
+    const result = adapter.parse(code, "OrderService.ts");
+    const repoCall = result.call_sites.find((s) => s.callee === "repo.save");
+    expect(repoCall).toBeDefined();
+    expect(repoCall!.caller).toBe("OrderService.create");
   });
 });

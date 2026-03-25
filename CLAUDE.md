@@ -21,21 +21,40 @@ The user may lack specialized knowledge in the technical domain. Ensure that mec
 
 These principles apply to all artifacts and documents produced by the system.
 
+## Tech Stack
+
+<!-- auto:tech-stack -->
+- Programming Language: TypeScript (strict mode)
+- Framework: 없음 (순수 라이브러리 — yaml, zod)
+- Package Manager: npm
+<!-- /auto:tech-stack -->
+
 ## System Structure
 
-- **Ontology Map**: `docs/ontology-map.md` — 도메인 엔티티, union type, 관계 구조, Reverse Index (자동 생성, `npm run ontology-map`)
+<!-- auto:system-structure -->
+- **Ontology Map**: `npm run ontology-map` → `docs/ontology-map.md` — 도메인 엔티티, union type, 관계 구조, Reverse Index 자동 생성
 - **Gate Guard**: `npm run check-deps` — kernel/ 모듈의 의존 방향 검증 (외부 모듈 import 차단)
 - **Protocol Refs Check**: `npm run check-refs` — 에이전트 프로토콜 문서의 타입/이벤트 참조가 코드와 일치하는지 검증
 - **Ontology Consumption Pipeline**: `scanners/ontology-index.ts` → `ontology-query.ts` → `ontology-resolve.ts` → `code-chunk-collector.ts` — 도메인 온톨로지 기반 6관점 코드 청크 자동 수집
 - **Ontology Generation Pipeline**: `scanners/generators/` — 코드베이스에서 도메인 온톨로지 YAML을 자동 생성하는 2단계 파이프라인 (Stage 1: 구조 추출, Stage 2: LLM 의미 부여). 에이전트 프로토콜: `docs/agent-protocol/ontology-generate.md`
+<!-- /auto:system-structure -->
+
+## Verification Loop
+
+<!-- auto:verify -->
+After every change: `npm run build && npm test`
+Before PR: `npm run build && npm test && npm run check-deps && npm run check-refs`
+<!-- /auto:verify -->
 
 ## Commit Protocol
 
 커밋 또는 푸시 전에 다음 문서가 현재 코드를 반영하는지 확인하고, 필요시 업데이트합니다:
+<!-- auto:commit-protocol -->
 - `CHANGELOG.md` — 새 버전/변경 사항 추가
 - `README.md` — 현재 규모 (파일 수, 테스트 수) + 새 기능 반영
 - `CLAUDE.md` — System Structure 섹션에 새 모듈/파이프라인 반영
 - `dev-docs/design/ontology-auto-generation-tasks.md` — 작업 상태 업데이트 (해당 시)
+<!-- /auto:commit-protocol -->
 
 이 규칙은 의미적 판단이므로 모든 커밋에 적용하지 않습니다. 기능 추가/구조 변경 커밋에만 적용합니다. 단순 버그 수정이나 typo 수정에는 불필요합니다.
 

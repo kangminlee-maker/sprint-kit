@@ -62,6 +62,18 @@ const FIELD_RE = /^(?:readonly\s+)?(\w+)(?:\??):\s*(\w+)/;
 const ENUM_VALUE_RE = /^(\w+)(?:\s*=|,|\s*$)/;
 const TABLE_NAME_RE = /@Table\(\s*name\s*=\s*["'](\w+)["']/;
 
+// ── call site 탐지 패턴 ──
+
+const METHOD_DECL_RE = /^(?:async\s+)?(\w+)\s*\(/;
+const STANDALONE_FUNC_RE = /^(?:export\s+)?(?:async\s+)?function\s+(\w+)/;
+const ARROW_FUNC_RE = /^(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s+)?\(?/;
+const CALL_RE = /(?:await\s+)?(\w+(?:\.\w+)*)\s*\(/g;
+const CALL_SKIP_KEYWORDS = new Set([
+  "if", "for", "while", "switch", "return", "new", "import", "require",
+  "typeof", "instanceof", "catch", "throw", "super", "class", "function",
+  "const", "let", "var", "export", "console",
+]);
+
 export class TsMorphAdapter implements ParserAdapter {
   languages: SupportedLanguage[] = ["typescript", "javascript"];
 
@@ -82,7 +94,9 @@ export class TsMorphAdapter implements ParserAdapter {
     let currentFields: FieldDecl[] = [];
     let currentEnumName: string | null = null;
     let currentEnumValues: string[] = [];
+    let currentFunction: string | null = null;
     let braceDepth = 0;
+    let functionBraceDepth = 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -131,9 +145,18 @@ export class TsMorphAdapter implements ParserAdapter {
       // 상수 선언 (정책 상수 후보)
       // — 별도 추출기에서 처리하므로 여기서는 ParsedModule에 포함하지 않음
 
+      // arrow function (const fn = ...)
+      const arrowMatch = trimmed.match(ARROW_FUNC_RE);
+      if (arrowMatch && !currentClass) {
+        currentFunction = arrowMatch[1];
+        functionBraceDepth = 0;
+      }
+
       // export function
       const funcMatch = trimmed.match(EXPORT_FUNCTION_RE);
       if (funcMatch) {
+        currentFunction = funcMatch[1];
+        functionBraceDepth = 0;
         exports.push({
           name: funcMatch[1],
           kind: "function",
@@ -256,7 +279,14 @@ export class TsMorphAdapter implements ParserAdapter {
           currentClass = null;
           currentClassAnnotations = [];
           currentFields = [];
+          currentFunction = null;
           continue;
+        }
+
+        // 메서드 선언 탐지 (클래스 내부)
+        const methodMatch = trimmed.match(METHOD_DECL_RE);
+        if (methodMatch && braceDepth === 1 && !trimmed.startsWith("@")) {
+          currentFunction = `${currentClass}.${methodMatch[1]}`;
         }
 
         // 필드 추출
@@ -293,6 +323,21 @@ export class TsMorphAdapter implements ParserAdapter {
             guard_expression: findGuardExpression(lines, i),
           });
         }
+      }
+
+      // 비클래스 함수의 brace depth 추적
+      if (!currentClass && currentFunction) {
+        const openBraces = (trimmed.match(/{/g) || []).length;
+        const closeBraces = (trimmed.match(/}/g) || []).length;
+        functionBraceDepth += openBraces - closeBraces;
+        if (functionBraceDepth <= 0 && closeBraces > 0) {
+          currentFunction = null;
+        }
+      }
+
+      // call site 탐지
+      if (currentFunction) {
+        detectCallSites(trimmed, currentFunction, currentClass, filePath, lineNum, callSites);
       }
     }
 
@@ -371,4 +416,53 @@ function findGuardExpression(
     }
   }
   return undefined;
+}
+
+function detectCallSites(
+  trimmed: string,
+  caller: string,
+  currentClass: string | null,
+  filePath: string,
+  lineNum: number,
+  callSites: CallSite[],
+): void {
+  // Skip lines that are imports, decorators, or type annotations
+  if (
+    trimmed.startsWith("import ") ||
+    trimmed.startsWith("@") ||
+    trimmed.startsWith("type ") ||
+    trimmed.startsWith("interface ")
+  ) {
+    return;
+  }
+
+  CALL_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = CALL_RE.exec(trimmed)) !== null) {
+    const rawCallee = match[1];
+    const firstToken = rawCallee.split(".")[0];
+
+    // Skip language keywords
+    if (CALL_SKIP_KEYWORDS.has(firstToken)) continue;
+
+    // Resolve this.method → ClassName.method
+    let callee = rawCallee;
+    if (rawCallee.startsWith("this.") && currentClass) {
+      callee = `${currentClass}.${rawCallee.slice(5)}`;
+    }
+
+    // Determine kind: computed property access (bracket notation) → unresolved
+    const kind: "direct" | "unresolved" = rawCallee.includes("[")
+      ? "unresolved"
+      : "direct";
+
+    callSites.push({
+      caller,
+      callee,
+      file_path: filePath,
+      line: lineNum,
+      kind,
+    });
+  }
 }

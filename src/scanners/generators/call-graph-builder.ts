@@ -84,7 +84,7 @@ export function buildCallGraph(
     const startSymbol = ep.symbol;
     const startFile = ep.file;
 
-    bfsTraverse(
+    dfsTraverse(
       startSymbol,
       startFile,
       0,
@@ -104,7 +104,7 @@ export function buildCallGraph(
 
 // ── BFS 탐색 ──
 
-function bfsTraverse(
+function dfsTraverse(
   symbol: string,
   filePath: string,
   depth: number,
@@ -151,7 +151,7 @@ function bfsTraverse(
           ? Math.min(depth + 1, maxDepth - stateChangeBonus)
           : depth + 1;
 
-        bfsTraverse(
+        dfsTraverse(
           site.callee,
           calleeFile,
           nextDepth,
@@ -191,7 +191,7 @@ function bfsTraverse(
             ? Math.min(depth + 1, maxDepth - stateChangeBonus)
             : depth + 1;
 
-          bfsTraverse(
+          dfsTraverse(
             site.callee,
             resolvedFile,
             nextDepth,

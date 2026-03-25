@@ -74,6 +74,13 @@ export type { RelevantCodeChunks, CoverageGap, CollectOptions } from "./scanners
 
 export type { CodeChunk, CollectionViewpoint } from "./scanners/viewpoint-collectors.js";
 
+// ─── Ontology Auto-Generation (Stage 1 Pipeline) ───
+
+export { runGeneratorPipeline } from "./scanners/generators/run-pipeline.js";
+export type { PipelineResult } from "./scanners/generators/run-pipeline.js";
+export type { GeneratorInput, GeneratorFileEntry, GeneratorConfigFile, CodeStructureExtract, DomainFlowSeed, EntryPoint, EntryPointKind } from "./scanners/generators/types.js";
+export type { GeneratedYaml } from "./scanners/generators/yaml-generator.js";
+
 // ─── Core types (read-only access to kernel types) ───
 
 export type {

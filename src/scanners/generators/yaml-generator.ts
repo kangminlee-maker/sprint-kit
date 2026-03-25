@@ -139,15 +139,80 @@ export function generateYaml(extract: CodeStructureExtract): GeneratedYaml {
       : undefined,
   }));
 
+  // buildOntologyIndex() 입력 형식에 맞춰 루트 키 래핑
+  const glossaryYaml = glossaryEntries.length > 0
+    ? stringify({ glossary: glossaryEntries })
+    : "";
+
+  const actionsYaml = actionEntries.length > 0
+    ? stringify({ actions: actionEntries })
+    : "";
+
+  // transitions: entity별 그룹핑 → { entities: [{ name, state_machine: [...] }] } 중첩
+  const transitionsYaml = transitionEntries.length > 0
+    ? stringify({ entities: groupTransitionsByEntity(transitionEntries) })
+    : "";
+
   return {
-    glossary: glossaryEntries.length > 0 ? stringify(glossaryEntries) : "",
-    actions: actionEntries.length > 0 ? stringify(actionEntries) : "",
-    transitions: transitionEntries.length > 0 ? stringify(transitionEntries) : "",
+    glossary: glossaryYaml,
+    actions: actionsYaml,
+    transitions: transitionsYaml,
     warnings,
   };
 }
 
 // ── 헬퍼 ──
+
+/** TransitionYamlEntry[] → buildOntologyIndex()가 기대하는 중첩 구조로 변환 */
+function groupTransitionsByEntity(
+  entries: TransitionYamlEntry[],
+): { name: string; state_machine: { field_name: string; transitions: TransitionNested[] }[] }[] {
+  // entity → field_name → transitions 그룹핑
+  const entityMap = new Map<string, Map<string, TransitionYamlEntry[]>>();
+
+  for (const entry of entries) {
+    if (!entityMap.has(entry.entity)) {
+      entityMap.set(entry.entity, new Map());
+    }
+    const fieldMap = entityMap.get(entry.entity)!;
+    const fieldName = entry.field_name;
+    if (!fieldMap.has(fieldName)) {
+      fieldMap.set(fieldName, []);
+    }
+    fieldMap.get(fieldName)!.push(entry);
+  }
+
+  const result: { name: string; state_machine: { field_name: string; transitions: TransitionNested[] }[] }[] = [];
+
+  for (const [entityName, fieldMap] of entityMap) {
+    const stateFields: { field_name: string; transitions: TransitionNested[] }[] = [];
+    for (const [fieldName, transitions] of fieldMap) {
+      stateFields.push({
+        field_name: fieldName,
+        transitions: transitions.map((t) => ({
+          id: t.id,
+          from: t.from,
+          to: t.to,
+          trigger: t.trigger ?? "",
+          source_code: t.source_code,
+          ...(t.guards ? { guard: t.guards } : {}),
+        })),
+      });
+    }
+    result.push({ name: entityName, state_machine: stateFields });
+  }
+
+  return result;
+}
+
+interface TransitionNested {
+  id?: string;
+  from: string;
+  to: string;
+  trigger: string;
+  source_code: string;
+  guard?: { check: string }[];
+}
 
 function findTargetEntities(
   entrySymbol: string,

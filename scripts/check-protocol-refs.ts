@@ -31,6 +31,9 @@ const SOURCE_FILES = [
   join(ROOT, "src/kernel/types.ts"),
   join(ROOT, "src/compilers/compile.ts"),
   join(ROOT, "src/compilers/compile-defense.ts"),
+  join(ROOT, "src/scanners/generators/types.ts"),
+  join(ROOT, "src/scanners/ontology-index.ts"),
+  join(ROOT, "src/scanners/types.ts"),
 ];
 
 // ─── Build reference sets ───
