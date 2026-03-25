@@ -1,5 +1,9 @@
 /**
- * TypeScript/JavaScript 파서 어댑터 (ts-morph 기반)
+ * TypeScript/JavaScript 파서 어댑터 (정규식 기반 경량 파서)
+ *
+ * 정규식과 줄 단위 분석으로 코드 구조를 추출합니다.
+ * ts-morph 등 AST 파서 대비 정확도가 낮지만, 외부 의존성 없이 경량으로 동작합니다.
+ * Stage 1의 "best-effort 추출" 원칙에 따라, 미추출 항목은 Stage 2가 보완합니다.
  *
  * ParsedModule을 출력합니다. 후속 처리는 ParsedModule만 소비하므로,
  * 파서 추가 시 어댑터만 구현하면 됩니다.

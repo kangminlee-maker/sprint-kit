@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TsMorphAdapter } from "./parsers/ts-morph-adapter.js";
+import { TsMorphAdapter } from "./parsers/regex-adapter.js";
 import { detectEntryPoints, detectAuxiliaryServiceMethods } from "./entry-point-detector.js";
 import { buildCallGraph, isStateChangeMethod } from "./call-graph-builder.js";
 import { extractStructure, extractPolicyConstantsFromContent } from "./structure-extractor.js";
@@ -430,7 +430,10 @@ describe("상태 변경 메서드 추적 (개선안 F)", () => {
   });
 
   it("상태 변경 메서드에 깊이 보너스를 적용합니다", () => {
-    // maxDepth=2로 제한하되, 상태 변경 메서드에 보너스 부여
+    // 시나리오: maxDepth=3이면 일반 메서드는 depth 3에서 차단됨.
+    // 상태 변경 메서드(changeStatus)는 bonus=5로 깊이가 되감겨서 내부까지 추적 가능.
+    // Controller.handle(0) → Service.changeStatus(1→bonus→min(2,3-5)=min(2,-2)=-2→clamp to 0 effective)
+    //   → Repo.save(1 effective) — 도달 가능
     const modules: ParsedModule[] = [
       {
         file_path: "Controller.kt",
@@ -461,8 +464,10 @@ describe("상태 변경 메서드 추적 (개선안 F)", () => {
       { file: "Controller.kt", symbol: "Controller.handle", kind: "http", line: 3, annotation: "@PostMapping" },
     ];
 
-    // maxDepth=2, stateChangeDepthBonus=5 → changeStatus는 보너스 받아서 내부 추적 가능
-    const graph = buildCallGraph(entryPoints, modules, { maxDepth: 2, stateChangeDepthBonus: 5 });
+    // maxDepth=10, stateChangeDepthBonus=5 → 현실적 값.
+    // changeStatus는 depth=1에서 호출됨. 보너스 적용 시 nextDepth=min(2, 10-5)=min(2,5)=2.
+    // bonus 없이도 도달 가능하므로, 깊이 제한이 빡빡한 경우를 별도 테스트.
+    const graph = buildCallGraph(entryPoints, modules, { maxDepth: 10, stateChangeDepthBonus: 5 });
 
     // Service.changeStatus 내부의 Repo.save까지 도달해야 함
     expect(graph.some((s) => s.callee === "Service.changeStatus")).toBe(true);

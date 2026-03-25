@@ -146,7 +146,9 @@ function dfsTraverse(
         symbolIndex,
       );
       if (calleeFile) {
-        // 개선안 F: 상태 변경 메서드면 깊이 보너스 적용
+        // 개선안 F: 상태 변경 메서드면 깊이를 되감아 내부까지 추적.
+        // 예: maxDepth=20, bonus=5, 현재 depth=18이면 nextDepth=min(19, 15)=15로 되감김.
+        // 이미 깊이가 충분히 얕으면(depth+1 < maxDepth-bonus) 보너스 없이 정상 진행.
         const nextDepth = isStateChangeMethod(site.callee)
           ? Math.min(depth + 1, maxDepth - stateChangeBonus)
           : depth + 1;

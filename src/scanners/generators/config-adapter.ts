@@ -8,6 +8,7 @@
  * PolicyConstantCandidate(source_type: "config")로 반환합니다.
  */
 
+import { parse as parseYaml } from "yaml";
 import type { GeneratorConfigFile, PolicyConstantCandidate } from "./types.js";
 
 /**
@@ -39,47 +40,45 @@ export function extractConfigConstants(
 
 /**
  * application.yml 등의 YAML 설정 파일에서 정책 상수를 추출합니다.
- * 평탄화된 키-값 쌍으로 변환합니다.
+ * yaml 패키지로 파싱한 뒤, 평탄화된 키-값 쌍으로 변환합니다.
  *
  * 예: `spring.datasource.max-pool-size: 10` → name: "MAX_POOL_SIZE", value: 10
  */
 function parseYamlConfig(content: string, filePath: string): PolicyConstantCandidate[] {
   const results: PolicyConstantCandidate[] = [];
-  const lines = content.split("\n");
 
-  // 간이 YAML 파서: 들여쓰기 기반 키 경로 추적
-  const keyStack: { indent: number; key: string }[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trimEnd();
-
-    // 빈 줄, 주석 건너뜀
-    if (trimmed === "" || trimmed.trimStart().startsWith("#")) continue;
-
-    // 키:값 분리
-    const kvMatch = trimmed.match(/^(\s*)([\w.\-"-]+)\s*:\s*(.*)$/);
-    if (!kvMatch) continue;
-
-    const indent = kvMatch[1].length;
-    const key = kvMatch[2].replace(/["']/g, "");
-    const rawValue = kvMatch[3].trim();
-
-    // 들여쓰기 기반 키 스택 갱신
-    while (keyStack.length > 0 && keyStack[keyStack.length - 1].indent >= indent) {
-      keyStack.pop();
-    }
-    keyStack.push({ indent, key });
-
-    // 값이 있는 leaf 노드만 추출 (빈 값 = 하위 키가 있는 부모 노드)
-    if (rawValue === "" || rawValue.startsWith("{") || rawValue.startsWith("[")) continue;
-
-    const fullKey = keyStack.map((k) => k.key).join(".");
-    const candidate = toConfigCandidate(fullKey, rawValue, filePath, i + 1);
-    if (candidate) results.push(candidate);
+  let doc: unknown;
+  try {
+    doc = parseYaml(content);
+  } catch {
+    return results; // graceful degradation: 파싱 실패 시 빈 결과
   }
 
+  if (doc === null || doc === undefined || typeof doc !== "object") return results;
+
+  // 재귀적으로 평탄화하여 leaf 키-값 쌍 추출
+  flattenObject(doc as Record<string, unknown>, [], filePath, results);
+
   return results;
+}
+
+/** 중첩 객체를 재귀적으로 순회하여 leaf 값을 추출합니다. */
+function flattenObject(
+  obj: Record<string, unknown>,
+  keyPath: string[],
+  filePath: string,
+  results: PolicyConstantCandidate[],
+): void {
+  for (const [key, value] of Object.entries(obj)) {
+    const currentPath = [...keyPath, key];
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      flattenObject(value as Record<string, unknown>, currentPath, filePath, results);
+    } else if (typeof value === "string" || typeof value === "number") {
+      const fullKey = currentPath.join(".");
+      const candidate = toConfigCandidate(fullKey, String(value), filePath, 0);
+      if (candidate) results.push(candidate);
+    }
+  }
 }
 
 // ── Properties 설정 파일 파서 ──

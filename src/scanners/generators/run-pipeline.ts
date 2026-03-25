@@ -7,7 +7,7 @@
 
 import type { GeneratorInput, GeneratorConfigFile } from "./types.js";
 import type { GeneratedYaml } from "./yaml-generator.js";
-import { TsMorphAdapter } from "./parsers/ts-morph-adapter.js";
+import { TsMorphAdapter } from "./parsers/regex-adapter.js";
 import { detectEntryPoints, detectAuxiliaryServiceMethods } from "./entry-point-detector.js";
 import { buildCallGraph } from "./call-graph-builder.js";
 import { extractStructure } from "./structure-extractor.js";
