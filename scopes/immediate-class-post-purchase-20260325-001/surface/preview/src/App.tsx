@@ -5,20 +5,29 @@ import { Check, ChevronLeft, Gift, Clock, X, Sparkles } from "lucide-react";
 
 type PlanType = "count" | "unlimited";
 
-const MOCK_PURCHASE = {
-  planName: "영어 회화 6개월",
-  planType: "count" as PlanType,
-  totalClasses: 48,
-  expireDate: "2026-09-25",
-  price: "299,000원",
+const PLANS: Record<PlanType, { planName: string; planType: PlanType; totalClasses: number | "무제한"; expireDate: string; price: string }> = {
+  count: {
+    planName: "영어 회화 6개월",
+    planType: "count",
+    totalClasses: 48,
+    expireDate: "2026-09-25",
+    price: "299,000원",
+  },
+  unlimited: {
+    planName: "영어 회화 무제한 3개월",
+    planType: "unlimited",
+    totalClasses: "무제한",
+    expireDate: "2026-06-25",
+    price: "449,000원",
+  },
 };
 
 const LEVELS = [
-  { id: "beginner", label: "Beginner", description: "Basic greetings, simple sentences", firstLesson: "Self-Introduction" },
-  { id: "elementary", label: "Elementary", description: "Daily conversations, short dialogues", firstLesson: "Weekend Plans" },
-  { id: "intermediate", label: "Intermediate", description: "Work & social topics, opinions", firstLesson: "Workplace Communication" },
-  { id: "upper", label: "Upper-Intermediate", description: "Complex discussions, nuanced views", firstLesson: "Business Negotiations" },
-  { id: "advanced", label: "Advanced", description: "Debate, academic, abstract topics", firstLesson: "Debate: AI & Jobs" },
+  { id: "beginner", label: "Beginner", description: "기초 인사, 간단한 문장", firstLesson: "Self-Introduction" },
+  { id: "elementary", label: "Elementary", description: "일상 대화, 짧은 대화문", firstLesson: "Weekend Plans" },
+  { id: "intermediate", label: "Intermediate", description: "업무·사회 주제, 의견 표현", firstLesson: "Workplace Communication" },
+  { id: "upper", label: "Upper-Intermediate", description: "심화 토론, 뉘앙스 표현", firstLesson: "Business Negotiations" },
+  { id: "advanced", label: "Advanced", description: "토론, 학술, 추상적 주제", firstLesson: "Debate: AI & Jobs" },
 ] as const;
 
 function generateTimeSlots() {
@@ -28,7 +37,7 @@ function generateTimeSlots() {
   for (let d = 0; d < 3; d++) {
     const date = new Date(now);
     date.setDate(date.getDate() + d);
-    const dayLabel = d === 0 ? "Today" : d === 1 ? "Tomorrow" : date.toLocaleDateString("en", { weekday: "short" });
+    const dayLabel = d === 0 ? "오늘" : d === 1 ? "내일" : date.toLocaleDateString("en", { weekday: "short" });
     const dateLabel = `${date.getMonth() + 1}/${date.getDate()}`;
 
     const times: { time: string; tutor: string; available: boolean }[] = [];
@@ -66,16 +75,17 @@ type Screen =
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("celebration");
-  const [selectedLevel, setSelectedLevel] = useState<string>("elementary"); // pre-selected from trial recommendation
+  const [planType, setPlanType] = useState<PlanType>("count");
+  const [selectedLevel, setSelectedLevel] = useState<string>("elementary");
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [incentiveClaimed, setIncentiveClaimed] = useState(false);
-  const [hasTrialData] = useState(true); // simulate trial user with level data
-  const recommendedLevel = hasTrialData ? "elementary" : null; // simulated recommendation
+  const [hasTrialData] = useState(true);
+  const recommendedLevel = hasTrialData ? "elementary" : null;
 
-  const incentiveText =
-    MOCK_PURCHASE.planType === "count" ? "+1 bonus class" : "+3 days free";
+  const MOCK_PURCHASE = PLANS[planType];
+  const incentiveText = planType === "count" ? "보너스 1회" : "3일 연장";
 
   function handleDismiss() {
     setShowExitConfirm(true);
@@ -107,44 +117,42 @@ export default function App() {
             </div>
 
             <h1 className="mt-6 text-2xl font-bold text-gray-900">
-              Purchase Complete!
+              구매가 완료되었어요!
             </h1>
 
             {/* Purchase summary */}
             <div className="mt-5 w-full rounded-2xl bg-gray-50 p-5">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Plan</span>
+                <span className="text-sm text-gray-500">수강권</span>
                 <span className="text-sm font-semibold text-gray-900">
                   {MOCK_PURCHASE.planName}
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Classes</span>
+                <span className="text-sm text-gray-500">수업 횟수</span>
                 <span className="text-sm font-semibold text-gray-900">
-                  {MOCK_PURCHASE.totalClasses} classes
+                  {MOCK_PURCHASE.totalClasses === "무제한" ? "무제한" : `${MOCK_PURCHASE.totalClasses}회`}
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Valid until</span>
+                <span className="text-sm text-gray-500">유효기간</span>
                 <span className="text-sm font-semibold text-gray-900">
                   {MOCK_PURCHASE.expireDate}
                 </span>
               </div>
             </div>
 
-            {/* Incentive banner */}
-            <div className="mt-5 flex w-full items-center gap-3 rounded-2xl bg-podo-black px-5 py-4">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-podo-green">
-                <Gift className="size-5 text-podo-black" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-white">
-                  Book now and get {incentiveText} when you complete the class!
-                </p>
-                <p className="mt-0.5 text-xs text-gray-400">
-                  This offer is only available right now. If you leave, it's gone forever. Rescheduling is fine, but cancelling forfeits the bonus.
-                </p>
-              </div>
+            {/* Motivation + Incentive */}
+            <div className="mt-5 w-full rounded-2xl bg-podo-black px-5 py-5">
+              <p className="text-base font-bold text-white">
+                지금이 시작하기 가장 좋은 순간이에요
+              </p>
+              <p className="mt-2 flex items-center gap-2 text-sm text-podo-green">
+                <Gift className="size-4 shrink-0" />
+                {MOCK_PURCHASE.planType === "count"
+                  ? "첫 수업 완료 시 보너스 1회 증정"
+                  : "첫 수업 완료 시 3일 연장"}
+              </p>
             </div>
           </div>
 
@@ -154,13 +162,13 @@ export default function App() {
               onClick={() => setScreen("level-select")}
               className="w-full rounded-2xl bg-podo-green py-4 text-base font-bold text-podo-black active:bg-podo-green-dark transition-colors"
             >
-              Book Your First Class
+              첫 수업 예약하기
             </button>
             <button
               onClick={handleDismiss}
               className="mt-2 w-full py-3 text-sm text-gray-400"
             >
-              Maybe later
+              다음에 할게요
             </button>
           </div>
         </div>
@@ -175,7 +183,7 @@ export default function App() {
               <ChevronLeft className="size-6 text-gray-900" />
             </button>
             <h2 className="flex-1 text-center text-base font-bold text-gray-900">
-              Choose Your Level
+              레벨 선택
             </h2>
             <button onClick={handleDismiss} className="p-1">
               <X className="size-5 text-gray-400" />
@@ -186,14 +194,14 @@ export default function App() {
           <div className="mx-5 flex items-center gap-2 rounded-xl bg-podo-green/10 px-4 py-2.5">
             <Gift className="size-4 shrink-0 text-podo-green-dark" />
             <span className="text-xs font-medium text-gray-700">
-              Book now → complete class → {incentiveText} (one-time offer)
+              지금 예약 → 수업 완료 → {incentiveText} (1회 한정)
             </span>
           </div>
 
           {/* Level cards */}
           <div className="mt-4 flex-1 px-5 pb-24">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400 mb-3">
-              Select your level
+              레벨을 선택해 주세요
             </p>
 
             {LEVELS.map((level) => {
@@ -225,7 +233,7 @@ export default function App() {
                       {isRecommended && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-podo-green/20 px-2.5 py-0.5 text-[10px] font-bold text-podo-black">
                           <Sparkles className="size-3" />
-                          Recommended
+                          추천
                         </span>
                       )}
                     </div>
@@ -233,7 +241,7 @@ export default function App() {
                       {level.description}
                     </p>
                     <p className="mt-1.5 text-xs text-gray-500">
-                      First lesson: <span className="font-medium text-gray-700">{level.firstLesson}</span>
+                      첫 수업: <span className="font-medium text-gray-700">{level.firstLesson}</span>
                     </p>
                   </div>
                 </button>
@@ -247,7 +255,7 @@ export default function App() {
               onClick={() => setScreen("time-select")}
               className="w-full rounded-2xl bg-podo-green py-4 text-base font-bold text-podo-black active:bg-podo-green-dark transition-colors"
             >
-              Next — Choose Time
+              다음 — 시간 선택
             </button>
           </div>
         </div>
@@ -262,7 +270,7 @@ export default function App() {
               <ChevronLeft className="size-6 text-gray-900" />
             </button>
             <h2 className="flex-1 text-center text-base font-bold text-gray-900">
-              Choose a Time
+              시간 선택
             </h2>
             <button onClick={handleDismiss} className="p-1">
               <X className="size-5 text-gray-400" />
@@ -271,7 +279,7 @@ export default function App() {
 
           {/* Selected level + lesson summary */}
           <div className="mx-5 rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs text-gray-400">Your first lesson</p>
+            <p className="text-xs text-gray-400">첫 수업</p>
             <p className="mt-0.5 text-sm font-semibold text-gray-900">
               {selectedLevelData.label} — {selectedLevelData.firstLesson}
             </p>
@@ -281,7 +289,7 @@ export default function App() {
           <div className="mx-5 mt-3 flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2.5">
             <Clock className="size-4 shrink-0 text-blue-500" />
             <span className="text-xs text-blue-700">
-              Classes start at least 2 hours from now
+              현재 시간 기준 2시간 이후부터 예약 가능해요
             </span>
           </div>
 
@@ -327,7 +335,7 @@ export default function App() {
                   </p>
                   <p className="mt-1 text-xs text-gray-400">{slot.tutor}</p>
                   {!slot.available && (
-                    <p className="mt-1 text-xs text-red-400">Full</p>
+                    <p className="mt-1 text-xs text-red-400">마감</p>
                   )}
                 </button>
               ))}
@@ -345,7 +353,7 @@ export default function App() {
                   : "bg-gray-200 text-gray-400"
               }`}
             >
-              Confirm Booking
+              예약 확정
             </button>
           </div>
         </div>
@@ -354,63 +362,52 @@ export default function App() {
       {/* ── Screen: Booking Confirmed ── */}
       {screen === "booking-confirmed" && (
         <div className="flex min-h-screen flex-col items-center justify-center px-5 pb-24">
-          <div className="flex size-[120px] items-center justify-center rounded-full bg-podo-green/20">
-            <div className="flex size-[80px] items-center justify-center rounded-full bg-podo-green">
-              <Check className="size-10 text-podo-black" strokeWidth={3} />
-            </div>
+          {/* Hero */}
+          <div className="flex size-16 items-center justify-center rounded-full bg-podo-green">
+            <Check className="size-8 text-podo-black" strokeWidth={3} />
           </div>
+          <h1 className="mt-4 text-2xl font-bold text-gray-900">예약 완료!</h1>
 
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">
-            Class Booked!
-          </h1>
-          <p className="mt-2 text-center text-base text-gray-500">
-            Your first class is scheduled. We'll remind you before it starts.
-          </p>
-
-          {/* Bonus pending notice */}
-          {incentiveClaimed && (
-            <div className="mt-5 w-full rounded-2xl bg-podo-green/10 px-5 py-4">
-              <div className="flex items-center gap-3">
-                <Gift className="size-5 shrink-0 text-podo-green-dark" />
-                <span className="text-sm font-semibold text-gray-900">
-                  Complete this class to get {incentiveText}!
-                </span>
-              </div>
-              <p className="mt-2 text-xs text-gray-500 pl-8">
-                Rescheduling is okay — your bonus is preserved. But if you cancel the class, the bonus is forfeited.
-              </p>
-            </div>
-          )}
-
-          {/* Booking summary */}
-          <div className="mt-5 w-full rounded-2xl bg-gray-50 p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">Lesson</span>
-              <span className="text-sm font-semibold text-gray-900">
-                {selectedLevelData.label} — {selectedLevelData.firstLesson}
-              </span>
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm text-gray-500">Time</span>
-              <span className="text-sm font-semibold text-gray-900">
+          {/* Booking card */}
+          <div className="mt-6 w-full rounded-2xl border border-gray-100 p-5">
+            <p className="text-sm font-semibold text-gray-900">
+              {selectedLevelData.label} — {selectedLevelData.firstLesson}
+            </p>
+            <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
+              <span>
                 {selectedTime && TIME_SLOTS[selectedDay]?.times[parseInt(selectedTime.split("-")[1])]?.time}{" "}
-                ({TIME_SLOTS[selectedDay]?.day})
+                {TIME_SLOTS[selectedDay]?.day}
               </span>
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm text-gray-500">Tutor</span>
-              <span className="text-sm font-semibold text-gray-900">
+              <span className="text-gray-300">|</span>
+              <span>
                 {selectedTime && TIME_SLOTS[selectedDay]?.times[parseInt(selectedTime.split("-")[1])]?.tutor}
               </span>
             </div>
           </div>
+
+          {/* Bonus pending */}
+          {incentiveClaimed && (
+            <div className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-podo-black px-5 py-4">
+              <Gift className="size-5 shrink-0 text-podo-green" />
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {MOCK_PURCHASE.planType === "count"
+                    ? "수업 완료 시 보너스 1회 지급"
+                    : "수업 완료 시 3일 연장"}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-400">
+                  시간 변경 가능 · 취소 시 소멸
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 pb-8 pt-3">
             <button
               onClick={() => setScreen("lesson-tab")}
               className="w-full rounded-2xl bg-podo-green py-4 text-base font-bold text-podo-black active:bg-podo-green-dark transition-colors"
             >
-              Go to My Lessons
+              내 수업 보기
             </button>
           </div>
         </div>
@@ -420,24 +417,24 @@ export default function App() {
       {screen === "lesson-tab" && (
         <div className="flex min-h-screen flex-col">
           <div className="flex items-center px-5 py-4">
-            <h2 className="text-xl font-bold text-gray-900">My Lessons</h2>
+            <h2 className="text-xl font-bold text-gray-900">내 수업</h2>
           </div>
           <div className="flex flex-1 flex-col items-center justify-center px-5">
             <div className="flex size-16 items-center justify-center rounded-2xl bg-gray-100">
               <span className="text-2xl text-gray-300">📚</span>
             </div>
             <p className="mt-4 text-base font-semibold text-gray-900">
-              {incentiveClaimed ? "Your class is booked!" : "No classes booked yet"}
+              {incentiveClaimed ? "수업이 예약되었어요!" : "아직 예약된 수업이 없어요"}
             </p>
             <p className="mt-1 text-sm text-gray-400">
               {incentiveClaimed
-                ? "Check your upcoming lessons here."
-                : "Browse courses and book your first class to get started."}
+                ? "예정된 수업을 여기서 확인하세요."
+                : "코스를 둘러보고 첫 수업을 예약해 보세요."}
             </p>
           </div>
           {/* Mock GNB */}
           <div className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-[480px] border-t border-gray-100 bg-white">
-            {["Home", "Lessons", "Schedule", "AI Study", "My PODO"].map((tab, i) => (
+            {["홈", "수업", "예약", "AI학습", "마이포도"].map((tab, i) => (
               <div
                 key={tab}
                 className={`flex flex-1 flex-col items-center py-2 ${i === 1 ? "text-podo-black" : "text-gray-300"}`}
@@ -455,24 +452,25 @@ export default function App() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
           <div className="mx-auto w-full max-w-[480px] rounded-t-3xl bg-white px-5 pb-8 pt-6">
             <h3 className="text-lg font-bold text-gray-900">
-              Are you sure?
+              정말 나가시겠어요?
             </h3>
             <p className="mt-2 text-sm text-gray-500">
-              If you leave now, the <strong>{incentiveText}</strong> offer will be gone forever.
-              You won't be able to come back to this screen. Book now, complete the class, and the bonus is yours. You can reschedule anytime — just don't cancel.
+              {MOCK_PURCHASE.planType === "count"
+                ? "지금 나가면 보너스 1회 혜택이 영구적으로 사라져요. 예약 후 수업만 완료하면 보너스를 받을 수 있어요. 시간 변경은 언제든 가능해요."
+                : "지금 나가면 3일 연장 혜택이 영구적으로 사라져요. 예약 후 수업만 완료하면 연장을 받을 수 있어요. 시간 변경은 언제든 가능해요."}
             </p>
             <div className="mt-6 space-y-2">
               <button
                 onClick={() => setShowExitConfirm(false)}
                 className="w-full rounded-2xl bg-podo-green py-4 text-base font-bold text-podo-black active:bg-podo-green-dark transition-colors"
               >
-                Stay and Book
+                예약하기
               </button>
               <button
                 onClick={confirmExit}
                 className="w-full rounded-2xl bg-gray-100 py-4 text-base font-medium text-gray-500"
               >
-                Leave — I'll book later
+                나중에 할게요
               </button>
             </div>
           </div>
@@ -493,6 +491,18 @@ export default function App() {
               className={`rounded px-1.5 py-0.5 text-[9px] ${screen === s ? "bg-podo-green text-black" : "bg-white/10"}`}
             >
               {s.replace("celebration", "1.cel").replace("level-select", "2.lvl").replace("time-select", "3.time").replace("booking-confirmed", "4.done").replace("lesson-tab", "5.tab")}
+            </button>
+          ))}
+        </div>
+        <div className="mt-1.5 flex items-center gap-1 border-t border-white/10 pt-1.5">
+          <span>Plan:</span>
+          {(["count", "unlimited"] as PlanType[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => { setPlanType(p); setScreen("celebration"); }}
+              className={`rounded px-1.5 py-0.5 text-[9px] ${planType === p ? "bg-podo-green text-black" : "bg-white/10"}`}
+            >
+              {p === "count" ? "회차권" : "무제한"}
             </button>
           ))}
         </div>

@@ -64,7 +64,7 @@ This scope inserts a purpose-built purchase completion experience between paymen
 - One-time incentive: +1 bonus class for count-based plans; +3 days extension for unlimited plans
 - Level selection screen: recommended pre-selection for trial/returning users; chooser for new users; easy level switching
 - Time slot selection screen: tutor + time, minimum 2-hour advance, 3-day tab view, auto-tomorrow fallback
-- Booking confirmation screen: success state, bonus award confirmation
+- Booking confirmation screen: success state, bonus pending notice (bonus is awarded on class completion, not at booking time)
 - Exit confirmation bottom sheet: incentive-loss warning, dismiss destination is Lessons tab (not Home)
 - Server-side incentive eligibility tracking and double-claim prevention
 
@@ -90,7 +90,7 @@ Ji-yeon completes payment via PortOne. Instead of landing on the generic Home sc
 
 #### Act 2 — Level Selection
 
-Ji-yeon taps the CTA. The level selection screen slides in. Because she is a new user with no trial or class history, the level chooser is shown: a vertical list of available levels filtered by her ticket's curriculumType (XG1). Each level card shows the level name, a one-line description of what kind of learner it suits, and 4–5 representative lesson topics. No level is pre-selected. She taps "중급 (Intermediate)" and sees the card highlight with a checkmark. A "다음" button at the bottom activates. She taps it.
+Ji-yeon taps the CTA. The level selection screen slides in. Because she is a new user with no trial or class history, the level chooser is shown: a vertical list of available levels filtered by her ticket's curriculumType (XG1). Each level card shows the level name, a one-line description of what kind of learner it suits, and 4–5 representative lesson topics. No level is pre-selected. She taps "중급" and sees the card highlight with a checkmark. A "다음" button at the bottom activates. She taps it.
 
 #### Act 3 — Time Slot Selection
 
@@ -303,7 +303,7 @@ Once expired server-side, the incentive banner will not be shown on subsequent v
 | CST-005 | Attending 1 class forfeits 7-day refund right | Deferred. No disclosure shown. Standard ToS applies. Do not modify ToS Section 15. |
 | CST-006 | BONUS `acquisitionType` may not be in production | `PostPurchaseIncentiveService` checks availability; falls back to TKT-3 admin API if BONUS unavailable. |
 | CST-007 | Level must map to exactly one auto-assigned `LectureCourse` | `LevelRecommendationService.getLevelCourseMapping()`. Levels with no active course are hidden from the chooser. |
-| CST-008 | Incentive double-claim prevention | Server-side `incentiveClaimed` / `incentiveExpired` flags on payment record. Atomic writes. Both claim and expire paths check flags before executing. |
+| CST-008 | Incentive double-claim prevention | Server-side `incentivePending` / `incentiveClaimed` / `incentiveExpired` flags on payment record. Atomic writes. `incentivePending` is set at booking. `incentiveClaimed` is set at class completion. `incentiveExpired` is set on user dismissal or class cancellation. All mutation paths check flags before executing. Reschedule preserves `pending`; cancellation sets `expired`. |
 
 ---
 
@@ -488,24 +488,24 @@ Unlimited variant — incentive banner reads:
 │  ←  수업 레벨을 선택해 주세요            │
 │                                         │
 │  ┌──────────────────────────────────┐   │
-│  │  [추천] 중급 (Intermediate)      │   │   ← Pre-selected (returning user)
+│  │  [추천] 중급                     │   │   ← Pre-selected (returning user)
 │  │  일상 대화와 의견 표현이 가능한   │   │
 │  │  학습자에게 적합합니다            │   │
-│  │  • Daily Conversations           │   │
-│  │  • Expressing Opinions           │   │
-│  │  • Travel & Situations           │   │
+│  │  • 일상 대화                     │   │
+│  │  • 의견 표현하기                 │   │
+│  │  • 여행 & 상황별 회화            │   │
 │  └──────────────────────────────────┘   │
 │                                         │
 │  ┌──────────────────────────────────┐   │
-│  │  초급 (Beginner)                 │   │
+│  │  초급                            │   │
 │  │  기초 문장과 기본 표현을 배우는   │   │
 │  │  단계입니다                      │   │
-│  │  • Greetings & Introductions     │   │
-│  │  • Numbers & Time                │   │
+│  │  • 인사 & 자기소개               │   │
+│  │  • 숫자 & 시간                   │   │
 │  └──────────────────────────────────┘   │
 │                                         │
 │  ┌──────────────────────────────────┐   │
-│  │  고급 (Advanced)                 │   │
+│  │  고급                            │   │
 │  │  ...                             │   │
 │  └──────────────────────────────────┘   │
 │                                         │
@@ -577,9 +577,9 @@ Unlimited concurrent booking state — slot grid replaced with:
 │  └──────────────────────────────────┘   │
 │                                         │
 │  ┌──────────────────────────────────┐   │
-│  │  🎉 보너스 1회 적립 완료!         │   │   ← Count-based variant
+│  │  🎁 수업 완료 시 보너스 1회 지급  │   │   ← Count-based variant (pending)
 │  └──────────────────────────────────┘   │
-│     (or: 수강 기간 3일 연장 완료!)       │   ← Unlimited variant
+│     (or: 수업 완료 시 3일 연장 예정!)    │   ← Unlimited variant (pending)
 │                                         │
 │  ┌──────────────────────────────────┐   │
 │  │        수업 탭으로 이동           │   │
