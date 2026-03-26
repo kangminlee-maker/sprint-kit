@@ -1,6 +1,37 @@
 import { useState } from "react";
 import { Check, ChevronLeft, Gift, Clock, X, Sparkles } from "lucide-react";
 
+// ── Primary Button (isometric 3D) ──
+
+function PrimaryButton({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) {
+  const baseColor = disabled ? "#E8E8E8" : "#1C1C1C";
+  const faceColor = disabled ? "#F5F5F5" : "#B5FD4C";
+  const textColor = disabled ? "#D6D6D6" : "#1C1C1C";
+  return (
+    <button
+      onClick={disabled ? undefined : onClick}
+      className="group w-full rounded-lg transition-all"
+      style={{ background: baseColor, paddingBottom: disabled ? 0 : 4, borderRadius: 8 }}
+      disabled={disabled}
+    >
+      <div
+        className={`w-full rounded-lg px-5 py-3.5 text-center text-base font-bold leading-6 transition-all ${
+          disabled ? "" : "group-active:translate-y-[4px]"
+        }`}
+        style={{
+          background: faceColor,
+          color: textColor,
+          outline: disabled ? "none" : "1.5px solid #1C1C1C",
+          outlineOffset: "-1.5px",
+          borderRadius: 8,
+        }}
+      >
+        {children}
+      </div>
+    </button>
+  );
+}
+
 // ── Mock Data ──
 
 type PlanType = "count" | "unlimited";
@@ -109,46 +140,44 @@ export default function App() {
       {/* ── Screen: Celebration ── */}
       {screen === "celebration" && (
         <div className="flex min-h-screen flex-col">
-          <div className="flex flex-1 flex-col items-center justify-center px-5 pb-32">
+          <div className="flex flex-1 flex-col items-center justify-center px-5 pb-40">
             {/* Checkmark */}
-            <div className="flex size-[120px] items-center justify-center rounded-full bg-podo-green/20">
-              <div className="flex size-[80px] items-center justify-center rounded-full bg-podo-green">
-                <Check className="size-10 text-podo-black" strokeWidth={3} />
-              </div>
+            <div className="flex size-20 items-center justify-center rounded-full bg-[#F2FCEC]">
+              <Check className="size-10 text-[#1C1C1C]" strokeWidth={3} />
             </div>
 
-            <h1 className="mt-6 text-2xl font-bold text-gray-900">
+            <h1 className="mt-5 text-lg font-bold text-[#1C1C1C] leading-7">
               구매가 완료되었어요!
             </h1>
 
             {/* Purchase summary */}
-            <div className="mt-5 w-full rounded-2xl bg-gray-50 p-5">
+            <div className="mt-5 w-full rounded-lg bg-[#F5F5F5] px-5 py-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">수강권</span>
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm text-[#A5A5A5]">수강권</span>
+                <span className="text-sm font-medium text-[#1C1C1C]">
                   {MOCK_PURCHASE.planName}
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">수업 횟수</span>
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm text-[#A5A5A5]">수업 횟수</span>
+                <span className="text-sm font-medium text-[#1C1C1C]">
                   {MOCK_PURCHASE.totalClasses === "무제한" ? "무제한" : `${MOCK_PURCHASE.totalClasses}회`}
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">유효기간</span>
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm text-[#A5A5A5]">유효기간</span>
+                <span className="text-sm font-medium text-[#1C1C1C]">
                   {MOCK_PURCHASE.expireDate}
                 </span>
               </div>
             </div>
 
             {/* Motivation + Incentive */}
-            <div className="mt-5 w-full rounded-2xl bg-podo-black px-5 py-5">
-              <p className="text-base font-bold text-white">
+            <div className="mt-3 w-full rounded-lg bg-[#1C1C1C] px-5 py-4">
+              <p className="text-sm font-bold text-white leading-[22px]">
                 지금이 시작하기 가장 좋은 순간이에요
               </p>
-              <p className="mt-2 flex items-center gap-2 text-sm text-podo-green">
+              <p className="mt-2 flex items-center gap-2 text-sm font-medium text-[#B5FD4C] leading-[22px]">
                 <Gift className="size-4 shrink-0" />
                 {MOCK_PURCHASE.planType === "count"
                   ? "첫 수업 완료 시 보너스 1회 증정"
@@ -158,16 +187,13 @@ export default function App() {
           </div>
 
           {/* Bottom CTA */}
-          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 pb-8 pt-3">
-            <button
-              onClick={() => setScreen("level-select")}
-              className="w-full rounded-2xl bg-podo-green py-4 text-base font-bold text-podo-black active:bg-podo-green-dark transition-colors"
-            >
+          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 py-2">
+            <PrimaryButton onClick={() => setScreen("level-select")}>
               첫 수업 예약하기
-            </button>
+            </PrimaryButton>
             <button
               onClick={handleDismiss}
-              className="mt-2 w-full py-3 text-sm text-gray-400"
+              className="mt-1 w-full py-3 text-sm font-medium text-[#A5A5A5]"
             >
               다음에 할게요
             </button>
@@ -179,24 +205,25 @@ export default function App() {
       {screen === "level-select" && (
         <div className="flex min-h-screen flex-col">
           {/* Top bar */}
-          <div className="flex items-center px-4 py-3">
+          <div className="flex items-center px-5 py-3">
             <button onClick={() => setScreen("celebration")} className="p-1">
-              <ChevronLeft className="size-6 text-gray-900" />
+              <ChevronLeft className="size-6 text-[#1C1C1C]" />
             </button>
-            <h2 className="flex-1 text-center text-base font-bold text-gray-900">
-              레벨 선택
+            <div className="flex-1" />
+          </div>
+
+          {/* Title */}
+          <div className="px-5">
+            <h2 className="text-lg font-bold text-[#1C1C1C] leading-7">
+              레벨을 선택해 주세요.
             </h2>
-            <button onClick={handleDismiss} className="p-1">
-              <X className="size-5 text-gray-400" />
-            </button>
+            <p className="mt-1 text-sm text-[#A5A5A5] leading-[22px]">
+              체험 수업 기반으로 추천해 드려요.
+            </p>
           </div>
 
           {/* Level cards */}
-          <div className="mt-4 flex-1 px-5 pb-24">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400 mb-3">
-              레벨을 선택해 주세요
-            </p>
-
+          <div className="mt-5 flex-1 px-5 pb-24">
             {LEVELS.map((level) => {
               const isRecommended = level.id === recommendedLevel;
               const isSelected = level.id === selectedLevel;
@@ -205,36 +232,33 @@ export default function App() {
                 <button
                   key={level.id}
                   onClick={() => setSelectedLevel(level.id)}
-                  className={`mt-2 flex w-full items-start gap-4 rounded-2xl border-2 p-4 text-left transition-colors ${
+                  className={`mt-2 flex w-full items-start gap-3 rounded-lg p-4 text-left transition-colors outline -outline-offset-1 ${
                     isSelected
-                      ? "border-podo-green bg-podo-green/5"
-                      : "border-gray-100 bg-white"
+                      ? "bg-[#F2FCEC] outline-[1.5px] outline-[#1C1C1C]"
+                      : "bg-white outline-1 outline-[#E8E8E8]"
                   }`}
                 >
-                  {/* Radio indicator */}
-                  <div className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                    isSelected ? "border-podo-green bg-podo-green" : "border-gray-300"
+                  {/* Radio */}
+                  <div className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-[1.5px] ${
+                    isSelected ? "border-[#1C1C1C] bg-[#1C1C1C]" : "border-[#D6D6D6]"
                   }`}>
-                    {isSelected && <Check className="size-4 text-podo-black" />}
+                    {isSelected && <Check className="size-3 text-white" />}
                   </div>
 
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-base font-medium text-[#1C1C1C] leading-6">
                         {level.label}
                       </p>
                       {isRecommended && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-podo-green/20 px-2.5 py-0.5 text-[10px] font-bold text-podo-black">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#1C1C1C] px-2.5 py-1 text-[11px] font-bold text-[#B5FD4C]">
                           <Sparkles className="size-3" />
                           추천
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs text-gray-400">
+                    <p className="mt-0.5 text-sm text-[#A5A5A5] leading-[22px]">
                       {level.description}
-                    </p>
-                    <p className="mt-1.5 text-xs text-gray-500">
-                      첫 수업: <span className="font-medium text-gray-700">{level.firstLesson}</span>
                     </p>
                   </div>
                 </button>
@@ -243,13 +267,10 @@ export default function App() {
           </div>
 
           {/* Bottom CTA */}
-          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 pb-8 pt-3">
-            <button
-              onClick={() => setScreen("time-select")}
-              className="w-full rounded-2xl bg-podo-green py-4 text-base font-bold text-podo-black active:bg-podo-green-dark transition-colors"
-            >
+          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 py-2">
+            <PrimaryButton onClick={() => setScreen("time-select")}>
               다음 — 시간 선택
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       )}
@@ -362,17 +383,9 @@ export default function App() {
 
           {/* Bottom CTA */}
           <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 py-2">
-            <button
-              onClick={() => selectedTime && handleBookingConfirmed()}
-              disabled={!selectedTime}
-              className={`w-full rounded-lg py-3.5 text-base font-bold leading-6 transition-colors ${
-                selectedTime
-                  ? "bg-podo-green text-podo-black shadow-[0_4px_0_0_#9AE030] active:shadow-none active:translate-y-1"
-                  : "bg-[#F5F5F5] text-[#D6D6D6] shadow-[0_4px_0_0_#E8E8E8]"
-              }`}
-            >
+            <PrimaryButton onClick={() => selectedTime && handleBookingConfirmed()} disabled={!selectedTime}>
               선택한 날짜에 예약
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       )}
@@ -381,52 +394,48 @@ export default function App() {
       {screen === "booking-confirmed" && (
         <div className="flex min-h-screen flex-col items-center justify-center px-5 pb-24">
           {/* Hero */}
-          <div className="flex size-16 items-center justify-center rounded-full bg-podo-green">
-            <Check className="size-8 text-podo-black" strokeWidth={3} />
+          <div className="flex size-20 items-center justify-center rounded-full bg-[#F2FCEC]">
+            <Check className="size-10 text-[#1C1C1C]" strokeWidth={3} />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-gray-900">예약 완료!</h1>
+          <h1 className="mt-5 text-lg font-bold text-[#1C1C1C] leading-7">예약 완료!</h1>
+          <p className="mt-1 text-sm text-[#A5A5A5] leading-[22px]">수업 전에 알림을 보내드릴게요.</p>
 
           {/* Booking card */}
-          <div className="mt-6 w-full rounded-2xl border border-gray-100 p-5">
-            <p className="text-sm font-semibold text-gray-900">
+          <div className="mt-5 w-full rounded-lg px-5 py-4 outline outline-1 -outline-offset-1 outline-[#E8E8E8]">
+            <p className="text-base font-medium text-[#1C1C1C] leading-6">
               {selectedLevelData.label} — {selectedLevelData.firstLesson}
             </p>
-            <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
-              <span>
-                {selectedTime && (() => {
-                  const [period, idx] = selectedTime.split("-");
-                  const slots = period === "am" ? TIME_SLOTS[selectedDay]?.am : TIME_SLOTS[selectedDay]?.pm;
-                  return slots?.[parseInt(idx)]?.time;
-                })()}{" "}
-                ({TIME_SLOTS[selectedDay]?.day})
-              </span>
-            </div>
+            <p className="mt-2 text-sm text-[#A5A5A5] leading-[22px]">
+              {selectedTime && (() => {
+                const [period, idx] = selectedTime.split("-");
+                const slots = period === "am" ? TIME_SLOTS[selectedDay]?.am : TIME_SLOTS[selectedDay]?.pm;
+                return slots?.[parseInt(idx)]?.time;
+              })()}{" "}
+              · {TIME_SLOTS[selectedDay]?.day}
+            </p>
           </div>
 
           {/* Bonus pending */}
           {incentiveClaimed && (
-            <div className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-podo-black px-5 py-4">
-              <Gift className="size-5 shrink-0 text-podo-green" />
-              <div>
-                <p className="text-sm font-semibold text-white">
+            <div className="mt-3 w-full rounded-lg bg-[#1C1C1C] px-5 py-4">
+              <div className="flex items-center gap-3">
+                <Gift className="size-5 shrink-0 text-[#B5FD4C]" />
+                <p className="text-sm font-medium text-white leading-[22px]">
                   {MOCK_PURCHASE.planType === "count"
                     ? "수업 완료 시 보너스 1회 지급"
                     : "수업 완료 시 3일 연장"}
                 </p>
-                <p className="mt-0.5 text-xs text-gray-400">
-                  시간 변경 가능 · 취소 시 소멸
-                </p>
               </div>
+              <p className="mt-1.5 pl-8 text-xs text-[#A5A5A5] leading-[18px]">
+                시간 변경 가능 · 취소 시 소멸
+              </p>
             </div>
           )}
 
-          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 pb-8 pt-3">
-            <button
-              onClick={() => setScreen("lesson-tab")}
-              className="w-full rounded-2xl bg-podo-green py-4 text-base font-bold text-podo-black active:bg-podo-green-dark transition-colors"
-            >
+          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 py-2">
+            <PrimaryButton onClick={() => setScreen("lesson-tab")}>
               내 수업 보기
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       )}
@@ -434,31 +443,31 @@ export default function App() {
       {/* ── Screen: Lesson Tab (dismiss destination) ── */}
       {screen === "lesson-tab" && (
         <div className="flex min-h-screen flex-col">
-          <div className="flex items-center px-5 py-4">
-            <h2 className="text-xl font-bold text-gray-900">내 수업</h2>
+          <div className="px-5 pt-14 pb-3">
+            <h2 className="text-lg font-bold text-[#1C1C1C] leading-7">내 수업</h2>
           </div>
-          <div className="flex flex-1 flex-col items-center justify-center px-5">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-gray-100">
-              <span className="text-2xl text-gray-300">📚</span>
+          <div className="flex flex-1 flex-col items-center justify-center px-5 pb-20">
+            <div className="flex size-16 items-center justify-center rounded-lg bg-[#F5F5F5]">
+              <span className="text-2xl">📚</span>
             </div>
-            <p className="mt-4 text-base font-semibold text-gray-900">
+            <p className="mt-4 text-base font-medium text-[#1C1C1C] leading-6">
               {incentiveClaimed ? "수업이 예약되었어요!" : "아직 예약된 수업이 없어요"}
             </p>
-            <p className="mt-1 text-sm text-gray-400">
+            <p className="mt-1 text-sm text-[#A5A5A5] leading-[22px]">
               {incentiveClaimed
                 ? "예정된 수업을 여기서 확인하세요."
                 : "코스를 둘러보고 첫 수업을 예약해 보세요."}
             </p>
           </div>
           {/* Mock GNB */}
-          <div className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-[480px] border-t border-gray-100 bg-white">
+          <div className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-[480px] border-t border-[#E8E8E8] bg-white py-2">
             {["홈", "수업", "예약", "AI학습", "마이포도"].map((tab, i) => (
               <div
                 key={tab}
-                className={`flex flex-1 flex-col items-center py-2 ${i === 1 ? "text-podo-black" : "text-gray-300"}`}
+                className="flex flex-1 flex-col items-center gap-1"
               >
-                <div className={`size-5 rounded-md ${i === 1 ? "bg-podo-green" : "bg-gray-200"}`} />
-                <span className={`mt-1 text-[10px] ${i === 1 ? "font-bold" : ""}`}>{tab}</span>
+                <div className={`size-5 rounded ${i === 1 ? "bg-[#1C1C1C]" : "bg-[#D6D6D6]"}`} />
+                <span className={`text-[10px] leading-3 ${i === 1 ? "font-bold text-[#1C1C1C]" : "text-[#A5A5A5]"}`}>{tab}</span>
               </div>
             ))}
           </div>
@@ -468,25 +477,22 @@ export default function App() {
       {/* ── Exit Confirmation Modal ── */}
       {showExitConfirm && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-          <div className="mx-auto w-full max-w-[480px] rounded-t-3xl bg-white px-5 pb-8 pt-6">
-            <h3 className="text-lg font-bold text-gray-900">
+          <div className="mx-auto w-full max-w-[480px] rounded-t-2xl bg-white px-5 pb-8 pt-6">
+            <h3 className="text-lg font-bold text-[#1C1C1C] leading-7">
               정말 나가시겠어요?
             </h3>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-sm text-[#A5A5A5] leading-[22px]">
               {MOCK_PURCHASE.planType === "count"
-                ? "지금 나가면 보너스 1회 혜택이 영구적으로 사라져요. 예약 후 수업만 완료하면 보너스를 받을 수 있어요. 시간 변경은 언제든 가능해요."
-                : "지금 나가면 3일 연장 혜택이 영구적으로 사라져요. 예약 후 수업만 완료하면 연장을 받을 수 있어요. 시간 변경은 언제든 가능해요."}
+                ? "지금 나가면 보너스 1회 혜택이 사라져요."
+                : "지금 나가면 3일 연장 혜택이 사라져요."}
             </p>
-            <div className="mt-6 space-y-2">
-              <button
-                onClick={() => setShowExitConfirm(false)}
-                className="w-full rounded-2xl bg-podo-green py-4 text-base font-bold text-podo-black active:bg-podo-green-dark transition-colors"
-              >
+            <div className="mt-6 flex flex-col gap-2">
+              <PrimaryButton onClick={() => setShowExitConfirm(false)}>
                 예약하기
-              </button>
+              </PrimaryButton>
               <button
                 onClick={confirmExit}
-                className="w-full rounded-2xl bg-gray-100 py-4 text-base font-medium text-gray-500"
+                className="w-full rounded-lg bg-[#F5F5F5] py-3.5 text-base font-medium leading-6 text-[#A5A5A5]"
               >
                 나중에 할게요
               </button>
