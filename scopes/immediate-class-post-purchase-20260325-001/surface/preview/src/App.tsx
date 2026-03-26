@@ -190,14 +190,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Incentive reminder */}
-          <div className="mx-5 flex items-center gap-2 rounded-xl bg-podo-green/10 px-4 py-2.5">
-            <Gift className="size-4 shrink-0 text-podo-green-dark" />
-            <span className="text-xs font-medium text-gray-700">
-              지금 예약 → 수업 완료 → {incentiveText} (1회 한정)
-            </span>
-          </div>
-
           {/* Level cards */}
           <div className="mt-4 flex-1 px-5 pb-24">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400 mb-3">
@@ -283,14 +275,6 @@ export default function App() {
             <p className="mt-0.5 text-sm font-semibold text-gray-900">
               {selectedLevelData.label} — {selectedLevelData.firstLesson}
             </p>
-          </div>
-
-          {/* Min 2hr notice */}
-          <div className="mx-5 mt-3 flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2.5">
-            <Clock className="size-4 shrink-0 text-blue-500" />
-            <span className="text-xs text-blue-700">
-              현재 시간 기준 2시간 이후부터 예약 가능해요
-            </span>
           </div>
 
           {/* Day selector */}
