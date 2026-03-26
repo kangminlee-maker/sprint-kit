@@ -30,32 +30,33 @@ const LEVELS = [
   { id: "advanced", label: "Advanced", description: "토론, 학술, 추상적 주제", firstLesson: "Debate: AI & Jobs" },
 ] as const;
 
+const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
+
 function generateTimeSlots() {
   const now = new Date();
-  const slots: { date: string; day: string; times: { time: string; tutor: string; available: boolean }[] }[] = [];
+  const slots: { dateNum: number; day: string; am: { time: string; available: boolean }[]; pm: { time: string; available: boolean }[] }[] = [];
 
-  for (let d = 0; d < 3; d++) {
+  for (let d = 0; d < 7; d++) {
     const date = new Date(now);
     date.setDate(date.getDate() + d);
-    const dayLabel = d === 0 ? "오늘" : d === 1 ? "내일" : date.toLocaleDateString("en", { weekday: "short" });
-    const dateLabel = `${date.getMonth() + 1}/${date.getDate()}`;
+    const dayLabel = d === 0 ? "오늘" : d === 1 ? "내일" : WEEKDAY_KO[date.getDay()];
 
-    const times: { time: string; tutor: string; available: boolean }[] = [];
-    const startHour = d === 0 ? Math.max(now.getHours() + 3, 9) : 9;
+    const am: { time: string; available: boolean }[] = [];
+    const pm: { time: string; available: boolean }[] = [];
 
-    for (let h = startHour; h <= 22; h++) {
+    for (let h = 0; h <= 23; h++) {
       for (const m of ["00", "30"]) {
-        if (times.length >= 6) break;
-        const tutors = ["Sarah K.", "Mike L.", "Jenny P.", "David C.", "Emma W."];
-        times.push({
-          time: `${h}:${m}`,
-          tutor: tutors[Math.floor(Math.random() * tutors.length)],
-          available: Math.random() > 0.2,
-        });
+        const slot = { time: `${String(h).padStart(2, "0")}:${m}`, available: Math.random() > 0.15 };
+        // For today, slots before now+2hr are unavailable
+        if (d === 0 && (h < now.getHours() + 3 || (h === now.getHours() + 2 && parseInt(m) <= now.getMinutes()))) {
+          slot.available = false;
+        }
+        if (h < 12) am.push(slot);
+        else pm.push(slot);
       }
     }
 
-    slots.push({ date: dateLabel, day: dayLabel, times });
+    slots.push({ dateNum: date.getDate(), day: dayLabel, am, pm });
   }
   return slots;
 }
@@ -257,28 +258,25 @@ export default function App() {
       {screen === "time-select" && (
         <div className="flex min-h-screen flex-col">
           {/* Top bar */}
-          <div className="flex items-center px-4 py-3">
+          <div className="flex items-center px-5 py-3">
             <button onClick={() => setScreen("level-select")} className="p-1">
               <ChevronLeft className="size-6 text-gray-900" />
             </button>
-            <h2 className="flex-1 text-center text-base font-bold text-gray-900">
-              시간 선택
-            </h2>
-            <button onClick={handleDismiss} className="p-1">
-              <X className="size-5 text-gray-400" />
-            </button>
+            <div className="flex-1" />
           </div>
 
-          {/* Selected level + lesson summary */}
-          <div className="mx-5 rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs text-gray-400">첫 수업</p>
-            <p className="mt-0.5 text-sm font-semibold text-gray-900">
-              {selectedLevelData.label} — {selectedLevelData.firstLesson}
+          {/* Title */}
+          <div className="px-5">
+            <h2 className="text-lg font-bold text-[#1C1C1C] leading-7">
+              레슨 일정을 선택해주세요.
+            </h2>
+            <p className="mt-1 text-sm text-[#A5A5A5] leading-[22px]">
+              레슨은 25분간 진행됩니다.
             </p>
           </div>
 
-          {/* Day selector */}
-          <div className="mt-4 flex gap-2 px-5">
+          {/* Date selector — 7 days horizontal */}
+          <div className="mt-5 flex px-5">
             {TIME_SLOTS.map((slot, i) => (
               <button
                 key={i}
@@ -286,58 +284,94 @@ export default function App() {
                   setSelectedDay(i);
                   setSelectedTime(null);
                 }}
-                className={`flex-1 rounded-2xl py-3 text-center transition-colors ${
+                className={`flex w-16 flex-col items-center gap-1.5 rounded-lg px-4 py-3.5 transition-colors ${
                   selectedDay === i
-                    ? "bg-podo-black text-white"
-                    : "bg-gray-100 text-gray-600"
+                    ? "bg-[#F2FCEC] outline outline-[1.5px] outline-[#1C1C1C]"
+                    : "bg-white"
                 }`}
               >
-                <p className="text-xs font-medium">{slot.day}</p>
-                <p className="mt-0.5 text-sm font-bold">{slot.date}</p>
+                <span className={`text-sm font-medium leading-[22px] ${
+                  selectedDay === i ? "text-[#1C1C1C]" : "text-[#A5A5A5]"
+                }`}>
+                  {slot.day}
+                </span>
+                <span className="text-base font-medium leading-6 text-[#1C1C1C]">
+                  {slot.dateNum}
+                </span>
               </button>
             ))}
           </div>
 
-          {/* Time slots */}
-          <div className="mt-4 flex-1 px-5 pb-24">
-            <div className="grid grid-cols-2 gap-2">
-              {TIME_SLOTS[selectedDay]?.times.map((slot, i) => (
-                <button
-                  key={i}
-                  onClick={() => slot.available && setSelectedTime(`${selectedDay}-${i}`)}
-                  disabled={!slot.available}
-                  className={`rounded-2xl border-2 p-4 text-left transition-colors ${
-                    !slot.available
-                      ? "border-gray-100 bg-gray-50 opacity-40"
-                      : selectedTime === `${selectedDay}-${i}`
-                        ? "border-podo-green bg-podo-green/5"
-                        : "border-gray-100 bg-white"
-                  }`}
-                >
-                  <p className="text-lg font-bold text-gray-900">
+          {/* Time slots — scrollable */}
+          <div className="mt-5 flex-1 overflow-y-auto px-5 pb-24">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#1C1C1C] leading-7">예약 가능 시간</h3>
+              <div className="flex items-center gap-1.5">
+                <div className="size-3 rounded-full bg-[#D6D6D6]" />
+                <span className="text-sm font-medium text-[#A5A5A5]">예약 마감</span>
+              </div>
+            </div>
+
+            {/* 오전 */}
+            <div className="mt-5">
+              <p className="text-sm text-[#A5A5A5] leading-[22px]">오전</p>
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                {TIME_SLOTS[selectedDay]?.am.map((slot, i) => (
+                  <button
+                    key={`am-${i}`}
+                    onClick={() => slot.available && setSelectedTime(`am-${i}`)}
+                    disabled={!slot.available}
+                    className={`rounded-lg py-3.5 text-center text-base font-medium leading-6 transition-colors outline outline-1 -outline-offset-1 ${
+                      !slot.available
+                        ? "bg-[#F5F5F5] text-[#D6D6D6] outline-[#E8E8E8]"
+                        : selectedTime === `am-${i}`
+                          ? "bg-[#F2FCEC] text-[#1C1C1C] outline-[#1C1C1C] outline-[1.5px]"
+                          : "bg-white text-[#1C1C1C] outline-[#E8E8E8]"
+                    }`}
+                  >
                     {slot.time}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-400">{slot.tutor}</p>
-                  {!slot.available && (
-                    <p className="mt-1 text-xs text-red-400">마감</p>
-                  )}
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 오후 */}
+            <div className="mt-5">
+              <p className="text-sm text-[#A5A5A5] leading-[22px]">오후</p>
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                {TIME_SLOTS[selectedDay]?.pm.map((slot, i) => (
+                  <button
+                    key={`pm-${i}`}
+                    onClick={() => slot.available && setSelectedTime(`pm-${i}`)}
+                    disabled={!slot.available}
+                    className={`rounded-lg py-3.5 text-center text-base font-medium leading-6 transition-colors outline outline-1 -outline-offset-1 ${
+                      !slot.available
+                        ? "bg-[#F5F5F5] text-[#D6D6D6] outline-[#E8E8E8]"
+                        : selectedTime === `pm-${i}`
+                          ? "bg-[#F2FCEC] text-[#1C1C1C] outline-[#1C1C1C] outline-[1.5px]"
+                          : "bg-white text-[#1C1C1C] outline-[#E8E8E8]"
+                    }`}
+                  >
+                    {slot.time}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Bottom CTA */}
-          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 pb-8 pt-3">
+          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 py-2">
             <button
               onClick={() => selectedTime && handleBookingConfirmed()}
               disabled={!selectedTime}
-              className={`w-full rounded-2xl py-4 text-base font-bold transition-colors ${
+              className={`w-full rounded-lg py-3.5 text-base font-bold leading-6 transition-colors ${
                 selectedTime
-                  ? "bg-podo-green text-podo-black active:bg-podo-green-dark"
-                  : "bg-gray-200 text-gray-400"
+                  ? "bg-podo-green text-podo-black shadow-[0_4px_0_0_#9AE030] active:shadow-none active:translate-y-1"
+                  : "bg-[#F5F5F5] text-[#D6D6D6] shadow-[0_4px_0_0_#E8E8E8]"
               }`}
             >
-              예약 확정
+              선택한 날짜에 예약
             </button>
           </div>
         </div>
@@ -359,12 +393,12 @@ export default function App() {
             </p>
             <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
               <span>
-                {selectedTime && TIME_SLOTS[selectedDay]?.times[parseInt(selectedTime.split("-")[1])]?.time}{" "}
-                {TIME_SLOTS[selectedDay]?.day}
-              </span>
-              <span className="text-gray-300">|</span>
-              <span>
-                {selectedTime && TIME_SLOTS[selectedDay]?.times[parseInt(selectedTime.split("-")[1])]?.tutor}
+                {selectedTime && (() => {
+                  const [period, idx] = selectedTime.split("-");
+                  const slots = period === "am" ? TIME_SLOTS[selectedDay]?.am : TIME_SLOTS[selectedDay]?.pm;
+                  return slots?.[parseInt(idx)]?.time;
+                })()}{" "}
+                ({TIME_SLOTS[selectedDay]?.day})
               </span>
             </div>
           </div>
