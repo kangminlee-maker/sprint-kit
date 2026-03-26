@@ -64,18 +64,32 @@ export type SupportedLanguage =
  */
 export interface ExportedSymbol {
   name: string;
-  kind: "class" | "interface" | "function" | "enum" | "type_alias";
+  /** 처리 경로 판별자 (discriminant). 원래 언어의 의미가 아닌, 파이프라인 내부의 처리 분기를 결정합니다.
+   *  언어별 세부 특성(data_class, sealed, struct 등)은 annotations 배열에 기록합니다.
+   *  매핑 예시: Go struct → "class", Go const+iota → "enum", Python Protocol/ABC → "interface" */
+  kind: ExportedSymbolKind;
   file_path: string;
   line: number;
   type_decl_ref?: string;
+  /** 언어별 어노테이션 + 구조 마커. ORM(@Entity), 프레임워크(@Service), 구조(struct, data_class, sealed) 등 */
   annotations?: string[];
 }
+
+export type ExportedSymbolKind = "class" | "interface" | "function" | "enum" | "type_alias";
 
 export interface ImportedSymbol {
   name: string;
   source: string;
+  /** import 경로의 해석 방식. call-graph-builder가 source_kind에 따라 해석 전략을 분기합니다. */
+  source_kind: ImportSourceKind;
   file_path: string;
 }
+
+/** import 경로의 의미 유형.
+ *  - file_path: 파일 상대/절대 경로 (TypeScript, JavaScript)
+ *  - package: 패키지 경로 (Go, Java)
+ *  - module: 모듈명 (Python) */
+export type ImportSourceKind = "file_path" | "package" | "module";
 
 export interface CallSite {
   caller: string;

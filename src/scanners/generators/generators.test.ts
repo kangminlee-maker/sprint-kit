@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TsMorphAdapter } from "./parsers/regex-adapter.js";
+import { TsJsRegexAdapter } from "./parsers/regex-adapter.js";
 import { detectEntryPoints, detectAuxiliaryServiceMethods } from "./entry-point-detector.js";
 import { buildCallGraph, isStateChangeMethod } from "./call-graph-builder.js";
 import { extractStructure, extractPolicyConstantsFromContent } from "./structure-extractor.js";
@@ -144,7 +144,7 @@ describe("진입점 탐지기", () => {
 });
 
 describe("ts-morph 어댑터", () => {
-  const adapter = new TsMorphAdapter();
+  const adapter = new TsJsRegexAdapter();
 
   it("export class를 ExportedSymbol로 추출합니다", () => {
     const result = adapter.parse(ENTITY_TS, "Lesson.ts");
@@ -734,13 +734,26 @@ describe("오케스트레이터 (runGeneratorPipeline)", () => {
     const result = runGeneratorPipeline({
       files: [
         { path: "Lesson.ts", content: ENTITY_TS },
-        { path: "Service.kt", content: SERVICE_KT },
+        { path: "README.md", content: "# Readme" },
       ],
       dependency_graph: [],
     });
 
     expect(result.meta.parsed_files).toBe(1);
-    expect(result.meta.unsupported_files).toContain("Service.kt");
+    expect(result.meta.unsupported_files).toContain("README.md");
+  });
+
+  it("Kotlin 파일도 파싱하여 parsed_files에 포함합니다", () => {
+    const result = runGeneratorPipeline({
+      files: [
+        { path: "Lesson.ts", content: ENTITY_TS },
+        { path: "Service.kt", content: SERVICE_KT },
+      ],
+      dependency_graph: [],
+    });
+
+    expect(result.meta.parsed_files).toBe(2);
+    expect(result.meta.unsupported_files).toHaveLength(0);
   });
 
   it("오케스트레이터 출력이 소비 파이프라인을 통과합니다", () => {
@@ -761,8 +774,8 @@ describe("오케스트레이터 (runGeneratorPipeline)", () => {
   });
 });
 
-describe("TsMorphAdapter call_sites 생성", () => {
-  const adapter = new TsMorphAdapter();
+describe("TsJsRegexAdapter call_sites 생성", () => {
+  const adapter = new TsJsRegexAdapter();
 
   it("함수 호출을 call_sites로 추출합니다", () => {
     const code = `

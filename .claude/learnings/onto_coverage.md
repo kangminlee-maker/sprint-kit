@@ -8,3 +8,5 @@
 - ScanResult.files는 FileEntry(path, category, size_bytes)로 파일 메타데이터만 보유하며 content를 포함하지 않음. 생성 파이프라인의 GeneratorInput.files는 GeneratorFileEntry(path, content)를 요구하므로, ScanResult→GeneratorInput 변환 시 파일 content를 별도로 읽는 로직이 필요함. 소비 파이프라인은 YAML 문자열만 입력받으므로 이 gap이 없었음 (출처: 온톨로지 자동 생성 파이프라인 포괄성 검증, 2026-03-25)
 - 생성 파이프라인(generators/)과 소비 파이프라인(ontology-*.ts) 사이에 타입 수준 import가 양방향으로 차단됨. YAML 파일이 유일한 연결점. 이 분리 때문에 "변환 어댑터"가 generators/ 외부(호출자 측)에 반드시 필요하며, 어댑터 위치가 아키텍처적으로 중요함 (출처: 온톨로지 자동 생성 파이프라인 포괄성 검증, 2026-03-25)
 - extractEntities()의 진입 조건이 `exp.kind !== "class"` + ORM 어노테이션(@Entity 등)에 의존하므로, TypeScript/Go 프로젝트에서 interface/type_alias로 정의된 도메인 엔티티는 구조적으로 추출 불가. SupportedLanguage에 6개 언어가 정의되어 있으나 파서는 TsMorphAdapter 1개만 구현됨. 미구현 언어 파일 입력 시 경고 미발행 (출처: 온톨로지 자동 생성 파이프라인 Phase 1+2a 포괄성 검증, 2026-03-25)
+
+- [사실] gRPC/Protocol Buffers와 GraphQL 스키마는 특정 언어에 속하지 않는 '언어 독립적 인터페이스 정의 계층'입니다. 다언어 코드 분석 도구에서 이 계층을 개별 언어 파서와 같은 수준에서 처리하면 중복이 발생하므로, 별도 계층으로 분리해야 합니다. (출처: Stage 1 다언어 확장 설계 리뷰, 2026-03-26)

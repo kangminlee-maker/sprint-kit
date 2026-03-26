@@ -7,7 +7,7 @@
 
 import type { GeneratorInput, GeneratorConfigFile } from "./types.js";
 import type { GeneratedYaml } from "./yaml-generator.js";
-import { TsMorphAdapter } from "./parsers/regex-adapter.js";
+import { getAdapterForFile } from "./parsers/parser-registry.js";
 import { detectEntryPoints, detectAuxiliaryServiceMethods } from "./entry-point-detector.js";
 import { buildCallGraph } from "./call-graph-builder.js";
 import { extractStructure } from "./structure-extractor.js";
@@ -26,16 +26,13 @@ export interface PipelineResult {
 }
 
 export function runGeneratorPipeline(input: GeneratorInput): PipelineResult {
-  const adapter = new TsMorphAdapter();
-  const supportedExtensions = [".ts", ".tsx", ".js", ".jsx"];
-
-  // 1. Parse all supported files
+  // 1. Parse all supported files (registry-based adapter lookup)
   const parsedModules = [];
   const unsupportedFiles: string[] = [];
 
   for (const file of input.files) {
-    const ext = file.path.substring(file.path.lastIndexOf("."));
-    if (!supportedExtensions.includes(ext)) {
+    const adapter = getAdapterForFile(file.path);
+    if (!adapter) {
       unsupportedFiles.push(file.path);
       continue;
     }
@@ -47,11 +44,10 @@ export function runGeneratorPipeline(input: GeneratorInput): PipelineResult {
     }
   }
 
-  // 2. Detect entry points from file contents
+  // 2. Detect entry points from file contents (same registry filter)
   const allEntryPoints = [];
   for (const file of input.files) {
-    const ext = file.path.substring(file.path.lastIndexOf("."));
-    if (!supportedExtensions.includes(ext)) continue;
+    if (!getAdapterForFile(file.path)) continue;
     const eps = detectEntryPoints(file.content, file.path);
     allEntryPoints.push(...eps);
   }

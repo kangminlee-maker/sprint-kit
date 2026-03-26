@@ -32,7 +32,11 @@ import { extractConfigConstants } from "./config-adapter.js";
 
 // ── 어노테이션 패턴 ──
 
-const ENTITY_ANNOTATIONS = ["@Entity", "@Table", "@Document", "@Model"];
+const ENTITY_ANNOTATIONS = [
+  "@Entity", "@Table", "@Document", "@Model",   // JPA/MongoDB
+  "gorm.Model",                                   // Go GORM
+  "@dataclass",                                   // Python (context-dependent)
+];
 const EMBEDDED_ANNOTATIONS = ["@Embedded", "@Embeddable"];
 const INHERITANCE_ANNOTATIONS = ["@Inheritance", "@MappedSuperclass", "@DiscriminatorColumn"];
 const TABLE_NAME_RE = /@Table\(\s*(?:name\s*=\s*)?["'](\w+)["']/;
@@ -40,6 +44,8 @@ const TABLE_NAME_RE = /@Table\(\s*(?:name\s*=\s*)?["'](\w+)["']/;
 // ── 정책 상수 패턴 ──
 
 const CONST_RE = /^(?:export\s+)?(?:const|val|final\s+\w+)\s+([A-Z][A-Z_0-9]{2,})\s*(?::\s*\w+\s*)?=\s*(.+?)(?:;|$)/;
+/** Python 상수 패턴: UPPER_SNAKE = value (키워드 없음) */
+const PYTHON_CONST_RE = /^([A-Z][A-Z_0-9]{2,})\s*(?::\s*\w+\s*)?=\s*(.+?)(?:$)/;
 
 /**
  * ParsedModule[]과 호출 그래프 결과에서 CodeStructureExtract를 생성합니다.
@@ -361,7 +367,7 @@ export function extractPolicyConstantsFromContent(
 
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
-    const match = trimmed.match(CONST_RE);
+    const match = trimmed.match(CONST_RE) || trimmed.match(PYTHON_CONST_RE);
     if (!match) continue;
 
     const name = match[1];

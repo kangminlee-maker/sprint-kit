@@ -26,3 +26,5 @@
 - [사실] sprint-kit의 기존 소비 파이프라인(`buildOntologyIndex`)은 glossary/actions/transitions 3개 YAML만 입력받습니다. `domain_flows` 같은 새 카테고리를 추가하려면 소비 파이프라인의 스키마 확장이 선행되어야 합니다. 생성 파이프라인의 산출물 범위가 소비 파이프라인의 입력 범위를 초과하면 초과분은 버려집니다. (출처: ontology-auto-generation 설계 리뷰, 2026-03-23)
 - [사실] sprint-kit의 소비 파이프라인(`buildOntologyIndex`)은 glossary에 `{ glossary: [...] }` 루트 키, actions에 `{ actions: [...] }` 또는 `{ write_actions: [...], read_actions: [...] }` 루트 키, transitions에 `{ entities: [{ name, state_fields/state_machine: [{ field_name, transitions: [...] }] }] }` 중첩 구조를 기대합니다. yaml-generator.ts의 출력이 이 구조를 준수해야 합니다. (출처: ontology-auto-generation PR #5 리뷰, 2026-03-25)
 - [판단] "import 금지" 같은 모듈 격리 제약이 있을 때, 격리된 양쪽의 계약 일치를 검증하는 유일한 수단은 통합 테스트입니다. 격리 제약 자체가 컴파일 타임 검증을 차단하므로, 격리 제약 도입 시 "계약 검증 테스트"를 필수 동반 조건으로 식별해야 합니다. (출처: ontology-auto-generation PR #5 리뷰, 2026-03-25)
+
+- [사실] sprint-kit의 entry-point-detector.ts는 파일 확장자나 언어 정보를 입력으로 받지 않고 정규식만으로 진입점을 탐지합니다. 다언어 확장 시, 언어별 적용 범위 태깅 없이는 cross-language false positive가 발생할 수 있습니다(예: Go 파일에서 Express 패턴 매칭). (출처: Stage 1 다언어 확장 설계 리뷰, 2026-03-26)

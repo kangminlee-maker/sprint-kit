@@ -95,6 +95,46 @@ const DETECTION_RULES: DetectionRule[] = [
     kind: "batch",
     extractAnnotation: () => "@StepScope",
   },
+  // ── HTTP (Python Flask/FastAPI) ──
+  {
+    pattern: /@(?:app|router)\.(get|post|put|delete|patch)\s*\(/,
+    kind: "http",
+    extractAnnotation: (m) => `@app.${m[1]}()`,
+    extractHttpMethod: (m) => m[1].toUpperCase(),
+    extractHttpPath: (_m, line) => {
+      const pathMatch = line.match(/\(\s*["']([^"']+)["']/);
+      return pathMatch?.[1];
+    },
+  },
+  {
+    pattern: /@app\.route\s*\(/,
+    kind: "http",
+    extractAnnotation: () => "@app.route()",
+    extractHttpPath: (_m, line) => {
+      const pathMatch = line.match(/\(\s*["']([^"']+)["']/);
+      return pathMatch?.[1];
+    },
+  },
+  // ── HTTP (Go Gin/Echo/Fiber) ──
+  {
+    pattern: /(?:r|router|e|app|g|group)\.(GET|POST|PUT|DELETE|PATCH)\s*\(/,
+    kind: "http",
+    extractAnnotation: (m) => `r.${m[1]}()`,
+    extractHttpMethod: (m) => m[1],
+    extractHttpPath: (_m, line) => {
+      const pathMatch = line.match(/\(\s*["']([^"']+)["']/);
+      return pathMatch?.[1];
+    },
+  },
+  {
+    pattern: /http\.Handle(?:Func)?\s*\(/,
+    kind: "http",
+    extractAnnotation: () => "http.HandleFunc()",
+    extractHttpPath: (_m, line) => {
+      const pathMatch = line.match(/\(\s*["']([^"']+)["']/);
+      return pathMatch?.[1];
+    },
+  },
   // ── Main 진입점 ──
   {
     pattern: /public\s+static\s+void\s+main\s*\(/,
@@ -110,6 +150,11 @@ const DETECTION_RULES: DetectionRule[] = [
     pattern: /if\s+__name__\s*==\s*["']__main__["']/,
     kind: "main",
     extractAnnotation: () => "__name__ == '__main__'",
+  },
+  {
+    pattern: /^func\s+main\s*\(\s*\)/,
+    kind: "main",
+    extractAnnotation: () => "func main()",
   },
 ];
 

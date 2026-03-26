@@ -15,3 +15,5 @@
 - event-pipeline.ts Step 5의 "이벤트 파일 재읽기 생략(배열 concat)"과 "reduce() 내부의 증분 순회"는 다른 계층의 최적화. 전자는 이미 구현됨. 후자를 도입하려면 reducer.ts의 18개+ 로컬 변수를 이전 상태에서 복원하는 매핑이 필요하며 누락 시 파생 필드(stale, convergence_blocked 등) 불일치 발생 (출처: 속도 개선 설계 구조적 완전성 리뷰, 2026-03-14)
 - computeDirectoryHash의 해시는 source_hashes로 grounding 이벤트에 영구 기록되므로, 해시 계산 알고리즘(정렬 순서, 결합 방식) 변경은 이벤트 스키마 호환성 파괴와 동일한 영향. 스캔 해시는 이벤트 소싱 시스템의 불변 데이터 (출처: 속도 개선 설계 구조적 완전성 리뷰, 2026-03-14)
 - [사실] SourceEntry union type을 switch하는 함수는 현재 4개: sourceKey() (kernel/types.ts), toGroundingSource() (scanners/types.ts), scanSource() (commands/start.ts), toBriefSourceEntry() (commands/start.ts). scanSource()만 exhaustive check 존재 (출처: 속도 개선 #2-#5 작업설계 리뷰, 2026-03-15)
+
+- [사실] sprint-kit의 entry-point-detector.ts는 ParsedModule이 아닌 파일 content를 직접 입력받습니다(detectEntryPoints(content, filePath)). 따라서 어댑터 확장과 진입점 탐지 확장은 독립적인 경로입니다. 그러나 run-pipeline.ts의 오케스트레이션 루프에서 동일한 확장자 필터를 공유하고 있어, 어댑터 확장 시 진입점 탐지 루프의 필터도 함께 수정해야 합니다. (출처: Stage 1 다언어 확장 설계 리뷰, 2026-03-26)

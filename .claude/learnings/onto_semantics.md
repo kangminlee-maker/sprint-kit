@@ -13,3 +13,5 @@
 - `ConstraintDecision`의 `modify-direction` 값은 하이픈(`-`)을 사용하며, 다른 enum 값들의 밑줄(`_`) 관례와 불일치. 문서 작성 시 관례 기반 추측(`_`)으로 대체될 위험이 높음 (출처: Schema-as-Ontology 리뷰, 2026-03-14)
 - types.ts의 열거형은 모두 `as const` 배열 + union type 또는 직접 union type 선언으로 구현됨. TypeScript `enum` 키워드는 사용되지 않음. 문서나 생성 스크립트에서 "enum"이라 지칭하면 실제 구현과 불일치 (출처: ontology-map 리뷰, 2026-03-14)
 - 타입의 물리적 위치(파일)가 의미를 내포함. compile-defense.ts에 위치 = "compile 문맥 전용", kernel/types.ts에 위치 = "시스템 전체 계약". 승격/이동 시 이 의미 변경을 의도적으로 결정해야 함 (출처: ontology-map 리뷰, 2026-03-14)
+
+- [사실] ImportedSymbol.source 필드는 TypeScript에서 '파일 상대 경로', Go에서 '패키지 경로', Java에서 '패키지 FQN'으로, 단일 필드에 4가지 의미가 공존하는 동형이의어입니다. 호출 그래프 빌더가 이 값을 파일 경로로 해석하는 로직은 TypeScript 전용이며, 다언어 확장 시 해석 전략 분기가 필요합니다. (출처: Stage 1 다언어 확장 설계 리뷰, 2026-03-26)
