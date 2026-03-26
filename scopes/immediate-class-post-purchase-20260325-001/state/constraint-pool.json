@@ -1,0 +1,224 @@
+{
+  "constraints": [
+    {
+      "constraint_id": "CST-001",
+      "perspective": "code",
+      "summary": "2-hour minimum advance booking requirement prevents immediate class start",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "System will reject bookings less than 2 hours in advance. Users booking late at night may see no available slots.",
+      "source_refs": [
+        {
+          "source": "ontology actions SCH-5/SCH-6",
+          "detail": "BOOKING_ADVANCE_HOURS = 2"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "Confirmed in ontology transitions and booking service.",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 17,
+      "decision": "inject",
+      "selected_option": "Show earliest available slots, auto-select tomorrow if today empty",
+      "rationale": "PO approved all builder decisions.",
+      "decided_at": 34
+    },
+    {
+      "constraint_id": "CST-002",
+      "perspective": "code",
+      "summary": "Course must match ticket curriculumType (XG1 guard)",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "Mismatched course-ticket combination rejected by LEC-1 precondition. User sees error.",
+      "source_refs": [
+        {
+          "source": "LectureCommandServiceImpl",
+          "detail": "XG1: BUSINESS→BUSINESS, SMART_TALK→SMART_TALK only"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "Confirmed in ontology guard XG1.",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 18,
+      "decision": "inject",
+      "selected_option": "Filter levels by ticket curriculumType before display",
+      "rationale": "PO approved all builder decisions.",
+      "decided_at": 35
+    },
+    {
+      "constraint_id": "CST-003",
+      "perspective": "code",
+      "summary": "Unlimited ticket allows only 1 concurrent booking",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "Returning unlimited users with existing booking cannot book again from completion screen.",
+      "source_refs": [
+        {
+          "source": "Terms of Service Section 13",
+          "detail": "Unlimited: 1 lesson at a time"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "Confirmed in ToS Article 13 and ontology booking guards.",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 19,
+      "decision": "inject",
+      "selected_option": "Check existing bookings, show alternative message if one exists",
+      "rationale": "PO approved all builder decisions.",
+      "decided_at": 36
+    },
+    {
+      "constraint_id": "CST-004",
+      "perspective": "experience",
+      "summary": "No purchase completion screen exists — users go directly to Home",
+      "severity": "required",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "No surface for booking CTA or incentive. Must build new screen.",
+      "source_refs": [
+        {
+          "source": "podo-app payment flow",
+          "detail": "PortOne success → Home redirect"
+        }
+      ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "Inferred from app navigation flow. No completion screen component found.",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 20,
+      "decision": "inject",
+      "selected_option": "Build new purchase completion screen as confirmed in surface",
+      "rationale": "Surface confirmed. New screen to be built.",
+      "decided_at": 41
+    },
+    {
+      "constraint_id": "CST-005",
+      "perspective": "policy",
+      "summary": "Taking 1 class forfeits 7-day cooling-off refund right",
+      "severity": "recommended",
+      "discovery_stage": "grounding",
+      "decision_owner": "product_owner",
+      "impact_if_ignored": "Users may not realize booking+attending a class changes refund eligibility.",
+      "source_refs": [
+        {
+          "source": "Terms of Service Section 15",
+          "detail": "Refund within 7 days requires no 1:1 lesson conducted"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "Confirmed in sources/terms-of-service.md Section 15.",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 21,
+      "decision": "defer",
+      "selected_option": "No disclosure — standard ToS applies",
+      "rationale": "PO decided during Align: no refund disclosure needed, standard ToS applies.",
+      "decided_at": 42
+    },
+    {
+      "constraint_id": "CST-006",
+      "perspective": "code",
+      "summary": "BONUS acquisitionType from duplicate-ticket-purchase scope may not be in production",
+      "severity": "recommended",
+      "discovery_stage": "grounding",
+      "decision_owner": "builder",
+      "impact_if_ignored": "Bonus ticket cannot be tagged as BONUS type. Fallback: TKT-3 admin API.",
+      "source_refs": [
+        {
+          "source": "duplicate-ticket-purchase PRD",
+          "detail": "acquisitionType enum introduced in that scope"
+        }
+      ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "Field in PRD but may not be deployed. Builder to confirm.",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 22,
+      "decision": "inject",
+      "selected_option": "Check acquisitionType availability, fallback to TKT-3",
+      "rationale": "PO approved all builder decisions.",
+      "decided_at": 37
+    },
+    {
+      "constraint_id": "CST-007",
+      "perspective": "code",
+      "summary": "Each level must map to exactly one auto-assigned first lesson (LectureCourse)",
+      "severity": "required",
+      "discovery_stage": "draft_surface_gen",
+      "decision_owner": "builder",
+      "impact_if_ignored": "System cannot auto-create a class without a specific LectureCourse. Must define mapping from level to first lesson.",
+      "source_refs": [
+        {
+          "source": "LEC-1 precondition",
+          "detail": "createNewPodoLecture requires a specific LectureCourse selection"
+        }
+      ],
+      "evidence_status": "verified",
+      "evidence_note": "Confirmed in ontology action LEC-1 preconditions.",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 30,
+      "decision": "inject",
+      "selected_option": "Level-to-first-lesson mapping table using first active LectureCourse",
+      "rationale": "PO approved all builder decisions.",
+      "decided_at": 38
+    },
+    {
+      "constraint_id": "CST-008",
+      "perspective": "code",
+      "summary": "One-time incentive requires server-side tracking to prevent double-claim on app restart",
+      "severity": "required",
+      "discovery_stage": "draft_surface_gen",
+      "decision_owner": "builder",
+      "impact_if_ignored": "User could force-quit and reopen app to claim incentive multiple times. Must track claim status server-side.",
+      "source_refs": [
+        {
+          "source": "surface/preview",
+          "detail": "Incentive awarded on booking confirmation, disappears on exit"
+        }
+      ],
+      "evidence_status": "code_inferred",
+      "evidence_note": "No existing server-side tracking for post-purchase incentives. Must be built.",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 31,
+      "decision": "inject",
+      "selected_option": "Server-side incentive eligibility flag on payment record",
+      "rationale": "PO approved all builder decisions.",
+      "decided_at": 39
+    },
+    {
+      "constraint_id": "CST-008-dup-check",
+      "perspective": "code",
+      "summary": "duplicate check",
+      "severity": "recommended",
+      "discovery_stage": "draft_surface_gen",
+      "decision_owner": "builder",
+      "impact_if_ignored": "none",
+      "source_refs": [],
+      "evidence_status": "unverified",
+      "evidence_note": "",
+      "requires_policy_change": false,
+      "status": "decided",
+      "discovered_at": 32,
+      "decision": "inject",
+      "selected_option": "duplicate check - handled by CST-008",
+      "rationale": "Covered by CST-008.",
+      "decided_at": 40
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "required": 6,
+    "recommended": 3,
+    "decided": 9,
+    "clarify_pending": 0,
+    "invalidated": 0,
+    "undecided": 0
+  }
+}

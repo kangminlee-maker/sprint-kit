@@ -1,0 +1,80 @@
+[
+  {
+    "type": "align.locked",
+    "revision": 24,
+    "ts": "2026-03-25T09:15:46.108Z",
+    "locked_direction": "Maximize first-class booking rate at purchase completion. Reduce 0-class refund rate from 8% to 2-3% via completion screen with celebration, simplified booking, and one-time incentive."
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 34,
+    "ts": "2026-03-25T09:40:53.081Z",
+    "constraint_id": "CST-001",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 35,
+    "ts": "2026-03-25T09:40:53.084Z",
+    "constraint_id": "CST-002",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 36,
+    "ts": "2026-03-25T09:40:53.084Z",
+    "constraint_id": "CST-003",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 37,
+    "ts": "2026-03-25T09:40:53.085Z",
+    "constraint_id": "CST-006",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 38,
+    "ts": "2026-03-25T09:40:53.085Z",
+    "constraint_id": "CST-007",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 39,
+    "ts": "2026-03-25T09:40:53.086Z",
+    "constraint_id": "CST-008",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 40,
+    "ts": "2026-03-25T09:40:53.086Z",
+    "constraint_id": "CST-008-dup-check",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 41,
+    "ts": "2026-03-25T09:41:32.881Z",
+    "constraint_id": "CST-004",
+    "decision": "inject",
+    "decision_owner": "builder"
+  },
+  {
+    "type": "constraint.decision_recorded",
+    "revision": 42,
+    "ts": "2026-03-25T09:41:32.883Z",
+    "constraint_id": "CST-005",
+    "decision": "defer",
+    "decision_owner": "product_owner"
+  }
+]

@@ -1,0 +1,1801 @@
+{
+  "by_viewpoint": {
+    "semantics": [
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/gateway/UserGateway.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: UserGateway.dropUser(), AppleOauthService.revokeAppleAccount()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/gateway/UserGateway.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: UserGateway.updateUserInfo()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/controller/UserController.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: UserController.setLanguage(), UserGateway.changeLanguage()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/controller/UserControllerV2.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: UserController.setLanguage(), UserGateway.changeLanguage()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/gateway/UserGateway.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: UserGateway.registerDeviceToken()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/gateway/UserGateway.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: UserGateway.requestPhoneOtp(), UserGateway.verifyPhoneOtp()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/service/command/LectureCommandServiceImpl.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: LectureCommandServiceImpl.createNewPodoLecture()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/service/command/TrialLectureCommandServiceImpl.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: LectureCommandServiceImpl.createNewPodoLecture()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/gateway/LectureGateway.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: LectureGateway.createSmartTalkSession()"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/gateway/LectureGateway.java",
+        "viewpoint": "semantics",
+        "context": "온톨로지 매칭: LectureGateway.updatePreStudyTime()"
+      }
+    ],
+    "dependency": [
+      {
+        "file_path": "com.speaking.podo.applications.coupon.usecase.CouponService",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "com.speaking.podo.core.annotation.Listener",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "com.speaking.podo.core.listener.SQSMessage",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "io.awspring.cloud.sqs.annotation.SqsListener",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "lombok.RequiredArgsConstructor",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "lombok.extern.slf4j.Slf4j",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "org.springframework.core.env.Environment",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "org.springframework.messaging.handler.annotation.Header",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "org.springframework.messaging.handler.annotation.Payload",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/listener/CouponListener.java이 import하는 파일 (callee, hop 1)"
+      },
+      {
+        "file_path": "com.speaking.podo.applications.coupon.domain.Coupon",
+        "viewpoint": "dependency",
+        "context": "src/main/java/com/speaking/podo/applications/coupon/repository/CouponRepository.java이 import하는 파일 (callee, hop 1)"
+      }
+    ],
+    "logic": [
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/gateway/UserGateway.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 회원 탈퇴 (AUTH-5). preconditions: 로그인 상태"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/gateway/UserGateway.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 사용자 정보 수정 (USER-2). preconditions: 로그인 상태"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/controller/UserController.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 사용자 언어 설정 변경 (USER-3). preconditions: 로그인 상태"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/controller/UserControllerV2.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 사용자 언어 설정 변경 (USER-3). preconditions: 로그인 상태"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/gateway/UserGateway.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 디바이스 토큰 등록 (USER-4). preconditions: 로그인 상태, 유효한 FCM/APNS 디바이스 토큰"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/gateway/UserGateway.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 전화번호 인증 (OTP) (USER-5). preconditions: 로그인 상태, 유효한 전화번호"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/service/command/LectureCommandServiceImpl.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 수업 생성 (일반) (LEC-1). preconditions: 유효한 수강권(Ticket) 존재, 교재(LectureCourse) 선택 완료, Redis 분산 락 획득"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/service/command/TrialLectureCommandServiceImpl.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 수업 생성 (일반) (LEC-1). preconditions: 유효한 수강권(Ticket) 존재, 교재(LectureCourse) 선택 완료, Redis 분산 락 획득"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/gateway/LectureGateway.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: AI 채팅 수업 생성 (LEC-2). preconditions: 유효한 스마트톡 수강권 존재, CharacterChatType 선택"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/gateway/LectureGateway.java",
+        "viewpoint": "logic",
+        "context": "⚠️ 비즈니스 규칙: 예습 시간 기록 (LEC-3). preconditions: Lesson이 CREATED 상태, 예습 진행 중"
+      }
+    ],
+    "structure": [
+      {
+        "file_path": "_bmad/bmm/workflows/document-project/templates/project-scan-report-schema.json",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "docs/portone-v2-frontend-migration-guide.md",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "docs/stories/story-1-4-core-notification-migration.md",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "docs/stories/story-1-5-monitoring-slack-migration.md",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "src/main/resources/db/migration/nps_response_ddl.sql",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "src/main/resources/db/migration/tutor_exclusion_add_class_id.sql",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "src/main/resources/db/migration/tutor_exclusion_ddl.sql",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "apps/tutor-web/src/server/db/schema/bizLog.ts",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "apps/tutor-web/src/server/db/schema/board.ts",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      },
+      {
+        "file_path": "apps/tutor-web/src/server/db/schema/dropUser.ts",
+        "viewpoint": "structure",
+        "context": "스키마 파일: DB 구조와 제약조건 확인"
+      }
+    ],
+    "pragmatics": [
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "POST /podo/copyPodoClassRoom — 사용자 접점 API 엔드포인트 (43행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "GET /podo/getCompletedLecture — 사용자 접점 API 엔드포인트 (55행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "GET /podo/getLectureList — 사용자 접점 API 엔드포인트 (69행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "GET /podo/getNextLectureList — 사용자 접점 API 엔드포인트 (87행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "GET /podo/getPodoClassCourseList — 사용자 접점 API 엔드포인트 (108행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "POST /podo/createPodoClass — 사용자 접점 API 엔드포인트 (133행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "POST /podo/createPodoChat — 사용자 접점 API 엔드포인트 (170행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "POST /podo/updatePreStudyTime — 사용자 접점 API 엔드포인트 (212행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "POST /podo/finishPreStudyTime — 사용자 접점 API 엔드포인트 (247행)"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "pragmatics",
+        "context": "GET /podo/getCompPrestudyList — 사용자 접점 API 엔드포인트 (262행)"
+      }
+    ],
+    "evolution": [
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/alarm/domain/Alarm.java",
+        "viewpoint": "evolution",
+        "context": "세대 혼재: GT_ALARM_MANAGE (GT_ 레거시 접두사). 신규 le_ 테이블과 공존"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/board/domain/Board.java",
+        "viewpoint": "evolution",
+        "context": "세대 혼재: GT_BOARD (GT_ 레거시 접두사). 신규 le_ 테이블과 공존"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/card/domain/Card.java",
+        "viewpoint": "evolution",
+        "context": "세대 혼재: GT_CARD (GT_ 레거시 접두사). 신규 le_ 테이블과 공존"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/user/controller/UserControllerV2.java",
+        "viewpoint": "evolution",
+        "context": "버전 패턴: UserControllerV2.java — 이전 버전과의 호환성 확인 필요"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/lecture/controller/LectureControllerV2.java",
+        "viewpoint": "evolution",
+        "context": "버전 패턴: LectureControllerV2.java — 이전 버전과의 호환성 확인 필요"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/podo/schedule/usecase/PodoScheduleServiceImplV2.java",
+        "viewpoint": "evolution",
+        "context": "버전 패턴: PodoScheduleServiceImplV2.java — 이전 버전과의 호환성 확인 필요"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/podo/schedule/usecase/PodoScheduleServiceImplV2.java",
+        "viewpoint": "evolution",
+        "context": "버전 패턴: PodoScheduleServiceImplV2.java — 이전 버전과의 호환성 확인 필요"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/podo/schedule/usecase/PodoScheduleServiceImplV2.java",
+        "viewpoint": "evolution",
+        "context": "버전 패턴: PodoScheduleServiceImplV2.java — 이전 버전과의 호환성 확인 필요"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/podo/schedule/usecase/PodoScheduleServiceImplV2.java",
+        "viewpoint": "evolution",
+        "context": "버전 패턴: PodoScheduleServiceImplV2.java — 이전 버전과의 호환성 확인 필요"
+      },
+      {
+        "file_path": "src/main/java/com/speaking/podo/applications/ticket/service/TicketServiceV2Impl.java",
+        "viewpoint": "evolution",
+        "context": "버전 패턴: TicketServiceV2Impl.java — 이전 버전과의 호환성 확인 필요"
+      }
+    ]
+  },
+  "coverage_gaps": [],
+  "ontology_result": {
+    "matched_entities": [
+      "Lesson",
+      "Tutor",
+      "Student",
+      "Ticket",
+      "Subscribe",
+      "PaymentInfo",
+      "Coupon",
+      "TrialLesson"
+    ],
+    "code_locations": [
+      {
+        "reference": "AuthenticationGateway.oauthLogin(), OauthService.authenticate()",
+        "context": "Action AUTH-1: 소셜 로그인",
+        "entity": "AUTH"
+      },
+      {
+        "reference": "UserGateway.dropUser(), AppleOauthService.revokeAppleAccount()",
+        "context": "Action AUTH-5: 회원 탈퇴",
+        "entity": "AUTH"
+      },
+      {
+        "reference": "OauthService.authenticate() → UserService.createUser()",
+        "context": "Action USER-1: 사용자 생성 (신규 가입)",
+        "entity": "USER"
+      },
+      {
+        "reference": "UserGateway.updateUserInfo()",
+        "context": "Action USER-2: 사용자 정보 수정",
+        "entity": "USER"
+      },
+      {
+        "reference": "UserController.setLanguage(), UserGateway.changeLanguage()",
+        "context": "Action USER-3: 사용자 언어 설정 변경",
+        "entity": "USER"
+      },
+      {
+        "reference": "UserGateway.registerDeviceToken()",
+        "context": "Action USER-4: 디바이스 토큰 등록",
+        "entity": "USER"
+      },
+      {
+        "reference": "UserGateway.requestPhoneOtp(), UserGateway.verifyPhoneOtp()",
+        "context": "Action USER-5: 전화번호 인증 (OTP)",
+        "entity": "USER"
+      },
+      {
+        "reference": "LectureCommandServiceImpl.createNewPodoLecture()",
+        "context": "Action LEC-1: 수업 생성 (일반)",
+        "entity": "LEC"
+      },
+      {
+        "reference": "LectureGateway.createSmartTalkSession()",
+        "context": "Action LEC-2: AI 채팅 수업 생성",
+        "entity": "LEC"
+      },
+      {
+        "reference": "LectureGateway.updatePreStudyTime()",
+        "context": "Action LEC-3: 예습 시간 기록",
+        "entity": "LEC"
+      },
+      {
+        "reference": "LectureGateway.completePreStudy()",
+        "context": "Action LEC-4: 예습 완료",
+        "entity": "LEC"
+      },
+      {
+        "reference": "RedisKeyExpirationListener",
+        "context": "Action LEC-5: 예습 자동 완료",
+        "entity": "LEC"
+      },
+      {
+        "reference": "LectureGateway.skipPreStudy()",
+        "context": "Action LEC-6: 예습 건너뛰기",
+        "entity": "LEC"
+      },
+      {
+        "reference": "LectureControllerV2.changeTrialClassLevel(), LectureGateway.changeTrialLevel()",
+        "context": "Action LEC-7: 체험 수업 레벨 변경",
+        "entity": "LEC"
+      },
+      {
+        "reference": "LectureOnlineService.copyRoom()",
+        "context": "Action LEC-8: 수업 방 복제",
+        "entity": "LEC"
+      },
+      {
+        "reference": "PodoScheduleServiceImplV2.match() → LectureCommandServiceImpl.updateLectureToReserved()",
+        "context": "Action SCH-1: 수업 예약",
+        "entity": "SCH"
+      },
+      {
+        "reference": "PodoScheduleServiceImplV2.change(), changeByAdmin()",
+        "context": "Action SCH-2: 수업 일정 변경",
+        "entity": "SCH"
+      },
+      {
+        "reference": "PodoScheduleServiceImplV2.cancel()",
+        "context": "Action SCH-3: 수업 취소",
+        "entity": "SCH"
+      },
+      {
+        "reference": "PodoScheduleServiceImplV2.cancelAndReassign()",
+        "context": "Action SCH-4: 수업 취소+재할당",
+        "entity": "SCH"
+      },
+      {
+        "reference": "TutorSettingsController.openSchedule(), closeSchedule()",
+        "context": "Action SCH-7: 튜터 스케줄 열기/닫기",
+        "entity": "SCH"
+      },
+      {
+        "reference": "SubscribeMappServiceImpl.requestCertificate()",
+        "context": "Action SUB-4: 수료증 요청/발송",
+        "entity": "SUB"
+      },
+      {
+        "reference": "SubscribeMappDslRepositoryImpl.cancelTrial(), PaymentGateway → LectureDslRepositoryImpl.updateLectureStatus()",
+        "context": "Action SUB-5: 체험 구독 종료",
+        "entity": "SUB"
+      },
+      {
+        "reference": "SubscribeGateway.extendSubscription()",
+        "context": "Action SUB-6: 구독 연장",
+        "entity": "SUB"
+      },
+      {
+        "reference": "PaymentGateway.processPayment(), SubscribeMappServiceImpl.addSubscribeMapp()",
+        "context": "Action PAY-2: 결제 성공 처리",
+        "entity": "PAY"
+      },
+      {
+        "reference": "PaymentGateway.handleWebhook()",
+        "context": "Action PAY-3: 결제 Webhook 처리",
+        "entity": "PAY"
+      },
+      {
+        "reference": "PaymentGateway.processTrialFreePayment() (BFF route)",
+        "context": "Action PAY-5: 무료 체험 결제",
+        "entity": "PAY"
+      },
+      {
+        "reference": "DirectPayService",
+        "context": "Action PAY-7: 직결제 결제 처리",
+        "entity": "PAY"
+      },
+      {
+        "reference": "CouponServiceImpl.handleCoupon(), CouponListener (SQS 컨슈머)",
+        "context": "Action CPN-1: 쿠폰 발급",
+        "entity": "CPN"
+      },
+      {
+        "reference": "CouponRepository.use()",
+        "context": "Action CPN-2: 쿠폰 사용",
+        "entity": "CPN"
+      },
+      {
+        "reference": "CouponRepository.restore()",
+        "context": "Action CPN-3: 쿠폰 복원",
+        "entity": "CPN"
+      },
+      {
+        "reference": "CouponRepository.deleteById()",
+        "context": "Action CPN-4: 쿠폰 삭제",
+        "entity": "CPN"
+      },
+      {
+        "reference": "CouponServiceImpl.createCouponTemplate(), updateCouponTemplateByAdmin(), deleteCouponTemplateByAdmin()",
+        "context": "Action CPN-5: 쿠폰 템플릿 생성/수정/삭제",
+        "entity": "CPN"
+      },
+      {
+        "reference": "TicketServiceV2Impl.addTicket()",
+        "context": "Action TKT-1: 일반 수강권 발급",
+        "entity": "TKT"
+      },
+      {
+        "reference": "TicketServiceV2Impl.addTrialTicket()",
+        "context": "Action TKT-4: 체험 수강권 발급",
+        "entity": "TKT"
+      },
+      {
+        "reference": "PodoScheduleServiceImplV2.cancel() 내 수강권 차감 로직",
+        "context": "Action TKT-2: 수강권 차감",
+        "entity": "TKT"
+      },
+      {
+        "reference": "TicketController.updateCount(), 어드민 API 경유",
+        "context": "Action TKT-3: 수강권 횟수 수정",
+        "entity": "TKT"
+      },
+      {
+        "reference": "CouponServiceImpl.handleCoupon() (type=PARTNERS)",
+        "context": "Action COMM-4: 파트너스 쿠폰 발급",
+        "entity": "COMM"
+      },
+      {
+        "reference": "UserGateway.updateTrialTutorialStep()",
+        "context": "Action COMM-5: 체험 튜토리얼 단계 업데이트",
+        "entity": "COMM"
+      },
+      {
+        "reference": "CouponListener (SQS 큐 소비)",
+        "context": "Action BATCH-3: 쿠폰 비동기 발급",
+        "entity": "BATCH"
+      }
+    ],
+    "db_tables": [
+      "GT_CLASS",
+      "GT_TUTOR",
+      "GT_USER",
+      "le_ticket",
+      "le_subscribe",
+      "GT_PAYMENT_INFO",
+      "le_coupon",
+      "GT_CLASS"
+    ],
+    "related_actions": [
+      {
+        "id": "AUTH-1",
+        "display_name": "소셜 로그인",
+        "source_code": "AuthenticationGateway.oauthLogin(), OauthService.authenticate()",
+        "preconditions": [
+          {
+            "check": "카카오 또는 애플 OAuth 인증 코드 보유"
+          }
+        ],
+        "results": [
+          "JWT 액세스 토큰 + 리프레시 토큰 발급, 쿠키 설정. 신규 사용자면 Student 레코드 자동 생성 (AUTH-1 + USER-1 동시 수행)"
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "카카오 API 토큰 교환, 애플 ID 토큰 검증"
+        ]
+      },
+      {
+        "id": "AUTH-5",
+        "display_name": "회원 탈퇴",
+        "source_code": "UserGateway.dropUser(), AppleOauthService.revokeAppleAccount()",
+        "preconditions": [
+          {
+            "check": "로그인 상태"
+          }
+        ],
+        "results": [
+          "Student 레코드 비활성화 (논리 삭제)"
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "애플 계정 revoke API 호출, 카카오 탈퇴는 외부 시스템에서 처리"
+        ]
+      },
+      {
+        "id": "USER-1",
+        "display_name": "사용자 생성 (신규 가입)",
+        "source_code": "OauthService.authenticate() → UserService.createUser()",
+        "preconditions": [
+          {
+            "check": "OAuth 인증 성공"
+          },
+          {
+            "check": "동일 이메일의 기존 Student 미존재"
+          }
+        ],
+        "results": [
+          "Student 레코드 생성 (이름, 이메일, providerType, recommendCode 등 설정)"
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "웰컴 쿠폰 발급 트리거 가능"
+        ]
+      },
+      {
+        "id": "USER-2",
+        "display_name": "사용자 정보 수정",
+        "source_code": "UserGateway.updateUserInfo()",
+        "preconditions": [
+          {
+            "check": "로그인 상태"
+          }
+        ],
+        "results": [
+          "Student의 이름, 전화번호, 프로필 이미지 등 변경"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "USER-3",
+        "display_name": "사용자 언어 설정 변경",
+        "source_code": "UserController.setLanguage(), UserGateway.changeLanguage()",
+        "preconditions": [
+          {
+            "check": "로그인 상태"
+          }
+        ],
+        "results": [
+          "Student.lang 값 변경 (EN, JP, ENJP)"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "USER-4",
+        "display_name": "디바이스 토큰 등록",
+        "source_code": "UserGateway.registerDeviceToken()",
+        "preconditions": [
+          {
+            "check": "로그인 상태"
+          },
+          {
+            "check": "유효한 FCM/APNS 디바이스 토큰"
+          }
+        ],
+        "results": [
+          "학생의 디바이스 토큰 등록/갱신 (푸시 알림 수신 가능)"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "USER-5",
+        "display_name": "전화번호 인증 (OTP)",
+        "source_code": "UserGateway.requestPhoneOtp(), UserGateway.verifyPhoneOtp()",
+        "preconditions": [
+          {
+            "check": "로그인 상태"
+          },
+          {
+            "check": "유효한 전화번호"
+          }
+        ],
+        "results": [
+          "OTP 발송 후 검증 성공 시 Student.phone 업데이트"
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "SMS OTP 발송 (외부 API)"
+        ]
+      },
+      {
+        "id": "LEC-1",
+        "display_name": "수업 생성 (일반)",
+        "source_code": "LectureCommandServiceImpl.createNewPodoLecture()",
+        "preconditions": [
+          {
+            "check": "유효한 수강권(Ticket) 존재"
+          },
+          {
+            "check": "교재(LectureCourse) 선택 완료"
+          },
+          {
+            "check": "Redis 분산 락 획득"
+          }
+        ],
+        "results": [
+          "Lesson 레코드 생성 (invoiceStatus=CREATED, status=REGIST), LectureOnline 레코드 생성"
+        ],
+        "state_transitions": [
+          "L1"
+        ],
+        "side_effects": []
+      },
+      {
+        "id": "LEC-2",
+        "display_name": "AI 채팅 수업 생성",
+        "source_code": "LectureGateway.createSmartTalkSession()",
+        "preconditions": [
+          {
+            "check": "유효한 스마트톡 수강권 존재"
+          },
+          {
+            "check": "CharacterChatType 선택"
+          }
+        ],
+        "results": [
+          "스마트톡 세션 생성"
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "AI 대화 세션 초기화"
+        ]
+      },
+      {
+        "id": "LEC-3",
+        "display_name": "예습 시간 기록",
+        "source_code": "LectureGateway.updatePreStudyTime()",
+        "preconditions": [
+          {
+            "check": "Lesson이 CREATED 상태"
+          },
+          {
+            "check": "예습 진행 중"
+          }
+        ],
+        "results": [
+          "Lecture.preStudyTime 값 업데이트"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "LEC-4",
+        "display_name": "예습 완료",
+        "source_code": "LectureGateway.completePreStudy()",
+        "preconditions": [
+          {
+            "check": "Lesson이 CREATED 상태"
+          },
+          {
+            "check": "예습 미완료"
+          }
+        ],
+        "results": [
+          "Lecture.isPrestudy = \"Y\""
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "Redis 예습 타이머 키 삭제"
+        ]
+      },
+      {
+        "id": "LEC-5",
+        "display_name": "예습 자동 완료",
+        "source_code": "RedisKeyExpirationListener",
+        "preconditions": [
+          {
+            "check": "예습 Redis 키가 만료됨"
+          }
+        ],
+        "results": [
+          "Lecture.isPrestudy = \"Y\" (자동 완료 처리)"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "LEC-6",
+        "display_name": "예습 건너뛰기",
+        "source_code": "LectureGateway.skipPreStudy()",
+        "preconditions": [
+          {
+            "check": "Lesson이 CREATED 상태"
+          },
+          {
+            "check": "학생의 예습 스킵 잔여 횟수 > 0"
+          }
+        ],
+        "results": [
+          "Lecture.isPrestudy = \"Y\" (스킵으로 완료 처리), 스킵 횟수 차감"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "LEC-7",
+        "display_name": "체험 수업 레벨 변경",
+        "source_code": "LectureControllerV2.changeTrialClassLevel(), LectureGateway.changeTrialLevel()",
+        "preconditions": [
+          {
+            "check": "체험 수업(city=PODO_TRIAL)이 CREATED 상태"
+          }
+        ],
+        "results": [
+          "수업의 교재(LectureCourse) 변경 (레벨에 맞는 교재로 교체)"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "LEC-8",
+        "display_name": "수업 방 복제",
+        "source_code": "LectureOnlineService.copyRoom()",
+        "preconditions": [
+          {
+            "check": "원본 수업 방(LectureOnline) 존재"
+          }
+        ],
+        "results": [
+          "기존 수업 방 정보를 복제하여 새 LectureOnline 레코드 생성"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "SCH-1",
+        "display_name": "수업 예약",
+        "source_code": "PodoScheduleServiceImplV2.match() → LectureCommandServiceImpl.updateLectureToReserved()",
+        "preconditions": [
+          {
+            "check": "Lesson.invoiceStatus = CREATED"
+          },
+          {
+            "check": "수업 시작 2시간 전",
+            "policy_ref": "BOOKING_ADVANCE_HOURS"
+          },
+          {
+            "check": "학생 중복 예약 없음"
+          },
+          {
+            "check": "튜터 시간 충돌 없음"
+          },
+          {
+            "check": "수강권 잔여 > 0 (nPurchased - nUsed > 0 AND 현재일 <= expireDate)"
+          },
+          {
+            "check": "수강권 커리큘럼 매칭 (BUSINESS→BUSINESS전용, SMART_TALK→SMART_TALK전용, BASIC→BASIC전용, 프리토킹→BASIC+BUSINESS 허용)"
+          },
+          {
+            "check": "수강권 사용 우선순위 적용 (UNLIMIT/COUNT→1순위, PODO_TRIAL→2순위, 기타→3순위)"
+          },
+          {
+            "check": "연속 요청 제한 미초과 (3개월 기준 위반 8,744건/403명)"
+          }
+        ],
+        "results": [
+          "Lecture.invoiceStatus=RESERVED, 튜터 ID/시간/날짜 설정, LectureSchedule 생성, ScheduleTimeBlock 배정"
+        ],
+        "state_transitions": [
+          "L2"
+        ],
+        "side_effects": [
+          "상태 히스토리 기록 (LectureStatusHistory)"
+        ]
+      },
+      {
+        "id": "SCH-2",
+        "display_name": "수업 일정 변경",
+        "source_code": "PodoScheduleServiceImplV2.change(), changeByAdmin()",
+        "preconditions": [
+          {
+            "check": "Lesson.invoiceStatus = RESERVED"
+          },
+          {
+            "check": "수업 시작 2시간 전 (3개월 기준 위반 6건/3명)",
+            "policy_ref": "BOOKING_ADVANCE_HOURS"
+          }
+        ],
+        "results": [
+          "기존 타임블록 초기화, 새로운 튜터/시간 매칭, Lecture.nStudentUpdate +1"
+        ],
+        "state_transitions": [
+          "L3"
+        ],
+        "side_effects": [
+          "튜터 재매칭 시 기존 튜터 스케줄 초기화 후 신규 매칭 실패하면 REQUIRES_NEW 트랜잭션으로 부분 롤백. 수동 복구 필요할 수 있음"
+        ]
+      },
+      {
+        "id": "SCH-3",
+        "display_name": "수업 취소",
+        "source_code": "PodoScheduleServiceImplV2.cancel()",
+        "preconditions": [
+          {
+            "check": "Lesson.invoiceStatus = RESERVED"
+          }
+        ],
+        "results": [
+          "(1) 2시간+ 전: CANCEL, 수강권 차감 없음, 동일 코스로 새 수업 생성",
+          "(2) 1~2시간 전: CANCEL, 수강권 +1 차감, 무제한권(TicketEventType.UNLIMIT, originCount==999)은 72시간 예약 금지",
+          "(3) 1시간 이내: CANCEL_PAID, 수강권 +1 차감, 튜터 정산, 무제한권(TicketEventType.UNLIMIT, originCount==999)은 72시간 예약 금지"
+        ],
+        "state_transitions": [
+          "L4",
+          "L5",
+          "L6"
+        ],
+        "side_effects": [
+          "72시간 예약 금지 시 Penalty 레코드 생성",
+          "120분+ 무료취소 시 신규 수업 자동 생성. 생성 실패 시 트랜잭션 전체 롤백 (@Transactional)"
+        ]
+      },
+      {
+        "id": "SCH-4",
+        "display_name": "수업 취소+재할당",
+        "source_code": "PodoScheduleServiceImplV2.cancelAndReassign()",
+        "preconditions": [
+          {
+            "check": "Lesson.invoiceStatus = RESERVED"
+          },
+          {
+            "check": "관리자 권한"
+          }
+        ],
+        "results": [
+          "기존 예약 취소 후 다른 튜터로 즉시 재배정"
+        ],
+        "state_transitions": [
+          "L4",
+          "L2"
+        ],
+        "side_effects": []
+      },
+      {
+        "id": "SCH-7",
+        "display_name": "튜터 스케줄 열기/닫기",
+        "source_code": "TutorSettingsController.openSchedule(), closeSchedule()",
+        "preconditions": [
+          {
+            "check": "튜터 계정 로그인 상태"
+          }
+        ],
+        "results": [
+          "튜터의 당일 수업 가능 여부 일괄 변경"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "SUB-4",
+        "display_name": "수료증 요청/발송",
+        "source_code": "SubscribeMappServiceImpl.requestCertificate()",
+        "preconditions": [
+          {
+            "check": "수강권(Ticket) 보유"
+          },
+          {
+            "check": "수료 조건 충족"
+          }
+        ],
+        "results": [
+          "Ticket.isCert = true"
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "수료증 PDF 생성 및 이메일 발송"
+        ]
+      },
+      {
+        "id": "SUB-5",
+        "display_name": "체험 구독 종료",
+        "source_code": "SubscribeMappDslRepositoryImpl.cancelTrial(), PaymentGateway → LectureDslRepositoryImpl.updateLectureStatus()",
+        "preconditions": [
+          {
+            "check": "SubscribeMapp.status = TRIAL"
+          },
+          {
+            "check": "정규구독 결제 성공 (FIRST_BILLING)"
+          }
+        ],
+        "results": [
+          "체험 구독 종료 (cancelAt=현재시각), 체험 수업(CREATED 상태) 취소"
+        ],
+        "state_transitions": [
+          "S5",
+          "L7",
+          "L8"
+        ],
+        "side_effects": []
+      },
+      {
+        "id": "SUB-6",
+        "display_name": "구독 연장",
+        "source_code": "SubscribeGateway.extendSubscription()",
+        "preconditions": [
+          {
+            "check": "활성 구독 존재 (SubscribeMapp.subscribeYn=Y)"
+          },
+          {
+            "check": "연장 상품 선택 — 연장 상품 필터링 5가지 규칙 통과"
+          }
+        ],
+        "results": [
+          "구독 기간 연장 — SubscribeMapp의 연장 정보 갱신, 연장 상품(Subscribe) 반영"
+        ],
+        "state_transitions": [
+          "S2",
+          "S4"
+        ],
+        "side_effects": [
+          "결제 처리"
+        ]
+      },
+      {
+        "id": "PAY-2",
+        "display_name": "결제 성공 처리",
+        "source_code": "PaymentGateway.processPayment(), SubscribeMappServiceImpl.addSubscribeMapp()",
+        "preconditions": [
+          {
+            "check": "PG사 결제 성공 응답 수신"
+          }
+        ],
+        "results": [
+          "PaymentInfo 레코드 생성, SubscribeMapp 생성 또는 갱신, Ticket 발급, 쿠폰 사용 처리"
+        ],
+        "state_transitions": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S8",
+          "S9",
+          "C2"
+        ],
+        "side_effects": [
+          "포트원 결제 스케줄 등록 (정기구독 시), 체험 구독 종료 트리거 (SUB-5)",
+          "결제 성공 후 구독/수강권 생성 중 예외 시 포트원 자동 환불 + PaymentFailInfo 기록"
+        ]
+      },
+      {
+        "id": "PAY-3",
+        "display_name": "결제 Webhook 처리",
+        "source_code": "PaymentGateway.handleWebhook()",
+        "preconditions": [
+          {
+            "check": "PG사 webhook 수신"
+          },
+          {
+            "check": "유효한 merchantUid"
+          }
+        ],
+        "results": [
+          "결제 상태 확인 후 PAY-2와 동일한 후처리 수행"
+        ],
+        "state_transitions": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S8",
+          "S9",
+          "C2"
+        ],
+        "side_effects": [
+          "PAY-2와 동일",
+          "결제 성공 후 구독/수강권 생성 중 예외 시 포트원 자동 환불 + PaymentFailInfo 기록"
+        ]
+      },
+      {
+        "id": "PAY-5",
+        "display_name": "무료 체험 결제",
+        "source_code": "PaymentGateway.processTrialFreePayment() (BFF route)",
+        "preconditions": [
+          {
+            "check": "체험 미이용 사용자"
+          },
+          {
+            "check": "무료 체험 상품 선택"
+          }
+        ],
+        "results": [
+          "500원 체험 결제 처리, SubscribeMapp(TRIAL) 생성, Ticket 발급"
+        ],
+        "state_transitions": [
+          "S1"
+        ],
+        "side_effects": [
+          "BFF에서 직접 webhook 호출하여 결제 확인 처리"
+        ]
+      },
+      {
+        "id": "PAY-7",
+        "display_name": "직결제 결제 처리",
+        "source_code": "DirectPayService",
+        "preconditions": [
+          {
+            "check": "유효한 payToken"
+          },
+          {
+            "check": "payOtp 일치"
+          },
+          {
+            "check": "isPaid = N"
+          }
+        ],
+        "results": [
+          "DirectPay.isPaid=Y, PaymentInfo 생성, Ticket 발급"
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "PG사 결제 처리"
+        ]
+      },
+      {
+        "id": "CPN-1",
+        "display_name": "쿠폰 발급",
+        "source_code": "CouponServiceImpl.handleCoupon(), CouponListener (SQS 컨슈머)",
+        "preconditions": [
+          {
+            "check": "CouponTemplate.status = ACTIVE"
+          },
+          {
+            "check": "발급 기간 내"
+          },
+          {
+            "check": "발급 한도 미초과"
+          },
+          {
+            "check": "중복 발급 검사 — 동일 templateId + userId 조합에서 기존 Coupon 상태에 따라 판정"
+          }
+        ],
+        "results": [
+          "Coupon 레코드 생성 (status=ACTIVE, utcUseStart/utcUseEnd 설정)"
+        ],
+        "state_transitions": [
+          "C1"
+        ],
+        "side_effects": [
+          "이벤트 기반 비동기 발급 시 SQS 큐 사용"
+        ]
+      },
+      {
+        "id": "CPN-2",
+        "display_name": "쿠폰 사용",
+        "source_code": "CouponRepository.use()",
+        "preconditions": [
+          {
+            "check": "Coupon.status = ACTIVE"
+          },
+          {
+            "check": "사용 기간 내 (utcUseStart ≤ 현재 ≤ utcUseEnd)"
+          },
+          {
+            "check": "CouponTemplate.applyCondition 필드별 적용 조건 충족"
+          }
+        ],
+        "results": [
+          "Coupon.status=USED, paymentId 설정, utcUsedAt=현재시각"
+        ],
+        "state_transitions": [
+          "C2"
+        ],
+        "side_effects": [
+          "결제 금액 할인 적용"
+        ]
+      },
+      {
+        "id": "CPN-3",
+        "display_name": "쿠폰 복원",
+        "source_code": "CouponRepository.restore()",
+        "preconditions": [
+          {
+            "check": "Coupon.status = USED"
+          },
+          {
+            "check": "연결된 결제가 취소됨"
+          }
+        ],
+        "results": [
+          "Coupon.status=ACTIVE, paymentId=NULL, utcUsedAt=NULL"
+        ],
+        "state_transitions": [
+          "C3"
+        ],
+        "side_effects": []
+      },
+      {
+        "id": "CPN-4",
+        "display_name": "쿠폰 삭제",
+        "source_code": "CouponRepository.deleteById()",
+        "preconditions": [
+          {
+            "check": "Coupon.status가 USED/DELETED가 아닐 것"
+          },
+          {
+            "check": "Coupon.status가 ACTIVE 또는 HIDDEN"
+          }
+        ],
+        "results": [
+          "Coupon.status=DELETED"
+        ],
+        "state_transitions": [
+          "C4",
+          "C5"
+        ],
+        "side_effects": []
+      },
+      {
+        "id": "CPN-5",
+        "display_name": "쿠폰 템플릿 생성/수정/삭제",
+        "source_code": "CouponServiceImpl.createCouponTemplate(), updateCouponTemplateByAdmin(), deleteCouponTemplateByAdmin()",
+        "preconditions": [
+          {
+            "check": "관리자 권한"
+          },
+          {
+            "check": "삭제 시: CouponTemplate.status ≠ DELETED"
+          }
+        ],
+        "results": [
+          "생성: CouponTemplate(ACTIVE) 생성",
+          "수정: status 변경 시 하위 Coupon 연쇄 변경 (ACTIVE↔HIDDEN)",
+          "삭제: CouponTemplate(DELETED), 하위 Coupon 중 USED 아닌 것 모두 DELETED"
+        ],
+        "state_transitions": [
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5",
+          "C6",
+          "C7",
+          "C8"
+        ],
+        "side_effects": [
+          "삭제 시 선착순 Redis Lock 삭제"
+        ]
+      },
+      {
+        "id": "TKT-1",
+        "display_name": "일반 수강권 발급",
+        "source_code": "TicketServiceV2Impl.addTicket()",
+        "preconditions": [
+          {
+            "check": "정규 결제 성공 (PaymentType = FIRST_BILLING, BILLING, LUMP_SUM, EXTEND, BEHIND)"
+          }
+        ],
+        "results": [
+          "Ticket 레코드 생성 (eventType=COUNT 또는 UNLIMIT, expireDate=nextPaymentDate-1초), Student.credit 증가"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "TKT-4",
+        "display_name": "체험 수강권 발급",
+        "source_code": "TicketServiceV2Impl.addTrialTicket()",
+        "preconditions": [
+          {
+            "check": "체험 결제 성공 (PaymentType = TRIAL 또는 TRIAL_FREE)"
+          }
+        ],
+        "results": [
+          "Ticket 레코드 생성 (eventType=PODO_TRIAL, nPurchased=1, expireDate=now+giveDays), Student.credit 증가"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "TKT-2",
+        "display_name": "수강권 차감",
+        "source_code": "PodoScheduleServiceImplV2.cancel() 내 수강권 차감 로직",
+        "preconditions": [
+          {
+            "check": "수업 예약 또는 패널티 취소"
+          }
+        ],
+        "results": [
+          "Ticket.nUsed +1, Student.credit 감소"
+        ],
+        "state_transitions": [],
+        "side_effects": [
+          "무제한권 취소 패널티 시 Penalty 생성 가능"
+        ]
+      },
+      {
+        "id": "TKT-3",
+        "display_name": "수강권 횟수 수정",
+        "source_code": "TicketController.updateCount(), 어드민 API 경유",
+        "preconditions": [
+          {
+            "check": "관리자 권한"
+          }
+        ],
+        "results": [
+          "Ticket의 횟수(originCount, nPurchased 등) 직접 수정, Student.credit 연동 변경"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "COMM-4",
+        "display_name": "파트너스 쿠폰 발급",
+        "source_code": "CouponServiceImpl.handleCoupon() (type=PARTNERS)",
+        "preconditions": [
+          {
+            "check": "추천인 Partners.status = APPROVED"
+          },
+          {
+            "check": "피추천인 결제 완료"
+          }
+        ],
+        "results": [
+          "파트너스 쿠폰(CouponType=PARTNERS) 발급"
+        ],
+        "state_transitions": [
+          "C1"
+        ],
+        "side_effects": []
+      },
+      {
+        "id": "COMM-5",
+        "display_name": "체험 튜토리얼 단계 업데이트",
+        "source_code": "UserGateway.updateTrialTutorialStep()",
+        "preconditions": [
+          {
+            "check": "체험 수업 진행 중"
+          }
+        ],
+        "results": [
+          "튜토리얼 진행 단계 업데이트"
+        ],
+        "state_transitions": [],
+        "side_effects": []
+      },
+      {
+        "id": "BATCH-3",
+        "display_name": "쿠폰 비동기 발급",
+        "source_code": "CouponListener (SQS 큐 소비)",
+        "preconditions": [
+          {
+            "check": "SQS 큐에 쿠폰 발급 이벤트 존재"
+          }
+        ],
+        "results": [
+          "Coupon 레코드 생성 (status=ACTIVE)"
+        ],
+        "state_transitions": [
+          "C1"
+        ],
+        "side_effects": []
+      }
+    ],
+    "related_transitions": [
+      {
+        "id": "L1",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "(none)",
+        "to": "CREATED",
+        "trigger": "학생이 수업 생성 (예습 시작)",
+        "source_code": "LectureCommandServiceImpl.createNewPodoLecture()",
+        "guards": [
+          {
+            "check": "유효한 수강권 존재"
+          },
+          {
+            "check": "Redis 락 획득"
+          }
+        ]
+      },
+      {
+        "id": "L2",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "CREATED",
+        "to": "RESERVED",
+        "trigger": "학생이 시간 선택 + 튜터 매칭",
+        "source_code": "PodoScheduleServiceImplV2.match() → LectureCommandServiceImpl.updateLectureToReserved()",
+        "guards": [
+          {
+            "check": "invoiceStatus = CREATED"
+          },
+          {
+            "check": "수업 시작 2시간 전",
+            "policy_ref": "BOOKING_ADVANCE_HOURS"
+          },
+          {
+            "check": "학생 중복예약 없음"
+          },
+          {
+            "check": "튜터 시간 충돌 없음"
+          },
+          {
+            "check": "수강권 잔여 > 0"
+          }
+        ]
+      },
+      {
+        "id": "L3",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "RESERVED",
+        "to": "RESERVED",
+        "trigger": "학생이 수업 변경 (시간/튜터 재매칭)",
+        "source_code": "PodoScheduleServiceImplV2.change(), changeByAdmin()",
+        "guards": [
+          {
+            "check": "invoiceStatus = RESERVED"
+          },
+          {
+            "check": "수업 시작 2시간 전",
+            "policy_ref": "BOOKING_ADVANCE_HOURS"
+          }
+        ]
+      },
+      {
+        "id": "L4",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "RESERVED",
+        "to": "CANCEL",
+        "trigger": "학생이 수업 시작 2시간+ 전 취소",
+        "source_code": "PodoScheduleServiceImplV2.cancel()",
+        "guards": [
+          {
+            "check": "invoiceStatus = RESERVED"
+          },
+          {
+            "check": "남은시간 ≥ 120분",
+            "policy_ref": "CANCEL_FREE_DEADLINE"
+          }
+        ]
+      },
+      {
+        "id": "L5",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "RESERVED",
+        "to": "CANCEL",
+        "trigger": "학생이 수업 시작 1~2시간 전 취소",
+        "source_code": "PodoScheduleServiceImplV2.cancel()",
+        "guards": [
+          {
+            "check": "invoiceStatus = RESERVED"
+          },
+          {
+            "check": "60분 ≤ 남은시간 < 120분",
+            "policy_ref": "CANCEL_PENALTY_WINDOW"
+          }
+        ]
+      },
+      {
+        "id": "L6",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "RESERVED",
+        "to": "CANCEL_PAID",
+        "trigger": "학생이 수업 시작 1시간 이내 취소",
+        "source_code": "PodoScheduleServiceImplV2.cancel()",
+        "guards": [
+          {
+            "check": "invoiceStatus = RESERVED"
+          },
+          {
+            "check": "남은시간 < 60분",
+            "policy_ref": "CANCEL_PAID_WINDOW"
+          }
+        ]
+      },
+      {
+        "id": "L7",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "CREATED",
+        "to": "CANCEL",
+        "trigger": "정규구독 결제 시 체험수업 만료",
+        "source_code": "PaymentGateway → LectureDslRepositoryImpl.updateLectureStatus()",
+        "guards": [
+          {
+            "check": "invoiceStatus = CREATED"
+          },
+          {
+            "check": "classState = NULL"
+          }
+        ]
+      },
+      {
+        "id": "L8",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "CANCEL_NOSHOW_T",
+        "to": "CANCEL",
+        "trigger": "정규구독 결제 시 체험수업 만료",
+        "source_code": "PaymentGateway → LectureDslRepositoryImpl.updateLectureStatus()",
+        "guards": [
+          {
+            "check": "invoiceStatus = CANCEL_NOSHOW_T"
+          },
+          {
+            "check": "classState = NULL"
+          }
+        ]
+      },
+      {
+        "id": "L9",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "RESERVED",
+        "to": "COMPLETED",
+        "trigger": "수업 정상 완료",
+        "source_code": "(외부)",
+        "guards": [
+          {
+            "check": "(외부 시스템 — 레거시 PHP 또는 어드민 도구에서 처리)"
+          }
+        ]
+      },
+      {
+        "id": "L10",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "RESERVED",
+        "to": "NOSHOW_S",
+        "trigger": "학생 불참 처리",
+        "source_code": "(외부)",
+        "guards": [
+          {
+            "check": "(외부 시스템 — 레거시 PHP 또는 어드민 도구에서 처리)"
+          }
+        ]
+      },
+      {
+        "id": "L11",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "RESERVED",
+        "to": "NOSHOW_BOTH",
+        "trigger": "양측 불참 처리",
+        "source_code": "(외부)",
+        "guards": [
+          {
+            "check": "(외부 시스템 — 레거시 PHP 또는 어드민 도구에서 처리)"
+          }
+        ]
+      },
+      {
+        "id": "L12",
+        "entity": "Lesson",
+        "field_name": "invoice_status",
+        "from": "RESERVED",
+        "to": "CANCEL_NOSHOW_T",
+        "trigger": "튜터 불참 처리",
+        "source_code": "(외부)",
+        "guards": [
+          {
+            "check": "(외부 시스템 — 레거시 PHP 또는 어드민 도구에서 처리)"
+          }
+        ]
+      },
+      {
+        "id": "PI1",
+        "entity": "PaymentInfo",
+        "field_name": "status",
+        "from": "(none)",
+        "to": "pending",
+        "trigger": "포트원 결제 요청 생성",
+        "source_code": "PaymentGateway.validatePayment()",
+        "guards": [
+          {
+            "check": "결제 요청 파라미터 유효"
+          }
+        ]
+      },
+      {
+        "id": "PI2",
+        "entity": "PaymentInfo",
+        "field_name": "status",
+        "from": "pending",
+        "to": "paid",
+        "trigger": "포트원 결제 성공 웹훅 수신",
+        "source_code": "PaymentGateway.processWebhook()",
+        "guards": [
+          {
+            "check": "Transaction.Paid 웹훅 수신"
+          }
+        ]
+      },
+      {
+        "id": "PI3",
+        "entity": "PaymentInfo",
+        "field_name": "status",
+        "from": "pending",
+        "to": "failed",
+        "trigger": "포트원 결제 실패 웹훅 수신",
+        "source_code": "PaymentGateway.processPaymentFailed()",
+        "guards": [
+          {
+            "check": "Transaction.Failed 웹훅 수신"
+          }
+        ]
+      },
+      {
+        "id": "PI4",
+        "entity": "PaymentInfo",
+        "field_name": "status",
+        "from": "paid",
+        "to": "cancelled",
+        "trigger": "환불 처리",
+        "source_code": "PaymentGateway — 포트원 V2 cancelPayment()",
+        "guards": [
+          {
+            "check": "결제 전액 취소 요청"
+          }
+        ]
+      },
+      {
+        "id": "PI5",
+        "entity": "PaymentInfo",
+        "field_name": "status",
+        "from": "paid",
+        "to": "partialcancelled",
+        "trigger": "부분 환불 처리",
+        "source_code": "PaymentGateway — 포트원 V2 cancelPayment(amount)",
+        "guards": [
+          {
+            "check": "결제 일부 금액 취소 요청"
+          }
+        ]
+      },
+      {
+        "id": "C1",
+        "entity": "Coupon",
+        "field_name": "status",
+        "from": "(none)",
+        "to": "ACTIVE",
+        "trigger": "쿠폰 발급 (자동/어드민/SQS)",
+        "source_code": "CouponServiceImpl.handleCoupon()",
+        "guards": [
+          {
+            "check": "템플릿이 ACTIVE"
+          },
+          {
+            "check": "발급 기간 내"
+          },
+          {
+            "check": "발급 한도 미초과"
+          },
+          {
+            "check": "중복 발급 아님"
+          }
+        ]
+      },
+      {
+        "id": "C2",
+        "entity": "Coupon",
+        "field_name": "status",
+        "from": "ACTIVE",
+        "to": "USED",
+        "trigger": "결제 시 쿠폰 적용",
+        "source_code": "CouponRepository.use()",
+        "guards": [
+          {
+            "check": "couponId가 유효 (존재하지 않으면 COUPON_NOT_FOUND 예외)"
+          }
+        ]
+      },
+      {
+        "id": "C3",
+        "entity": "Coupon",
+        "field_name": "status",
+        "from": "USED",
+        "to": "ACTIVE",
+        "trigger": "결제 취소로 복원",
+        "source_code": "CouponRepository.restore()",
+        "guards": [
+          {
+            "check": "결제 취소 컨텍스트에서만 호출 (호출자 책임)"
+          }
+        ]
+      },
+      {
+        "id": "C4",
+        "entity": "Coupon",
+        "field_name": "status",
+        "from": "ACTIVE",
+        "to": "DELETED",
+        "trigger": "어드민이 쿠폰 삭제",
+        "source_code": "CouponRepository.deleteById()",
+        "guards": [
+          {
+            "check": "displayStatus가 DELETED/USED가 아닐 때"
+          }
+        ]
+      },
+      {
+        "id": "C5",
+        "entity": "Coupon",
+        "field_name": "status",
+        "from": "HIDDEN",
+        "to": "DELETED",
+        "trigger": "어드민이 쿠폰 삭제",
+        "source_code": "CouponRepository.deleteById()",
+        "guards": [
+          {
+            "check": "displayStatus가 DELETED/USED가 아닐 때"
+          }
+        ]
+      },
+      {
+        "id": "C6",
+        "entity": "Coupon",
+        "field_name": "status",
+        "from": "ACTIVE",
+        "to": "HIDDEN",
+        "trigger": "템플릿 상태가 HIDDEN으로 변경됨",
+        "source_code": "CouponRepository.updateById() (템플릿 수정 연쇄)",
+        "guards": [
+          {
+            "check": "Coupon status가 USED/DELETED가 아닐 때"
+          }
+        ]
+      },
+      {
+        "id": "C7",
+        "entity": "Coupon",
+        "field_name": "status",
+        "from": "HIDDEN",
+        "to": "ACTIVE",
+        "trigger": "템플릿 상태가 ACTIVE로 변경됨",
+        "source_code": "CouponRepository.updateById() (템플릿 수정 연쇄)",
+        "guards": [
+          {
+            "check": "Coupon status가 USED/DELETED가 아닐 때"
+          }
+        ]
+      },
+      {
+        "id": "C8",
+        "entity": "Coupon",
+        "field_name": "status",
+        "from": "ACTIVE|HIDDEN",
+        "to": "DELETED",
+        "trigger": "어드민이 쿠폰 템플릿 삭제 시 하위 쿠폰 일괄 삭제",
+        "source_code": "CouponRepository.deleteByIds()",
+        "guards": [
+          {
+            "check": "displayStatus가 USED가 아닌 쿠폰만"
+          }
+        ]
+      }
+    ],
+    "value_filters": [
+      {
+        "entity": "Ticket",
+        "column": "EVENT_TYPE",
+        "value": "PODO_TRIAL",
+        "description": "le_ticket에서 eventType='PODO_TRIAL'인 레코드가 체험 수강권"
+      },
+      {
+        "entity": "PaymentInfo",
+        "column": "EVENT_TYPE",
+        "value": "PODO_CARD_TRIAL",
+        "description": "결제 레코드에서 eventType='PODO_CARD_TRIAL'이면 체험 결제"
+      },
+      {
+        "entity": "TrialLesson",
+        "column": "CITY",
+        "value": "PODO_TRIAL",
+        "description": "GT_CLASS 테이블에서 CITY='PODO_TRIAL'인 레코드가 체험 수업"
+      }
+    ],
+    "total_glossary_count": 8
+  },
+  "total_chunks": 60,
+  "total_tokens_estimate": 16000,
+  "search_confidence": {
+    "method": "ontology",
+    "ontology_match_count": 8,
+    "unresolved_count": 4,
+    "keywords_used": [
+      "Lesson",
+      "수업",
+      "Class",
+      "Lecture",
+      "Tutor",
+      "튜터",
+      "Teacher",
+      "Student",
+      "학생",
+      "User",
+      "Ticket",
+      "수강권",
+      "ClassTicket",
+      "레슨권",
+      "Subscribe",
+      "구독",
+      "Subscription",
+      "PaymentInfo",
+      "결제 정보",
+      "Payment",
+      "결제",
+      "Coupon",
+      "쿠폰",
+      "쿠폰",
+      "CouponTemplate",
+      "TrialLesson",
+      "체험 수업",
+      "체험",
+      "trial",
+      "무료 체험",
+      "free trial"
+    ],
+    "viewpoint_counts": {
+      "semantics": 10,
+      "dependency": 10,
+      "logic": 10,
+      "structure": 10,
+      "pragmatics": 10,
+      "evolution": 10
+    },
+    "warning": "4건의 source_code가 파일로 해석되지 않았습니다"
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "scope_id": "immediate-class-post-purchase-20260325-001",
+  "surface_hash": "cb260746ceaf07dde202fc1b37c6a8f7167fe21bcd46ada5722fcac24e76cc63",
+  "build_spec_hash": "119ed225d727bdc35f597d43814a9db898ceed1833931b24627295683d39540c",
+  "changes": [
+    {
+      "change_id": "CHG-001",
+      "action": "create",
+      "file_path": "apps/web/src/pages/purchase-complete/index.tsx",
+      "description": "Purchase completion screen",
+      "related_impl": [
+        "IMPL-001",
+        "IMPL-002"
+      ],
+      "related_cst": [
+        "CST-004",
+        "CST-008"
+      ]
+    },
+    {
+      "change_id": "CHG-002",
+      "action": "create",
+      "file_path": "apps/web/src/pages/purchase-complete/level-select.tsx",
+      "description": "Level selection component",
+      "related_impl": [
+        "IMPL-003"
+      ],
+      "related_cst": [
+        "CST-002",
+        "CST-007"
+      ]
+    },
+    {
+      "change_id": "CHG-003",
+      "action": "create",
+      "file_path": "apps/web/src/pages/purchase-complete/time-select.tsx",
+      "description": "Time slot selection",
+      "related_impl": [
+        "IMPL-004"
+      ],
+      "related_cst": [
+        "CST-001",
+        "CST-003"
+      ]
+    },
+    {
+      "change_id": "CHG-004",
+      "action": "create",
+      "file_path": "apps/web/src/pages/purchase-complete/booking-confirmed.tsx",
+      "description": "Booking confirmation",
+      "related_impl": [
+        "IMPL-005"
+      ],
+      "related_cst": [
+        "CST-006"
+      ]
+    },
+    {
+      "change_id": "CHG-005",
+      "action": "modify",
+      "file_path": "apps/web/src/pages/payment/index.tsx",
+      "description": "Redirect to completion screen instead of Home",
+      "related_impl": [
+        "IMPL-001"
+      ],
+      "related_cst": [
+        "CST-004"
+      ]
+    },
+    {
+      "change_id": "CHG-006",
+      "action": "create",
+      "file_path": "src/main/java/com/speaking/podo/applications/payment/service/PostPurchaseIncentiveService.java",
+      "description": "Incentive tracking service",
+      "related_impl": [
+        "IMPL-002",
+        "IMPL-005",
+        "IMPL-006"
+      ],
+      "related_cst": [
+        "CST-006",
+        "CST-008",
+        "CST-008-dup-check"
+      ]
+    },
+    {
+      "change_id": "CHG-007",
+      "action": "create",
+      "file_path": "src/main/java/com/speaking/podo/applications/payment/controller/PostPurchaseController.java",
+      "description": "Post-purchase API endpoints",
+      "related_impl": [
+        "IMPL-002",
+        "IMPL-005",
+        "IMPL-006"
+      ],
+      "related_cst": [
+        "CST-008"
+      ]
+    },
+    {
+      "change_id": "CHG-008",
+      "action": "create",
+      "file_path": "apps/web/src/pages/purchase-complete/exit-confirm.tsx",
+      "description": "Exit confirmation bottom sheet",
+      "related_impl": [
+        "IMPL-006"
+      ],
+      "related_cst": [
+        "CST-008"
+      ]
+    },
+    {
+      "change_id": "CHG-009",
+      "action": "create",
+      "file_path": "src/main/java/com/speaking/podo/applications/lecture/service/LevelRecommendationService.java",
+      "description": "Level recommendation service",
+      "related_impl": [
+        "IMPL-003"
+      ],
+      "related_cst": [
+        "CST-007"
+      ]
+    }
+  ]
+}

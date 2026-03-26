@@ -1,0 +1,13 @@
+{
+  "scope_id": "immediate-class-post-purchase-20260325-001",
+  "snapshot_revision": 1,
+  "source_hashes": {
+    "add-dir:./sources": "1ad6c40bb077493f457f814dffd54085e753f8a5c846423f1b4a8bd687d7e7af"
+  },
+  "perspective_summary": {
+    "experience": 499,
+    "code": 13519,
+    "policy": 653
+  },
+  "scanned_at": "2026-03-25T07:40:19.412Z"
+}
