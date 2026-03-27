@@ -442,32 +442,121 @@ export default function App() {
 
       {/* ── Screen: Lesson Tab (dismiss destination) ── */}
       {screen === "lesson-tab" && (
-        <div className="flex min-h-screen flex-col">
-          <div className="px-5 pt-14 pb-3">
-            <h2 className="text-lg font-bold text-[#1C1C1C] leading-7">내 수업</h2>
-          </div>
-          <div className="flex flex-1 flex-col items-center justify-center px-5 pb-20">
-            <div className="flex size-16 items-center justify-center rounded-lg bg-[#F5F5F5]">
-              <span className="text-2xl">📚</span>
-            </div>
-            <p className="mt-4 text-base font-medium text-[#1C1C1C] leading-6">
-              {incentiveClaimed ? "수업이 예약되었어요!" : "아직 예약된 수업이 없어요"}
-            </p>
-            <p className="mt-1 text-sm text-[#A5A5A5] leading-[22px]">
-              {incentiveClaimed
-                ? "예정된 수업을 여기서 확인하세요."
-                : "코스를 둘러보고 첫 수업을 예약해 보세요."}
-            </p>
-          </div>
-          {/* Mock GNB */}
-          <div className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-[480px] border-t border-[#E8E8E8] bg-white py-2">
-            {["홈", "수업", "예약", "AI학습", "마이포도"].map((tab, i) => (
+        <div className="flex min-h-screen flex-col pb-20">
+          {/* Language tabs */}
+          <div className="flex border-b border-[#E8E8E8] px-5 pt-12">
+            {["영어", "일본어"].map((lang, i) => (
               <div
-                key={tab}
-                className="flex flex-1 flex-col items-center gap-1"
+                key={lang}
+                className={`py-2.5 px-0 mr-5 text-base font-bold leading-6 ${
+                  i === 0
+                    ? "text-[#1C1C1C] border-b-2 border-[#1C1C1C]"
+                    : "text-[#A5A5A5]"
+                }`}
               >
-                <div className={`size-5 rounded ${i === 1 ? "bg-[#1C1C1C]" : "bg-[#D6D6D6]"}`} />
-                <span className={`text-[10px] leading-3 ${i === 1 ? "font-bold text-[#1C1C1C]" : "text-[#A5A5A5]"}`}>{tab}</span>
+                {lang}
+              </div>
+            ))}
+          </div>
+
+          {/* Section: 영어 스탠다드 */}
+          <div className="px-5 pt-5">
+            <h3 className="text-lg font-bold text-[#1C1C1C] leading-[26px]">영어 스탠다드 (25분)</h3>
+
+            {/* Level filter chips */}
+            <div className="mt-3 flex gap-2">
+              {["전체", "초급", "중급", "중고급", "고급"].map((level, i) => (
+                <div
+                  key={level}
+                  className={`rounded-full px-3 py-[5px] text-xs font-bold leading-[18px] ${
+                    i === 0
+                      ? "bg-[#F2FCEC] text-black outline outline-[1.5px] outline-[#1C1C1C] -outline-offset-[1.5px]"
+                      : "bg-white text-[#1C1C1C] outline outline-1 outline-[#E8E8E8] -outline-offset-1"
+                  }`}
+                >
+                  {level}
+                </div>
+              ))}
+            </div>
+
+            {/* Course cards — horizontal scroll */}
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-2 -mx-5 px-5">
+              {[
+                { title: "Start1", desc: "고양이에서 대화까지: 초급 영어 문장 만들기", lessons: 12, img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=288&h=360&fit=crop" },
+                { title: "Start2", desc: "표현하고, 묻고, 비교해요", lessons: 12, img: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=288&h=360&fit=crop" },
+                { title: "Level1", desc: "진짜 생활 영어: 과거, 현재, 미래 표현하기", lessons: 12, img: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=288&h=360&fit=crop" },
+              ].map((course) => (
+                <div key={course.title} className="w-36 shrink-0 flex flex-col gap-2">
+                  <div className="relative h-[180px] w-full">
+                    <img src={course.img} alt={course.title} className="h-full w-full rounded-lg object-cover" />
+                    <div className="absolute left-2 top-2 flex size-6 items-center justify-center rounded-full bg-black/50">
+                      <span className="text-[10px] text-white">🔒</span>
+                    </div>
+                  </div>
+                  <div className="pr-1">
+                    <p className="text-sm font-semibold text-[#1C1C1C] leading-[22px]">{course.title}</p>
+                    <p className="mt-1 text-xs text-[#757575] leading-[18px] line-clamp-2">{course.desc}</p>
+                    <div className="mt-1 flex gap-1">
+                      <span className="rounded px-1.5 py-px text-[10px] font-medium text-[#1C1C1C] leading-4 outline outline-1 outline-[#E8E8E8] -outline-offset-1">25m</span>
+                      <span className="rounded px-1.5 py-px text-[10px] font-medium text-[#1C1C1C] leading-4 outline outline-1 outline-[#E8E8E8] -outline-offset-1">{course.lessons} lesson</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section: 영어 비즈니스 */}
+          <div className="px-5 pt-5">
+            <div className="flex items-center gap-1">
+              <div className="flex size-6 items-center justify-center rounded bg-[#E8E8E8]">
+                <span className="text-[10px]">💼</span>
+              </div>
+              <h3 className="text-lg font-bold text-[#1C1C1C] leading-[26px]">영어 비즈니스</h3>
+            </div>
+
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-2 -mx-5 px-5">
+              {[
+                { title: "Business Call", desc: "비즈니스 전화 연습하기", lessons: 5, img: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=288&h=360&fit=crop" },
+                { title: "Business Meeting", desc: "비즈니스 회의중 사용하는 영어", lessons: 5, img: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=288&h=360&fit=crop" },
+                { title: "Presentation", desc: "영어로 프리젠테이션 하기", lessons: 3, img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=288&h=360&fit=crop" },
+              ].map((course) => (
+                <div key={course.title} className="w-36 shrink-0 flex flex-col gap-2">
+                  <div className="relative h-[180px] w-full">
+                    <img src={course.img} alt={course.title} className="h-full w-full rounded-lg object-cover" />
+                    <div className="absolute left-2 top-2 flex size-6 items-center justify-center rounded-full bg-black/50">
+                      <span className="text-[10px] text-white">🔒</span>
+                    </div>
+                  </div>
+                  <div className="pr-1">
+                    <p className="text-sm font-semibold text-[#1C1C1C] leading-[22px]">{course.title}</p>
+                    <p className="mt-1 text-xs text-[#757575] leading-[18px] line-clamp-2">{course.desc}</p>
+                    <div className="mt-1 flex gap-1">
+                      <span className="rounded px-1.5 py-px text-[10px] font-medium text-[#1C1C1C] leading-4 outline outline-1 outline-[#E8E8E8] -outline-offset-1">25m</span>
+                      <span className="rounded px-1.5 py-px text-[10px] font-medium text-[#1C1C1C] leading-4 outline outline-1 outline-[#E8E8E8] -outline-offset-1">{course.lessons} lesson</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* GNB */}
+          <div className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-[480px] border-t border-[#E8E8E8] bg-white">
+            {[
+              { label: "홈", active: false },
+              { label: "레슨", active: true },
+              { label: "예약", active: false },
+              { label: "AI 학습", active: false },
+              { label: "마이포도", active: false },
+            ].map((tab) => (
+              <div key={tab.label} className="flex flex-1 flex-col items-center gap-1.5 py-2.5">
+                <div className={`size-6 rounded ${tab.active ? "bg-[#1C1C1C]" : "bg-[#D6D6D6]"}`} />
+                <span className={`text-[9px] font-semibold leading-[14px] ${
+                  tab.active ? "text-[#1C1C1C]" : "text-[#D6D6D6]"
+                }`}>
+                  {tab.label}
+                </span>
               </div>
             ))}
           </div>
