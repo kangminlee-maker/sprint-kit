@@ -123,6 +123,7 @@ type Screen =
   | "level-select"
   | "time-select"
   | "booking-confirmed"
+  | "home"
   | "lesson-tab";
 
 // ── App ──
@@ -446,24 +447,9 @@ export default function App() {
             </div>
           </div>
 
-          {/* Pre-study reminder */}
-          <div className="mt-5 w-full rounded-lg bg-[#F5F5F5] px-5 py-4">
-            <div className="flex items-center gap-3">
-              <span className="text-lg">📖</span>
-              <div>
-                <p className="text-sm font-medium text-[#1C1C1C] leading-[22px]">
-                  수업 전 예습을 완료해 보세요
-                </p>
-                <p className="mt-0.5 text-xs text-[#A5A5A5] leading-[18px]">
-                  예습을 하면 수업 효과가 훨씬 좋아져요.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Bonus pending */}
           {incentiveClaimed && (
-            <div className="mt-3 w-full rounded-lg bg-[#1C1C1C] px-5 py-4">
+            <div className="mt-5 w-full rounded-lg bg-[#1C1C1C] px-5 py-4">
               <div className="flex items-center gap-3">
                 <Gift className="size-5 shrink-0 text-[#B5FD4C]" />
                 <p className="text-sm font-medium text-white leading-[22px]">
@@ -478,10 +464,165 @@ export default function App() {
             </div>
           )}
 
-          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 py-2">
-            <PrimaryButton onClick={() => setScreen("lesson-tab")}>
-              홈으로 가기
-            </PrimaryButton>
+          <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 pb-2 pt-3">
+            <p className="mb-3 flex items-center justify-center gap-1.5 text-sm font-medium text-[#A5A5A5] leading-[22px]">
+              <span className="text-base">📖</span>
+              수업 전 예습을 하면 효과가 더 좋아요!
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setScreen("home")}
+                className="group flex-1 rounded-lg transition-all"
+                style={{ background: "#1C1C1C", paddingBottom: 4, borderRadius: 8 }}
+              >
+                <div className="w-full rounded-lg px-5 py-3.5 text-center text-base font-bold leading-6 text-[#1C1C1C] transition-all group-active:translate-y-[4px]"
+                  style={{ background: "white", outline: "1.5px solid #1C1C1C", outlineOffset: "-1.5px", borderRadius: 8 }}
+                >
+                  홈으로 가기
+                </div>
+              </button>
+              <div className="flex-1">
+                <PrimaryButton onClick={() => setScreen("home")}>
+                  예습하러 가기
+                </PrimaryButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Screen: Home ── */}
+      {screen === "home" && (
+        <div className="flex min-h-screen flex-col bg-[#FBFBF9] pb-20">
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-5 pt-14">
+            <div className="flex items-center gap-1">
+              <span className="text-lg font-extrabold text-[#1C1C1C]">PODO</span>
+              <span className="text-lg font-extrabold text-[#B5FD4C]">.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-[#25282B]">잔여 수업</span>
+              <div className="rounded bg-[#1A1A1D] px-3 py-1">
+                <span className="text-sm font-bold text-[#FBFBF9]">수강권 구매</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Promo banner */}
+          <div className="mx-5 mt-4 overflow-hidden rounded-lg bg-[#5779FD] px-5 py-5">
+            <p className="text-xs text-white leading-[18px]">세계 최저가 회당 3천원대!</p>
+            <p className="mt-0.5 text-base font-extrabold text-white leading-6">무제한 외국어 1:1 레슨</p>
+          </div>
+
+          {/* 예약된 레슨 */}
+          <div className="px-5 pt-6">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold text-[#111] leading-7">예약된 레슨</h3>
+              <span className="rounded bg-[#E2FFB8] px-2 py-0.5 text-xs text-[#1E2F06] leading-[18px]">레슨 16시간 전</span>
+            </div>
+
+            {/* Lesson card — dark */}
+            <div className="mt-3 rounded-[10px] bg-[#1C1C1C] px-5 py-6">
+              <p className="text-lg text-[#FAFAFA] leading-7">
+                <span className="font-normal">슬비님, 안녕하세요!</span>
+              </p>
+              <p className="mt-1 text-lg leading-7">
+                <span className="font-extrabold text-[#FAFAFA]">{selectedLang === "english" ? "(영어)" : "(일본어)"} {selectedLevelData.label} _ {selectedLevelData.firstLesson}</span>
+                <span className="font-normal text-[#FAFAFA]">이 예정되어있어요!</span>
+              </p>
+
+              {/* Schedule pill */}
+              <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-1">
+                <span className="text-sm font-semibold text-[#D6D6D6]">레슨 일정</span>
+                <span className="text-sm text-[#E8E8E8]">
+                  {selectedTime && (() => {
+                    const [period, idx] = selectedTime.split("-");
+                    const slots = period === "am" ? TIME_SLOTS[selectedDay]?.am : TIME_SLOTS[selectedDay]?.pm;
+                    return slots?.[parseInt(idx)]?.time;
+                  })()}
+                </span>
+                <span className="text-sm text-[#E8E8E8]">{TIME_SLOTS[selectedDay]?.day}</span>
+              </div>
+
+              {/* Pre-study progress */}
+              <div className="mt-4">
+                <div className="h-2 w-full rounded-full bg-[#575757]">
+                  <div className="h-2 rounded-full bg-[#FAFAFA]" style={{ width: "100%" }} />
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-6 items-center justify-center rounded-full bg-[#B5FD4C]">
+                      <Check className="size-3.5 text-[#293233]" strokeWidth={3} />
+                    </div>
+                    <span className="text-sm font-medium text-[#B5FD4C]">예습 완료!</span>
+                  </div>
+                  <span className="text-sm text-[#A5A5A5]"><span className="text-[#CBFE81]">8분</span>/8분</span>
+                </div>
+              </div>
+
+              {/* Action button */}
+              <button className="mt-4 w-full rounded-lg bg-[#B5FD4C] py-2 text-sm font-bold text-[#0F1900]">
+                예습하기
+              </button>
+
+              {/* Bottom links */}
+              <div className="mt-3 flex items-center justify-center rounded-lg border border-white/20 py-2">
+                <span className="text-sm font-semibold text-[#E8E8E8]">튜터 프로필 보기</span>
+                <div className="mx-4 h-4 w-px bg-white/20" />
+                <span className="text-sm font-semibold text-[#E8E8E8]">레슨 변경/취소</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 레슨 준비 */}
+          <div className="px-5 pt-6">
+            <h3 className="text-xl font-bold text-[#111]">레슨 준비</h3>
+            <p className="mt-2 flex items-center gap-1 text-xs font-medium text-[#6184FF]">
+              <span className="size-3 rounded-full bg-[#6184FF]" />
+              원활한 레슨을 위해 첫 수업 전까지 기기테스트를 진행해주세요!
+            </p>
+            <div className="mt-4 flex gap-2.5">
+              {["레벨 테스트", "기기 테스트", "학습 가이드", "발음 학습북"].map((label) => (
+                <div key={label} className="flex w-[76px] flex-col items-center gap-2">
+                  <div className="flex size-[75px] items-center justify-center rounded-md border border-[#F6F6F6] bg-white">
+                    <div className="size-[50px] rounded bg-[#F5F5F5]" />
+                  </div>
+                  <span className="text-sm font-medium text-black">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 레슨 코스 */}
+          <div className="px-5 pt-8">
+            <h3 className="text-xl font-bold text-[#111]">레슨 코스</h3>
+            <div className="mt-3 rounded-lg border border-[#F6F6F6] bg-white px-5 py-5 shadow-[0_4px_10px_rgba(25,27,79,0.02)]">
+              <p className="text-lg font-bold text-[#333] leading-7">
+                {MOCK_PURCHASE.planName}
+              </p>
+              <p className="mt-0.5 text-sm text-[#8A8A8A] leading-[22px]">
+                {formatDate(MOCK_PURCHASE.startDate)} ~ {formatDate(MOCK_PURCHASE.endDate)}
+              </p>
+            </div>
+          </div>
+
+          {/* GNB */}
+          <div className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-[480px] border-t border-[#E8E8E8] bg-white">
+            {[
+              { label: "홈", active: true },
+              { label: "레슨", active: false },
+              { label: "예약", active: false },
+              { label: "마이포도", active: false },
+            ].map((tab) => (
+              <div key={tab.label} className="flex flex-1 flex-col items-center gap-1.5 py-2.5">
+                <div className={`size-6 rounded ${tab.active ? "bg-[#1C1C1C]" : "bg-[#D6D6D6]"}`} />
+                <span className={`text-[9px] font-semibold leading-[14px] ${
+                  tab.active ? "text-[#1C1C1C]" : "text-[#D6D6D6]"
+                }`}>
+                  {tab.label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -643,13 +784,13 @@ export default function App() {
           <span className="font-bold text-podo-green">{screen}</span>
         </div>
         <div className="mt-1 flex flex-wrap gap-1">
-          {(["celebration", "level-select", "time-select", "booking-confirmed", "lesson-tab"] as Screen[]).map((s) => (
+          {(["celebration", "level-select", "time-select", "booking-confirmed", "home", "lesson-tab"] as Screen[]).map((s) => (
             <button
               key={s}
               onClick={() => setScreen(s)}
               className={`rounded px-1.5 py-0.5 text-[9px] ${screen === s ? "bg-podo-green text-black" : "bg-white/10"}`}
             >
-              {s.replace("celebration", "1.cel").replace("level-select", "2.lvl").replace("time-select", "3.time").replace("booking-confirmed", "4.done").replace("lesson-tab", "5.tab")}
+              {s.replace("celebration", "1.cel").replace("level-select", "2.lvl").replace("time-select", "3.time").replace("booking-confirmed", "4.done").replace("home", "5.home").replace("lesson-tab", "6.tab")}
             </button>
           ))}
         </div>
