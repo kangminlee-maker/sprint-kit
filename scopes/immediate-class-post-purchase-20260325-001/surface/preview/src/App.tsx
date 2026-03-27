@@ -36,30 +36,52 @@ function PrimaryButton({ children, onClick, disabled }: { children: React.ReactN
 
 type PlanType = "count" | "unlimited";
 
-const PLANS: Record<PlanType, { planName: string; planType: PlanType; totalClasses: number | "무제한"; expireDate: string; price: string }> = {
+function formatDate(dateStr: string) {
+  return dateStr.replace(/-/g, ".");
+}
+
+const PLANS: Record<PlanType, { planName: string; planType: PlanType; totalClasses: number | null; durationMonths: number; startDate: string; endDate: string; price: string }> = {
   count: {
-    planName: "영어 회화 6개월",
+    planName: "영어 라이트 레슨권",
     planType: "count",
     totalClasses: 48,
-    expireDate: "2026-09-25",
+    durationMonths: 6,
+    startDate: "2026-03-27",
+    endDate: "2026-09-27",
     price: "299,000원",
   },
   unlimited: {
-    planName: "영어 회화 무제한 3개월",
+    planName: "영어 무제한 레슨권",
     planType: "unlimited",
-    totalClasses: "무제한",
-    expireDate: "2026-06-25",
+    totalClasses: null,
+    durationMonths: 3,
+    startDate: "2026-03-27",
+    endDate: "2026-06-27",
     price: "449,000원",
   },
 };
 
-const LEVELS = [
-  { id: "beginner", label: "Beginner", description: "기초 인사, 간단한 문장", firstLesson: "Self-Introduction" },
-  { id: "elementary", label: "Elementary", description: "일상 대화, 짧은 대화문", firstLesson: "Weekend Plans" },
-  { id: "intermediate", label: "Intermediate", description: "업무·사회 주제, 의견 표현", firstLesson: "Workplace Communication" },
-  { id: "upper", label: "Upper-Intermediate", description: "심화 토론, 뉘앙스 표현", firstLesson: "Business Negotiations" },
-  { id: "advanced", label: "Advanced", description: "토론, 학술, 추상적 주제", firstLesson: "Debate: AI & Jobs" },
-] as const;
+type Language = "english" | "japanese";
+
+const LEVELS_BY_LANG: Record<Language, { id: string; label: string; description: string; highlight?: string; firstLesson: string }[]> = {
+  english: [
+    { id: "beginner", label: "초급", description: "단어 하나씩 나열해서 말해요.", firstLesson: "Self-Introduction" },
+    { id: "intermediate", label: "중급", description: "짧은 문장으로 끊어서 답해요.", firstLesson: "Daily Conversation" },
+    { id: "upper-intermediate", label: "중고급", description: "늘 쓰던 표현으로 일상 대화를 해요.", firstLesson: "Workplace Communication" },
+    { id: "advanced", label: "고급", description: "내 생각을 자유롭게 말할 수 있어요.", firstLesson: "Debate: AI & Jobs" },
+  ],
+  japanese: [
+    { id: "absolute-beginner", label: "왕초보", description: "히라가나는 읽을 줄 알아요.", firstLesson: "ひらがな練習" },
+    { id: "beginner", label: "초급", description: "간단한 단어로 여행지 주문을 할 수 있어요.", firstLesson: "旅行会話" },
+    { id: "intermediate", label: "중급", description: "막힘없이 일상 대화를 할 수 있어요.", firstLesson: "日常会話" },
+    { id: "advanced", label: "고급", description: "친구와 편하게 수다를 떨어요.", firstLesson: "フリートーク" },
+  ],
+};
+
+const DEFAULT_LEVEL: Record<Language, string> = {
+  english: "intermediate",
+  japanese: "absolute-beginner",
+};
 
 const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -108,14 +130,16 @@ type Screen =
 export default function App() {
   const [screen, setScreen] = useState<Screen>("celebration");
   const [planType, setPlanType] = useState<PlanType>("count");
-  const [selectedLevel, setSelectedLevel] = useState<string>("elementary");
+  const [selectedLang, setSelectedLang] = useState<Language>("english");
+  const [selectedLevel, setSelectedLevel] = useState<string>("intermediate");
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [incentiveClaimed, setIncentiveClaimed] = useState(false);
   const [hasTrialData] = useState(true);
-  const recommendedLevel = hasTrialData ? "elementary" : null;
 
+  const LEVELS = LEVELS_BY_LANG[selectedLang];
+  const recommendedLevel = hasTrialData ? DEFAULT_LEVEL[selectedLang] : null;
   const MOCK_PURCHASE = PLANS[planType];
   const incentiveText = planType === "count" ? "보너스 1회" : "3일 연장";
 
@@ -133,7 +157,7 @@ export default function App() {
     setScreen("booking-confirmed");
   }
 
-  const selectedLevelData = LEVELS.find((l) => l.id === selectedLevel)!;
+  const selectedLevelData = LEVELS.find((l) => l.id === selectedLevel) ?? LEVELS[0];
 
   return (
     <div className="mx-auto min-h-screen max-w-[480px] bg-white relative">
@@ -152,22 +176,16 @@ export default function App() {
 
             {/* Purchase summary */}
             <div className="mt-5 w-full rounded-lg bg-[#F5F5F5] px-5 py-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[#A5A5A5]">수강권</span>
+              <p className="text-base font-bold text-[#1C1C1C] leading-6">
+                {MOCK_PURCHASE.planName}
+              </p>
+              <p className="mt-1 text-sm text-[#A5A5A5] leading-[22px]">
+                {MOCK_PURCHASE.durationMonths}개월권 · {MOCK_PURCHASE.totalClasses === null ? "무제한" : `${MOCK_PURCHASE.totalClasses}회`}
+              </p>
+              <div className="mt-3 flex items-center justify-between border-t border-[#E8E8E8] pt-3">
+                <span className="text-sm text-[#A5A5A5]">이용 기간</span>
                 <span className="text-sm font-medium text-[#1C1C1C]">
-                  {MOCK_PURCHASE.planName}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-[#A5A5A5]">수업 횟수</span>
-                <span className="text-sm font-medium text-[#1C1C1C]">
-                  {MOCK_PURCHASE.totalClasses === "무제한" ? "무제한" : `${MOCK_PURCHASE.totalClasses}회`}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-[#A5A5A5]">유효기간</span>
-                <span className="text-sm font-medium text-[#1C1C1C]">
-                  {MOCK_PURCHASE.expireDate}
+                  {formatDate(MOCK_PURCHASE.startDate)} ~ {formatDate(MOCK_PURCHASE.endDate)}
                 </span>
               </div>
             </div>
@@ -215,10 +233,10 @@ export default function App() {
           {/* Title */}
           <div className="px-5">
             <h2 className="text-lg font-bold text-[#1C1C1C] leading-7">
-              레벨을 선택해 주세요.
+              당신의 현재 실력을 알려주세요!
             </h2>
             <p className="mt-1 text-sm text-[#A5A5A5] leading-[22px]">
-              체험 수업 기반으로 추천해 드려요.
+              레벨에 맞는 첫 수업을 준비해 드릴게요.
             </p>
           </div>
 
@@ -260,6 +278,11 @@ export default function App() {
                     <p className="mt-0.5 text-sm text-[#A5A5A5] leading-[22px]">
                       {level.description}
                     </p>
+                    {level.highlight && (
+                      <p className="mt-0.5 text-sm font-medium text-[#6184FF] leading-[22px]">
+                        {level.highlight}
+                      </p>
+                    )}
                   </div>
                 </button>
               );
@@ -269,7 +292,7 @@ export default function App() {
           {/* Bottom CTA */}
           <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 py-2">
             <PrimaryButton onClick={() => setScreen("time-select")}>
-              다음 — 시간 선택
+              시간 선택
             </PrimaryButton>
           </div>
         </div>
@@ -402,17 +425,40 @@ export default function App() {
 
           {/* Booking card */}
           <div className="mt-5 w-full rounded-lg px-5 py-4 outline outline-1 -outline-offset-1 outline-[#E8E8E8]">
-            <p className="text-base font-medium text-[#1C1C1C] leading-6">
-              {selectedLevelData.label} — {selectedLevelData.firstLesson}
+            <p className="text-sm text-[#A5A5A5] leading-[22px]">
+              {selectedLevelData.label}
             </p>
-            <p className="mt-2 text-sm text-[#A5A5A5] leading-[22px]">
-              {selectedTime && (() => {
-                const [period, idx] = selectedTime.split("-");
-                const slots = period === "am" ? TIME_SLOTS[selectedDay]?.am : TIME_SLOTS[selectedDay]?.pm;
-                return slots?.[parseInt(idx)]?.time;
-              })()}{" "}
-              · {TIME_SLOTS[selectedDay]?.day}
+            <p className="mt-1 text-base font-medium text-[#1C1C1C] leading-6">
+              {selectedLevelData.firstLesson}
             </p>
+            <div className="mt-3 flex items-center gap-3 border-t border-[#E8E8E8] pt-3 text-sm text-[#A5A5A5]">
+              <span>
+                {selectedTime && (() => {
+                  const [period, idx] = selectedTime.split("-");
+                  const slots = period === "am" ? TIME_SLOTS[selectedDay]?.am : TIME_SLOTS[selectedDay]?.pm;
+                  return slots?.[parseInt(idx)]?.time;
+                })()}
+              </span>
+              <span className="text-[#E8E8E8]">|</span>
+              <span>{TIME_SLOTS[selectedDay]?.day}</span>
+              <span className="text-[#E8E8E8]">|</span>
+              <span>25분</span>
+            </div>
+          </div>
+
+          {/* Pre-study reminder */}
+          <div className="mt-5 w-full rounded-lg bg-[#F5F5F5] px-5 py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">📖</span>
+              <div>
+                <p className="text-sm font-medium text-[#1C1C1C] leading-[22px]">
+                  수업 전 예습을 완료해 보세요
+                </p>
+                <p className="mt-0.5 text-xs text-[#A5A5A5] leading-[18px]">
+                  예습을 하면 수업 효과가 훨씬 좋아져요.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Bonus pending */}
@@ -434,7 +480,7 @@ export default function App() {
 
           <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-[480px] bg-white px-5 py-2">
             <PrimaryButton onClick={() => setScreen("lesson-tab")}>
-              내 수업 보기
+              홈으로 가기
             </PrimaryButton>
           </div>
         </div>
@@ -577,13 +623,13 @@ export default function App() {
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <PrimaryButton onClick={() => setShowExitConfirm(false)}>
-                예약하기
+                지금 예약하기
               </PrimaryButton>
               <button
                 onClick={confirmExit}
                 className="w-full rounded-lg bg-[#F5F5F5] py-3.5 text-base font-medium leading-6 text-[#A5A5A5]"
               >
-                나중에 할게요
+                혜택 포기하기
               </button>
             </div>
           </div>
@@ -616,6 +662,18 @@ export default function App() {
               className={`rounded px-1.5 py-0.5 text-[9px] ${planType === p ? "bg-podo-green text-black" : "bg-white/10"}`}
             >
               {p === "count" ? "회차권" : "무제한"}
+            </button>
+          ))}
+        </div>
+        <div className="mt-1 flex items-center gap-1">
+          <span>Lang:</span>
+          {(["english", "japanese"] as Language[]).map((l) => (
+            <button
+              key={l}
+              onClick={() => { setSelectedLang(l); setSelectedLevel(DEFAULT_LEVEL[l]); setScreen("level-select"); }}
+              className={`rounded px-1.5 py-0.5 text-[9px] ${selectedLang === l ? "bg-podo-green text-black" : "bg-white/10"}`}
+            >
+              {l === "english" ? "영어" : "일본어"}
             </button>
           ))}
         </div>
