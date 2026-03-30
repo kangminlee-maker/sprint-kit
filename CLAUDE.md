@@ -37,6 +37,7 @@ These principles apply to all artifacts and documents produced by the system.
 - **Protocol Refs Check**: `npm run check-refs` — 에이전트 프로토콜 문서의 타입/이벤트 참조가 코드와 일치하는지 검증
 - **Ontology Consumption Pipeline**: `scanners/ontology-index.ts` → `ontology-query.ts` → `ontology-resolve.ts` → `code-chunk-collector.ts` — 도메인 온톨로지 기반 6관점 코드 청크 자동 수집
 - **Ontology Generation Pipeline**: `scanners/generators/` — 코드베이스에서 도메인 온톨로지 YAML을 자동 생성하는 2단계 파이프라인 (Stage 1: 구조 추출, Stage 2: LLM 의미 부여). 에이전트 프로토콜: `docs/agent-protocol/ontology-generate.md`
+- **PRD Multi-Perspective Review**: `docs/agent-protocol/prd-review/` — PRD 무결성 3축 검증 (적합성: Pre-Apply Review, 품질+판단적합성: 8관점+Philosopher 다관점 리뷰). 도메인 문서: `domains/prd-integrity/`
 <!-- /auto:system-structure -->
 
 ## Verification Loop

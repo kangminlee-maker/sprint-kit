@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### PRD Multi-Perspective Review System
+
+PRD(Product Requirements Document)의 무결성을 3축(적합성/품질/판단적합성)으로 검증하는 다관점 리뷰 시스템 도입. 기존 Pre-Apply Review(적합성 축)에 추가하여, 8개 독립 관점 + Philosopher 종합으로 품질 + 판단적합성 축을 검증합니다.
+
+- **`prd.review_completed` 이벤트**: `apply.started`의 새 gate 조건. verdict(pass/gap_found), 8관점 findings, philosopher_synthesis 포함
+- **Gate-guard Rule 5d**: `apply.started`는 `pre_apply_completed` AND `prd_review_completed` 모두 필요
+- **파이프라인**: `compile → pre_apply.review_completed → prd.rendered → prd.review_completed → apply.started`
+- **8개 검증 관점**: logic, structure, dependency, semantics, pragmatics, evolution, coverage, conciseness — PRD 맥락으로 재정의
+- **prd-integrity 도메인**: 8개 도메인 문서 (domain_scope, concepts, competency_qs, logic_rules, structure_spec, dependency_rules, extension_cases, conciseness_rules)
+- **학습 시스템**: 프로젝트 수준 학습 저장/소비 (글로벌 승격 없음, 의도적 단순화)
+- **PRD 생성 실패 시**: 리뷰를 건너뛰고 `prd.review_completed(verdict: "pass")` 기록 (기존 파이프라인 유지)
+
+### 온톨로지 자동 생성 — Phase 2a
+
 온톨로지 자동 생성 Phase 2a: 입력 범위 확장 (~88% → ~93%). Stage 2 에이전트 프로토콜 정의, 보조 진입점, 상태 변경 메서드 추적, 설정 파일 스캔 도입.
 
 ### 온톨로지 자동 생성 — Phase 2a

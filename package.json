@@ -1,6 +1,6 @@
 {
   "name": "sprint-kit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Sprint Kit is a constraint-aware translation runtime.",
   "type": "module",
   "exports": {
@@ -10,6 +10,7 @@
   "files": [
     "dist",
     "docs",
+    "domains",
     "sources"
   ],
   "scripts": {
