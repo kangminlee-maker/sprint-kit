@@ -65,6 +65,7 @@ export function reduce(events: Event[]): ScopeState {
   const verdict_log: VerdictLogEntry[] = [];
   const feedback_history: FeedbackClassifiedPayload[] = [];
   let pre_apply_completed = false;
+  let prd_review_completed = false;
   let exploration_progress: ScopeState["exploration_progress"];
 
   let latest_revision = 0;
@@ -89,6 +90,7 @@ export function reduce(events: Event[]): ScopeState {
         const p = evt.payload as RedirectToGroundingPayload;
         last_backward_reason = p.reason;
         pre_apply_completed = false;
+        prd_review_completed = false;
         // exploring → grounded: exploration_progress 초기화.
         // exploration-log.md(파일)는 보존되므로 맥락 소실 없음.
         if (exploration_progress && !exploration_progress.completed_at) {
@@ -101,6 +103,7 @@ export function reduce(events: Event[]): ScopeState {
         const p = evt.payload as RedirectToAlignPayload;
         last_backward_reason = p.reason;
         pre_apply_completed = false;
+        prd_review_completed = false;
         break;
       }
 
@@ -192,6 +195,7 @@ export function reduce(events: Event[]): ScopeState {
       case "compile.constraint_gap_found":
         retry_count_compile++;
         pre_apply_completed = false;
+        prd_review_completed = false;
         break;
 
       case "compile.completed": {
@@ -290,6 +294,11 @@ export function reduce(events: Event[]): ScopeState {
         pre_apply_completed = true;
         break;
 
+      // ── PRD Multi-Perspective Review ──
+      case "prd.review_completed":
+        prd_review_completed = true;
+        break;
+
       // ── Exploration completed (via align.proposed) ──
       case "align.proposed": {
         if (exploration_progress && !exploration_progress.completed_at) {
@@ -340,6 +349,7 @@ export function reduce(events: Event[]): ScopeState {
     verdict_log,
     feedback_history,
     pre_apply_completed,
+    prd_review_completed,
     exploration_progress,
     latest_revision,
   };

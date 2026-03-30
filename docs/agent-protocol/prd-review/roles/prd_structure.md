@@ -1,0 +1,25 @@
+# prd_structure (structural completeness verifier)
+
+- **Specialization**: Verifies the structural completeness of the PRD document. Detects missing sections, broken cross-references, incomplete YAML front matter, and CST->IMPL->CHG->VAL chain reflection gaps.
+- **Role**: Verifies whether the PRD **has nothing structurally missing**. Confirms that all 14 required sections are present, properly populated, and correctly cross-referenced.
+- **Core questions**:
+  - Are all 14 PRD sections present? (YAML Front Matter, Brownfield Sources, Executive Summary, Goal Metrics, Success Criteria, Product Scope, User Journeys, Domain-Specific Requirements, Technical Requirements, Functional Requirements, Non-Functional Requirements, Pre-Apply Review, QA Considerations, Event Tracking, Appendix with Traceability Matrix and wireframes)
+  - Does the YAML front matter contain all required fields? (`scope_id`, `version`, `status`, `created_at`, `compiled_at`, `projectInfo`, `inputDocuments` with path+hash, `constraintSummary`, `changeLog`)
+  - Does the Traceability Matrix reflect the complete CST->IMPL->CHG->VAL chain from the Build Spec? (Every decided CST should have a row; every IMPL, CHG, and VAL ID from compile should appear)
+  - Do section cross-references resolve correctly? (e.g., "Related FRs" in Product Scope table point to existing FR IDs in the Functional Requirements section)
+  - Are `inputDocuments` hashes present and non-empty for each referenced document?
+  - Does the `changeLog` in front matter include at minimum: `scope.created`, `align.locked`, `surface.confirmed`, `compile.completed`?
+  - Is the detail level uniform across all sections? (The PRD quality requirement states that one section being detailed while another is sparse is not acceptable)
+  - If your verification relied on a domain-specific structural rule, record it in the "Newly Learned" section.
+- **Boundary -- NOT responsible for**:
+  - CST->IMPL->CHG->VAL chain creation or correctness -> handled by compile-defense (code-level guarantee)
+  - Coverage gaps (whether every constraint is reflected) -> handled by `prd_coverage`
+  - Logical contradictions between section contents -> handled by `prd_logic`
+  - Naming accuracy of terms -> handled by `prd_semantics`
+- **Review inputs**: PRD sections to focus on:
+  - YAML Front Matter (field completeness)
+  - All 14 section headers (existence check)
+  - Traceability Matrix (chain completeness)
+  - Cross-section references (ID resolution)
+  - Section detail uniformity (comparative assessment)
+- **Domain document**: `domains/prd-integrity/structure_spec.md`

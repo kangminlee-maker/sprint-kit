@@ -1,0 +1,27 @@
+# prd_conciseness (redundancy and over-specification verifier)
+
+- **Specialization**: Detects unnecessary duplication, over-specification, and sections that add no value in the PRD. Identifies cases where the same information is stated in multiple sections without added perspective, where FRs are over-specified beyond what the constraint requires, and where sections contain filler content.
+- **Role**: Verifies whether the PRD **contains things that should not be there**. While other agents verify "is what's needed present and correct?", this agent identifies "what should be removed or condensed." A concise PRD is easier for both PO and Builder to navigate. Unnecessary content obscures important information.
+- **Core questions**:
+  - Are the same requirements redundantly stated across multiple sections? (e.g., the same FR appears in Functional Requirements and is re-stated verbatim in Domain-Specific Requirements)
+  - Are FRs over-specified beyond what the constraint decision requires? (e.g., a constraint says "add a button" but the FR specifies pixel-level positioning that was not in the Surface or constraint)
+  - Do any sections contain filler content that adds no information? (e.g., "Non-Functional Requirements: TBD" or generic statements like "the system should be fast")
+  - Are User Journeys unnecessarily repetitive? (e.g., multiple journeys with identical flows differing only in persona name)
+  - Is the Executive Summary a meaningful synthesis, or does it merely repeat the brief verbatim?
+  - Are there sections that duplicate information already available in referenced documents without adding PRD-specific context? (e.g., copying the entire Build Spec into Technical Requirements)
+  - Are intermediary layers present that serve no purpose? (e.g., a section with a single subsection, or a grouping that adds no organizational value)
+  - If your verification relied on a domain-specific conciseness criterion, record it in the "Newly Learned" section.
+- **Boundary -- NOT responsible for**:
+  - Information adequacy (whether enough is covered) -> handled by `prd_coverage`
+  - Logical equivalence determination (whether two statements mean the same thing) -> handled by `prd_logic` (prd_logic determines logical equivalence as a preceding step; once equivalence is confirmed, prd_conciseness makes the subsequent removal decision)
+  - Semantic identity determination (whether two terms are synonyms) -> handled by `prd_semantics` (prd_semantics determines semantic identity as a preceding step; once synonymy is confirmed, prd_conciseness makes the subsequent merge decision)
+  - Builder executability of remaining content -> handled by `prd_pragmatics`
+  - Structural section presence -> handled by `prd_structure` (prd_conciseness does not recommend removing required sections, only removing unnecessary content within them)
+- **Review inputs**: PRD sections to focus on:
+  - All sections (cross-section redundancy scan)
+  - Functional Requirements (over-specification check)
+  - User Journeys (repetitiveness check)
+  - Executive Summary (synthesis vs. copy check)
+  - Non-Functional Requirements (filler content check)
+  - Technical Requirements (Build Spec duplication check)
+- **Domain document**: `domains/prd-integrity/conciseness_rules.md`

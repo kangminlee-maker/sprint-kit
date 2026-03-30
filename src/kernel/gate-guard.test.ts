@@ -22,6 +22,7 @@ function makeState(overrides: Partial<ScopeState> = {}): ScopeState {
     revision_count_surface: 0,
     retry_count_compile: 0,
     pre_apply_completed: false,
+    prd_review_completed: false,
     verdict_log: [],
     feedback_history: [],
     latest_revision: 0,
@@ -418,8 +419,8 @@ describe("gate-guard — Rule 5a: apply gate", () => {
     expect(result.allowed).toBe(false);
   });
 
-  it("allows apply.started when apply_enabled is true and pre_apply_completed", () => {
-    const state = makeState({ current_state: "compiled", pre_apply_completed: true });
+  it("allows apply.started when apply_enabled is true and pre_apply_completed and prd_review_completed", () => {
+    const state = makeState({ current_state: "compiled", pre_apply_completed: true, prd_review_completed: true });
     const event = makeEvent("apply.started", { build_spec_hash: "h" });
     const result = validateEvent(state, event, { apply_enabled: true });
     expect(result.allowed).toBe(true);
@@ -1082,10 +1083,11 @@ describe("gate-guard — Rule 5c: pre-apply review gate", () => {
     }
   });
 
-  it("allows apply.started with pre_apply.review_completed", () => {
+  it("allows apply.started with pre_apply.review_completed and prd_review_completed", () => {
     const state = makeState({
       current_state: "compiled",
       pre_apply_completed: true,
+      prd_review_completed: true,
     });
     const event = makeEvent("apply.started", { build_spec_hash: "h" });
     const result = validateEvent(state, event, { apply_enabled: true });
@@ -1096,6 +1098,45 @@ describe("gate-guard — Rule 5c: pre-apply review gate", () => {
     const state = makeState({
       current_state: "target_locked",
       pre_apply_completed: false,
+    });
+    const event = makeEvent("compile.started", { snapshot_revision: 1, surface_hash: "h" });
+    const result = validateEvent(state, event);
+    expect(result.allowed).toBe(true);
+  });
+});
+
+// ─── Rule 5d: PRD Review gate ───
+
+describe("gate-guard — Rule 5d: PRD review gate", () => {
+  it("denies apply.started without prd.review_completed", () => {
+    const state = makeState({
+      current_state: "compiled",
+      pre_apply_completed: true,
+      prd_review_completed: false,
+    });
+    const event = makeEvent("apply.started", { build_spec_hash: "h" });
+    const result = validateEvent(state, event, { apply_enabled: true });
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) {
+      expect(result.reason).toContain("prd.review_completed");
+    }
+  });
+
+  it("allows apply.started with prd.review_completed", () => {
+    const state = makeState({
+      current_state: "compiled",
+      pre_apply_completed: true,
+      prd_review_completed: true,
+    });
+    const event = makeEvent("apply.started", { build_spec_hash: "h" });
+    const result = validateEvent(state, event, { apply_enabled: true });
+    expect(result.allowed).toBe(true);
+  });
+
+  it("does not affect non-apply events", () => {
+    const state = makeState({
+      current_state: "target_locked",
+      prd_review_completed: false,
     });
     const event = makeEvent("compile.started", { snapshot_revision: 1, surface_hash: "h" });
     const result = validateEvent(state, event);

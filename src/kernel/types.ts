@@ -86,6 +86,7 @@ export const OBSERVATIONAL_EVENT_TYPES = [
   "constraint.evidence_updated",
   "prd.rendered",
   "pre_apply.review_completed",
+  "prd.review_completed",
 ] as const;
 
 export type ObservationalEventType =
@@ -613,6 +614,36 @@ export interface PreApplyReviewCompletedPayload {
   constraint_gap_id?: string;
 }
 
+// ─── PRD Review (multi-perspective) ───
+
+export type PrdReviewPerspective =
+  | "prd_logic"
+  | "prd_structure"
+  | "prd_dependency"
+  | "prd_semantics"
+  | "prd_pragmatics"
+  | "prd_evolution"
+  | "prd_coverage"
+  | "prd_conciseness";
+
+export type PrdReviewVerdict = "pass" | "gap_found";
+
+export interface PrdReviewFinding {
+  perspective: PrdReviewPerspective;
+  severity: "high" | "normal" | "low";
+  summary: string;
+  detail?: string;
+}
+
+export interface PrdReviewCompletedPayload {
+  verdict: PrdReviewVerdict;
+  perspectives: PrdReviewPerspective[];
+  findings: PrdReviewFinding[];
+  philosopher_synthesis?: string;
+  constraint_gap_id?: string;
+  review_session_path?: string;
+}
+
 export interface ExplorationStartedPayload {
   entry_mode: "conversation" | "brief_minimal" | "brief_detailed";
   initial_goals?: string[];
@@ -689,6 +720,7 @@ export interface PayloadMap {
   "draft_packet.rendered": DraftPacketRenderedPayload;
   "prd.rendered": PrdRenderedPayload;
   "pre_apply.review_completed": PreApplyReviewCompletedPayload;
+  "prd.review_completed": PrdReviewCompletedPayload;
   "exploration.started": ExplorationStartedPayload;
   "exploration.round_completed": ExplorationRoundCompletedPayload;
   "exploration.phase_transitioned": ExplorationPhaseTransitionedPayload;
@@ -805,6 +837,7 @@ export interface ScopeState {
   verdict_log: VerdictLogEntry[];
   feedback_history: FeedbackClassifiedPayload[];
   pre_apply_completed: boolean;
+  prd_review_completed: boolean;
   exploration_progress?: {
     current_phase: number;
     current_phase_name: string;

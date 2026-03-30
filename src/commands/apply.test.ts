@@ -30,6 +30,7 @@ function setupCompiled() {
   appendScopeEvent(paths, { type: "compile.started", actor: "system", payload: { snapshot_revision: 1, surface_hash: "sf1" } });
   appendScopeEvent(paths, { type: "compile.completed", actor: "system", payload: { build_spec_path: "build/build-spec.md", build_spec_hash: "bs1", brownfield_detail_path: "build/brownfield-detail.md", brownfield_detail_hash: "bf1", delta_set_path: "build/delta-set.json", delta_set_hash: "ds1", validation_plan_path: "build/validation-plan.md", validation_plan_hash: "vp1" } });
   appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
+  appendScopeEvent(paths, { type: "prd.review_completed", actor: "agent", payload: { verdict: "pass", perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"], findings: [] } });
   return paths;
 }
 

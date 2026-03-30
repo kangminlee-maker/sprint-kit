@@ -216,6 +216,14 @@ export function validateEvent(
     };
   }
 
+  // ── Rule 5d: PRD Review gate — apply requires prd.review_completed ──
+  if (eventType === "apply.started" && !state.prd_review_completed) {
+    return {
+      allowed: false,
+      reason: "Apply gate: PRD 다관점 리뷰가 완료되어야 합니다. prd.review_completed 이벤트가 먼저 기록되어야 합니다.",
+    };
+  }
+
   // ── Rule 5b: Compile retry limit ──
   if (
     eventType === "compile.started" &&

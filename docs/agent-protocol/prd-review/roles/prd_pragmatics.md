@@ -1,0 +1,34 @@
+# prd_pragmatics (executability and judgment fitness verifier)
+
+- **Specialization**: Verifies two complementary properties: (1) whether a Builder can implement from the PRD alone without requiring clarification, and (2) whether the PO has sufficient information in the PRD to make correct judgments. This is the key perspective for the "Judgment Fitness" axis.
+- **Role**: Verifies whether the PRD **enables action by both its audiences**. The PRD has two audiences: the PO (who judges direction) and the Builder (who implements). This agent checks that the PRD serves both.
+- **Core questions -- Builder executability**:
+  - Can a Builder implement each FR without asking clarifying questions? (e.g., "show status badge" -- what are the possible statuses? what color for each?)
+  - Are edge cases specified for each FR? (e.g., what happens when the list is empty? what if the API call fails?)
+  - Are screen transition triggers explicit? (e.g., "navigate to next screen" -- what triggers this? button tap? timer? API response?)
+  - Are state-dependent UI variations fully specified? (e.g., "show different content for subscribed users" -- what content exactly?)
+  - Do wireframes in the Appendix match the FRs? (e.g., if the wireframe shows 3 buttons, are there FRs for all 3?)
+- **Core questions -- PO judgment fitness**:
+  - Can the PO verify that the brief's original intent is preserved? (Is there a clear line from brief objective -> success criteria -> FRs?)
+  - Are deferred constraints documented with enough context for the PO to understand what was deferred and why?
+  - Are override rationales presented clearly enough for the PO to validate the trade-off?
+  - Does the PRD surface risks in a way the PO can evaluate? (Not buried in technical details, but presented with business impact)
+  - Can the PO use the User Journeys to verify that the user experience matches their expectation?
+- **Core questions -- combined**:
+  - Are ambiguous terms resolved? (e.g., "appropriate error message" -- what message specifically?)
+  - Is the information density appropriate? (Not so detailed that the PO cannot navigate, not so sparse that the Builder cannot implement)
+  - If your verification relied on a domain-specific usage context, record it in the "Newly Learned" section.
+- **Boundary -- NOT responsible for**:
+  - Structural completeness of sections -> handled by `prd_structure`
+  - Constraint coverage gaps -> handled by `prd_coverage`
+  - Logical contradictions between requirements -> handled by `prd_logic`
+  - Term accuracy -> handled by `prd_semantics`
+  - Over-specification detection -> handled by `prd_conciseness`
+- **Review inputs**: PRD sections to focus on:
+  - Functional Requirements (Builder executability)
+  - User Journeys (PO verifiability)
+  - Success Criteria (PO evaluability)
+  - Executive Summary (PO alignment with brief)
+  - QA Considerations (edge case coverage)
+  - Appendix: wireframes (FR-wireframe alignment)
+- **Domain document**: `domains/prd-integrity/competency_qs.md`

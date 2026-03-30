@@ -193,13 +193,25 @@ appendScopeEvent(paths, {
 });
 ```
 
+### PRD 생성 완료 후 → PRD Multi-Perspective Review (필수)
+
+PRD 생성이 성공하면, 다관점 리뷰를 실행합니다.
+리뷰 프로세스: `docs/agent-protocol/prd-review/process.md`를 참조하세요.
+
+리뷰는 PRD 무결성의 2개 축(Quality + Judgment Fitness)을 검증합니다.
+(3번째 축 Conformance는 이미 Pre-Apply Review에서 완료되었습니다.)
+
+리뷰 결과 `prd.review_completed` 이벤트가 기록되어야 `apply.started`로 진행할 수 있습니다.
+
+**gap_found 시**: Philosopher 종합에서 해소되지 않은 high-severity 발견이 있으면 `verdict: "gap_found"`를 기록합니다. 이 경우 `compile.constraint_gap_found`를 통해 backward transition이 발생하고, constraint 재결정 → 재compile → 재PRD → 재review 사이클을 거칩니다.
+
 ### PRD 생성 실패 시
 
-PRD 생성은 관찰적 활동입니다. 실패해도 상태 전이에 영향을 주지 않으며, apply 단계로 진행할 수 있습니다.
+PRD 생성은 관찰적 활동입니다. 실패해도 상태 전이에 영향을 주지 않습니다.
 
 **실패 시 이벤트 기록 (필수):**
 
-PRD 생성이 3회 재시도 후에도 실패하면, `prd.rendered` 이벤트를 status: "failed"로 기록합니다. 이 이벤트가 기록되어야 라우팅 테이블이 다음 단계(draft-apply.md)로 진행할 수 있습니다.
+PRD 생성이 3회 재시도 후에도 실패하면, `prd.rendered` 이벤트를 status: "failed"로 기록합니다.
 
 ```typescript
 // PRD 생성 실패 시
@@ -213,6 +225,25 @@ appendScopeEvent(paths, {
     section_count: 0,
     status: "failed",
     failure_reason: "3회 재시도 후 실패",
+  },
+});
+```
+
+PRD 생성이 실패하면 리뷰를 건너뛰고, `prd.review_completed`를 pass로 기록합니다:
+
+```typescript
+// PRD 실패 시 리뷰 건너뛰기
+appendScopeEvent(paths, {
+  type: "prd.review_completed",
+  actor: "agent",
+  payload: {
+    verdict: "pass",
+    perspectives: [],
+    findings: [{
+      perspective: "prd_coverage",
+      severity: "low",
+      summary: "PRD generation failed — review skipped",
+    }],
   },
 });
 ```

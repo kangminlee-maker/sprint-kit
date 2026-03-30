@@ -189,6 +189,15 @@ describe("E2E — tutor-block full lifecycle", () => {
       actor: "agent",
       payload: { verdict: "pass", findings: [] },
     });
+    appendScopeEvent(paths, {
+      type: "prd.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      },
+    });
     const applyStartResult = appendScopeEvent(paths, {
       type: "apply.started",
       actor: "agent",
@@ -268,13 +277,14 @@ describe("E2E — tutor-block full lifecycle", () => {
 
     // ── Final Assertions ──
     const allEvents = readEvents(paths.events);
-    // eventsBeforeCompile + compile.started + compile.completed + pre_apply.review_completed + apply.started + apply.completed + validation.started + validation.completed + scope.closed
-    expect(allEvents.length).toBe(eventsBeforeCompile.length + 8);
+    // eventsBeforeCompile + compile.started + compile.completed + pre_apply.review_completed + prd.review_completed + apply.started + apply.completed + validation.started + validation.completed + scope.closed
+    expect(allEvents.length).toBe(eventsBeforeCompile.length + 9);
 
     // Verify the full event type sequence
-    const lastSixTypes = allEvents.slice(-6).map((e) => e.type);
-    expect(lastSixTypes).toEqual([
+    const lastSevenTypes = allEvents.slice(-7).map((e) => e.type);
+    expect(lastSevenTypes).toEqual([
       "pre_apply.review_completed",
+      "prd.review_completed",
       "apply.started",
       "apply.completed",
       "validation.started",
@@ -294,6 +304,7 @@ describe("E2E — tutor-block full lifecycle", () => {
 
     // Apply
     appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
+    appendScopeEvent(paths, { type: "prd.review_completed", actor: "agent", payload: { verdict: "pass", perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"], findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -330,6 +341,7 @@ describe("E2E — tutor-block full lifecycle", () => {
 
     // Apply
     appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
+    appendScopeEvent(paths, { type: "prd.review_completed", actor: "agent", payload: { verdict: "pass", perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"], findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -772,6 +784,7 @@ describe("E2E — edge case scenarios", () => {
 
     // Apply
     appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
+    appendScopeEvent(paths, { type: "prd.review_completed", actor: "agent", payload: { verdict: "pass", perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"], findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -810,6 +823,7 @@ describe("E2E — edge case scenarios", () => {
 
     // Apply
     appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
+    appendScopeEvent(paths, { type: "prd.review_completed", actor: "agent", payload: { verdict: "pass", perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"], findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -898,6 +912,7 @@ describe("E2E — edge case scenarios", () => {
 
     // Re-apply
     appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
+    appendScopeEvent(paths, { type: "prd.review_completed", actor: "agent", payload: { verdict: "pass", perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"], findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "hash_bs_003" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -995,6 +1010,20 @@ describe("E2E — edge case scenarios", () => {
 
     state = reduce(readEvents(paths.events));
     expect(state.pre_apply_completed).toBe(true);
+
+    // Record prd.review_completed
+    appendScopeEvent(paths, {
+      type: "prd.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.prd_review_completed).toBe(true);
 
     // Attempt apply.started again → allowed
     const allowedResult = appendScopeEvent(paths, {
@@ -1136,8 +1165,20 @@ describe("E2E — edge case scenarios", () => {
       payload: { verdict: "pass", findings: [] },
     });
 
+    // Record prd.review_completed
+    appendScopeEvent(paths, {
+      type: "prd.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      },
+    });
+
     state = reduce(readEvents(paths.events));
     expect(state.pre_apply_completed).toBe(true);
+    expect(state.prd_review_completed).toBe(true);
 
     // apply.started → allowed
     const applyResult = appendScopeEvent(paths, {
@@ -1167,6 +1208,17 @@ describe("E2E — edge case scenarios", () => {
       type: "pre_apply.review_completed",
       actor: "agent",
       payload: { verdict: "pass", findings: [] },
+    });
+
+    // Record prd.review_completed
+    appendScopeEvent(paths, {
+      type: "prd.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      },
     });
 
     // Record prd.rendered with status: "failed"
@@ -1218,6 +1270,17 @@ describe("E2E — edge case scenarios", () => {
       type: "pre_apply.review_completed",
       actor: "agent",
       payload: { verdict: "pass", findings: [] },
+    });
+
+    // Record prd.review_completed
+    appendScopeEvent(paths, {
+      type: "prd.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      },
     });
 
     // Record prd.rendered with status: "success"
@@ -1487,8 +1550,20 @@ describe("E2E — edge case scenarios", () => {
       payload: { verdict: "pass", findings: [] },
     });
 
+    // prd.review_completed
+    appendScopeEvent(paths, {
+      type: "prd.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      },
+    });
+
     state = reduce(readEvents(paths.events));
     expect(state.pre_apply_completed).toBe(true);
+    expect(state.prd_review_completed).toBe(true);
 
     // prd.rendered (success)
     appendScopeEvent(paths, {
@@ -1587,6 +1662,17 @@ describe("E2E — edge case scenarios", () => {
     state = reduce(readEvents(paths.events));
     expect(state.pre_apply_completed).toBe(true);
 
+    // Record prd.review_completed
+    appendScopeEvent(paths, {
+      type: "prd.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      },
+    });
+
     // apply.started → allowed (warnings do not block)
     const applyResult = appendScopeEvent(paths, {
       type: "apply.started",
@@ -1617,8 +1703,20 @@ describe("E2E — edge case scenarios", () => {
       payload: { verdict: "pass", findings: [] },
     });
 
+    // Record prd.review_completed
+    appendScopeEvent(paths, {
+      type: "prd.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      },
+    });
+
     state = reduce(readEvents(paths.events));
     expect(state.pre_apply_completed).toBe(true);
+    expect(state.prd_review_completed).toBe(true);
 
     // Attempt apply.started WITHOUT apply_enabled option → rejected with apply_enabled message
     const rejectedResult = appendScopeEvent(paths, {

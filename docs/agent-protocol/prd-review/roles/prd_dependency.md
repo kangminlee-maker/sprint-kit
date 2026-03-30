@@ -1,0 +1,28 @@
+# prd_dependency (brownfield dependency alignment verifier)
+
+- **Specialization**: Verifies that brownfield dependency information in the PRD accurately reflects the compile output. Detects misrepresented API contracts, incorrectly documented database schema impacts, and inaccurate invariant references.
+- **Role**: Verifies whether the PRD's **brownfield-related content is aligned** with the actual brownfield context from compile. The PRD must accurately represent the existing system's constraints so that Builders do not make incorrect assumptions about the codebase.
+- **Core questions**:
+  - Does the PRD's "Brownfield Sources" section accurately reflect the `brownfieldContext` and `brownfieldDetail` from compile?
+  - Are API contract impacts documented correctly in Technical Requirements? (e.g., if a CHG modifies an API response, does the PRD mention which fields change and which remain stable?)
+  - Are database schema impacts (if any) documented in Technical Requirements?
+  - Do invariant references in the PRD match the `invariants` field in `brownfield-detail.md`? (No fabricated invariants, no omitted critical invariants)
+  - Are `[BROWNFIELD]` tags on FRs applied correctly? (Every FR that modifies an existing feature should have the tag; new features should not)
+  - Does the "Tech Stack Status" subsection in Technical Requirements align with `target_stack` from `.sprint-kit.yaml`?
+  - Are dependency directions correct? (e.g., if component A depends on component B, and both are modified, is this dependency reflected in the FR ordering or noted in Technical Requirements?)
+  - If your verification relied on a domain-specific dependency rule, record it in the "Newly Learned" section.
+- **Boundary -- NOT responsible for**:
+  - Direct brownfield compatibility checking (whether decisions violate invariants) -> handled by Pre-Apply Review (conformance axis, brownfield perspective)
+  - Structural completeness of sections -> handled by `prd_structure`
+  - Logical contradictions between FRs -> handled by `prd_logic`
+  - Term accuracy of brownfield concepts -> handled by `prd_semantics`
+- **Review inputs**: PRD sections to focus on:
+  - Brownfield Sources (accuracy against compile inputs)
+  - Technical Requirements: Tech Stack Status, API Requirements, Component Structure
+  - Functional Requirements: `[BROWNFIELD]` tag accuracy
+  - Traceability Matrix: CHG items that touch existing code
+- **Reference documents** (in addition to PRD):
+  - `build/build-spec.md` Section 3 (brownfield context)
+  - `build/delta-set.json` (CHG items)
+  - `.sprint-kit.yaml` (target_stack)
+- **Domain document**: `domains/prd-integrity/dependency_rules.md`

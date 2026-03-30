@@ -816,3 +816,69 @@ describe("exploration progress", () => {
     expect(state.exploration_progress!.completed_at).toBe(events[events.length - 1].revision);
   });
 });
+
+// ─── prd_review_completed ───
+
+describe("reducer — prd_review_completed", () => {
+  beforeEach(resetRev);
+
+  it("false by default", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+    ];
+    expect(reduce(events).prd_review_completed).toBe(false);
+  });
+
+  it("true after prd.review_completed", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("prd.review_completed", "compiled", "compiled", {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      }),
+    ];
+    expect(reduce(events).prd_review_completed).toBe(true);
+  });
+
+  it("resets to false on redirect.to_align", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("prd.review_completed", "compiled", "compiled", {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      }),
+      evt("redirect.to_align", "compiled", "align_proposed", { from_state: "compiled", reason: "방향 재검토" }),
+    ];
+    expect(reduce(events).prd_review_completed).toBe(false);
+  });
+
+  it("resets to false on redirect.to_grounding", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("prd.review_completed", "compiled", "compiled", {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      }),
+      evt("redirect.to_grounding", "compiled", "draft", { from_state: "compiled", reason: "소스 재분석" }),
+    ];
+    expect(reduce(events).prd_review_completed).toBe(false);
+  });
+
+  it("resets to false on compile.constraint_gap_found", () => {
+    const events = [
+      evt("scope.created", null, "draft", { title: "t", description: "d", entry_mode: "experience" }),
+      evt("prd.review_completed", "compiled", "compiled", {
+        verdict: "pass",
+        perspectives: ["prd_logic", "prd_structure", "prd_dependency", "prd_semantics", "prd_pragmatics", "prd_evolution", "prd_coverage", "prd_conciseness"],
+        findings: [],
+      }),
+      evt("compile.constraint_gap_found", "compiled", "constraints_resolved", {
+        new_constraint_id: "CST-010", perspective: "code", summary: "s",
+      }),
+    ];
+    expect(reduce(events).prd_review_completed).toBe(false);
+  });
+});
