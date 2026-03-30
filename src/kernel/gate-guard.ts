@@ -93,13 +93,15 @@ const CONVERGENCE_BLOCKED_EVENTS = new Set<string>([
 /**
  * Validate an event before appending to the event store.
  *
- * Checks 5 rules in order:
+ * Checks rules in order:
  * 1. State transition authorization (state machine matrix)
  * 2. Referential integrity (constraint_id existence)
  * 3. Required override validation (rationale required)
  * 3b. Required constraint invalidation protection [GC-017]
  * 4. Convergence blocking (revise blocked after convergence.blocked)
- * 5. Compile retry limit (compile.started blocked after 3 gap_found cycles)
+ * 5a. Apply gate (apply_enabled in config)
+ * 5c. Pre-Apply Review gate (pre_apply.review_completed required before apply)
+ * 5b. Compile retry limit (compile.started blocked after 3 gap_found cycles)
  *
  * On success, returns the determined next_state (resolving conditional targets).
  * On failure, returns the reason for rejection.
@@ -203,6 +205,14 @@ export function validateEvent(
     return {
       allowed: false,
       reason: "Apply gate: apply 단계를 실행하려면 .sprint-kit.yaml에 apply_enabled: true를 추가하세요.",
+    };
+  }
+
+  // ── Rule 5c: Pre-Apply Review gate — apply requires pre_apply.review_completed ──
+  if (eventType === "apply.started" && !state.pre_apply_completed) {
+    return {
+      allowed: false,
+      reason: "Apply gate: Pre-Apply Review가 완료되어야 합니다. pre_apply.review_completed 이벤트가 먼저 기록되어야 합니다.",
     };
   }
 

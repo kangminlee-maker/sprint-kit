@@ -9,6 +9,7 @@
 - `build/delta-set.json` — 변경 항목 목록
 - `build/validation-plan.md` — 검증 계획
 - `.sprint-kit.yaml` — apply_enabled 설정
+- `build/brownfield-detail.md` — 기존 코드 불변 제약
 - events.ndjson — compile.completed 이벤트
 
 ---
@@ -118,10 +119,34 @@ appendScopeEvent(paths, {
 
 **검증 결과 표시:** validation.completed 후 scope.md에 검증 결과가 반영됩니다. PO에게는 제품 관점의 요약이 표시됩니다.
 
-**validation 실패 시:**
-- `constraints_resolved`로 역전이합니다.
-- PO에게 실패 항목과 관련 constraint가 scope.md에 표시됩니다.
-- 해당 constraint에 대해 재결정이 필요합니다.
+**validation 실패 시 역전이 이벤트 시퀀스:**
+
+validation 실패 → constraints_resolved 역전이는 compile/apply의 gap_found 패턴과 동일한 이벤트 시퀀스를 따릅니다:
+
+```typescript
+// validation 실패 시
+if (output.result === "fail") {
+  // 1. 실패한 VAL 항목에 대응하는 constraint를 식별
+  const failedCstIds = output.items
+    .filter(item => item.result === "fail")
+    .map(item => item.related_cst);
+
+  // 2. validation.completed 기록 (실패 결과 포함)
+  appendScopeEvent(paths, {
+    type: "validation.completed",
+    actor: "agent",
+    payload: {
+      result: "fail",
+      pass_count: output.pass_count,
+      fail_count: output.fail_count,
+      items: output.items,
+    },
+  });
+  // → constraints_resolved로 역전이 (state-machine conditional target)
+}
+```
+
+**validation 재시도 상한:** validation 실패 역전이가 3회 누적되면 `scope.deferred`로 전환하거나 `redirect.to_align`으로 방향을 재검토합니다. 에이전트는 PO에게 상황을 보고합니다: "검증에서 반복적으로 문제가 발견되고 있습니다. 방향을 재검토하거나 scope를 보류할 수 있습니다."
 
 **validation 재시작:** applied 상태에서 `validation.started`가 이미 존재하면, 다시 기록하고 검증을 처음부터 수행합니다. `validation.started`는 self-transition이므로 중복 기록이 허용됩니다.
 

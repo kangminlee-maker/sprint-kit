@@ -594,6 +594,8 @@ export interface PrdRenderedPayload {
   prd_hash: string;
   build_spec_hash: string;
   section_count: number;
+  status?: "success" | "failed";
+  failure_reason?: string;
 }
 
 export type PreApplyReviewVerdict = "pass" | "gap_found";
@@ -802,6 +804,7 @@ export interface ScopeState {
   last_backward_reason?: string;
   verdict_log: VerdictLogEntry[];
   feedback_history: FeedbackClassifiedPayload[];
+  pre_apply_completed: boolean;
   exploration_progress?: {
     current_phase: number;
     current_phase_name: string;

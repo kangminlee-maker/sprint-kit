@@ -196,4 +196,25 @@ appendScopeEvent(paths, {
 ### PRD 생성 실패 시
 
 PRD 생성은 관찰적 활동입니다. 실패해도 상태 전이에 영향을 주지 않으며, apply 단계로 진행할 수 있습니다.
-실패 시 PO에게 "PRD 생성 중 문제가 발생했습니다. apply는 정상 진행됩니다."로 안내합니다.
+
+**실패 시 이벤트 기록 (필수):**
+
+PRD 생성이 3회 재시도 후에도 실패하면, `prd.rendered` 이벤트를 status: "failed"로 기록합니다. 이 이벤트가 기록되어야 라우팅 테이블이 다음 단계(draft-apply.md)로 진행할 수 있습니다.
+
+```typescript
+// PRD 생성 실패 시
+appendScopeEvent(paths, {
+  type: "prd.rendered",
+  actor: "agent",
+  payload: {
+    prd_path: "build/prd.md",
+    prd_hash: "",
+    build_spec_hash: result.buildSpecHash,
+    section_count: 0,
+    status: "failed",
+    failure_reason: "3회 재시도 후 실패",
+  },
+});
+```
+
+실패 시 PO에게 안내: "PRD 생성에 실패했습니다. 기존 산출물(Build Spec, delta-set)로 apply를 진행할 수 있습니다. 진행하시겠습니까?"

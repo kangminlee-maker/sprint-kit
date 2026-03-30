@@ -9,5 +9,6 @@ $ARGUMENTS를 처리합니다.
 | `align_locked`, `surface_iterating` | `docs/agent-protocol/draft-surface.md` |
 | `surface_confirmed`, `constraints_resolved` | `docs/agent-protocol/draft-constraint.md` |
 | `target_locked` | `docs/agent-protocol/draft-compile.md` |
-| `compiled` (prd.rendered 이벤트 없음) | `docs/agent-protocol/draft-prd.md` |
-| `compiled` (prd.rendered 이벤트 있음), `applied`, `validated` | `docs/agent-protocol/draft-apply.md` |
+| `compiled` (`pre_apply.review_completed` 이벤트 없음) | `docs/agent-protocol/draft-compile.md` §Pre-Apply Review |
+| `compiled` (`pre_apply.review_completed` 있음 + `prd.rendered` 이벤트 없음) | `docs/agent-protocol/draft-prd.md` |
+| `compiled` (`prd.rendered` 이벤트 있음), `applied`, `validated` | `docs/agent-protocol/draft-apply.md` |

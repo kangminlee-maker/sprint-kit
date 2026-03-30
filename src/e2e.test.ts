@@ -184,6 +184,11 @@ describe("E2E — tutor-block full lifecycle", () => {
     expect(state.validation_plan_hash).toBe(compileResult.validationPlanHash);
 
     // ── Phase 3: Apply ──
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
     const applyStartResult = appendScopeEvent(paths, {
       type: "apply.started",
       actor: "agent",
@@ -263,12 +268,13 @@ describe("E2E — tutor-block full lifecycle", () => {
 
     // ── Final Assertions ──
     const allEvents = readEvents(paths.events);
-    // eventsBeforeCompile + compile.started + compile.completed + apply.started + apply.completed + validation.started + validation.completed + scope.closed
-    expect(allEvents.length).toBe(eventsBeforeCompile.length + 7);
+    // eventsBeforeCompile + compile.started + compile.completed + pre_apply.review_completed + apply.started + apply.completed + validation.started + validation.completed + scope.closed
+    expect(allEvents.length).toBe(eventsBeforeCompile.length + 8);
 
     // Verify the full event type sequence
-    const lastFiveTypes = allEvents.slice(-5).map((e) => e.type);
-    expect(lastFiveTypes).toEqual([
+    const lastSixTypes = allEvents.slice(-6).map((e) => e.type);
+    expect(lastSixTypes).toEqual([
+      "pre_apply.review_completed",
       "apply.started",
       "apply.completed",
       "validation.started",
@@ -287,6 +293,7 @@ describe("E2E — tutor-block full lifecycle", () => {
     }
 
     // Apply
+    appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -322,6 +329,7 @@ describe("E2E — tutor-block full lifecycle", () => {
     }
 
     // Apply
+    appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -763,6 +771,7 @@ describe("E2E — edge case scenarios", () => {
     }
 
     // Apply
+    appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -800,6 +809,7 @@ describe("E2E — edge case scenarios", () => {
     }
 
     // Apply
+    appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "h" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -887,6 +897,7 @@ describe("E2E — edge case scenarios", () => {
     expect(state.current_state).toBe("compiled");
 
     // Re-apply
+    appendScopeEvent(paths, { type: "pre_apply.review_completed", actor: "agent", payload: { verdict: "pass", findings: [] } });
     appendScopeEvent(paths, { type: "apply.started", actor: "agent", payload: { build_spec_hash: "hash_bs_003" } }, { apply_enabled: true });
     appendScopeEvent(paths, { type: "apply.completed", actor: "agent", payload: { result: "success" } });
 
@@ -946,5 +957,687 @@ describe("E2E — edge case scenarios", () => {
     expect(state.constraint_pool.summary.undecided).toBe(1);
     // target.locked should be blocked (isConstraintsResolved = false)
     expect(state.compile_ready).toBe(false);
+  });
+
+  // ── Scenario 1: Pre-Apply Review gate — apply.started blocked without pre_apply.review_completed ──
+
+  it("pre-apply review gate blocks apply.started without pre_apply.review_completed", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-009");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+    expect(state.pre_apply_completed).toBe(false);
+
+    // Attempt apply.started WITHOUT pre_apply.review_completed → rejected
+    const blockedResult = appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "h" },
+    }, { apply_enabled: true });
+    expect(blockedResult.success).toBe(false);
+    if (!blockedResult.success) {
+      expect(blockedResult.reason).toContain("Pre-Apply Review");
+    }
+
+    // Record pre_apply.review_completed
+    const preApplyResult = appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
+    expect(preApplyResult.success).toBe(true);
+
+    state = reduce(readEvents(paths.events));
+    expect(state.pre_apply_completed).toBe(true);
+
+    // Attempt apply.started again → allowed
+    const allowedResult = appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "h" },
+    }, { apply_enabled: true });
+    expect(allowedResult.success).toBe(true);
+  });
+
+  // ── Scenario 2: Pre-Apply Review gap_found → reverse transition → re-compile → re-apply ──
+
+  it("pre-apply gap_found → constraint cycle → re-compile → re-apply", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-010");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+
+    // Record pre_apply.review_completed with verdict: gap_found
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "gap_found",
+        findings: [{ perspective: "logic", status: "warning", summary: "missing edge case" }],
+        constraint_gap_id: "CST-GAP-PA-001",
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    // pre_apply_completed is still set to true by reducer (observational event)
+    expect(state.pre_apply_completed).toBe(true);
+
+    // Record constraint.discovered (new constraint from gap)
+    appendScopeEvent(paths, {
+      type: "constraint.discovered",
+      actor: "system",
+      payload: {
+        constraint_id: "CST-GAP-PA-001",
+        perspective: "code",
+        summary: "Pre-Apply Review에서 발견된 누락 케이스",
+        severity: "required",
+        discovery_stage: "compile",
+        decision_owner: "product_owner",
+        impact_if_ignored: "엣지 케이스 미처리",
+        source_refs: [{ source: "pre-apply-review", detail: "gap found" }],
+      },
+    });
+
+    // compile.constraint_gap_found → constraints_resolved (backward)
+    appendScopeEvent(paths, {
+      type: "compile.constraint_gap_found",
+      actor: "system",
+      payload: {
+        new_constraint_id: "CST-GAP-PA-001",
+        perspective: "code",
+        summary: "Pre-Apply Review에서 발견된 누락 케이스",
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("constraints_resolved");
+    // pre_apply_completed reset by compile.constraint_gap_found
+    expect(state.pre_apply_completed).toBe(false);
+
+    // Decide new constraint
+    appendScopeEvent(paths, {
+      type: "constraint.decision_recorded",
+      actor: "user",
+      payload: {
+        constraint_id: "CST-GAP-PA-001",
+        decision: "inject",
+        selected_option: "엣지 케이스 처리 추가",
+        decision_owner: "product_owner",
+        rationale: "Pre-Apply Review 피드백 반영",
+      },
+    });
+
+    // target.locked
+    appendScopeEvent(paths, {
+      type: "target.locked",
+      actor: "system",
+      payload: {
+        surface_hash: "hash_sf_004",
+        constraint_decisions: [
+          { constraint_id: "CST-001", decision: "inject" },
+          { constraint_id: "CST-002", decision: "inject" },
+          { constraint_id: "CST-003", decision: "inject" },
+          { constraint_id: "CST-004", decision: "defer" },
+          { constraint_id: "CST-005", decision: "inject" },
+          { constraint_id: "CST-006", decision: "inject" },
+          { constraint_id: "CST-007", decision: "inject" },
+          { constraint_id: "CST-008", decision: "inject" },
+          { constraint_id: "CST-GAP-PA-001", decision: "inject" },
+        ],
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("target_locked");
+
+    // Re-compile
+    appendScopeEvent(paths, {
+      type: "compile.started",
+      actor: "system",
+      payload: { snapshot_revision: 3, surface_hash: "hash_sf_004" },
+    });
+
+    appendScopeEvent(paths, {
+      type: "compile.completed",
+      actor: "system",
+      payload: {
+        build_spec_path: "build/build-spec.md",
+        build_spec_hash: "hash_bs_retry",
+        brownfield_detail_path: "build/brownfield-detail.md",
+        brownfield_detail_hash: "hash_bd_retry",
+        delta_set_path: "build/delta-set.json",
+        delta_set_hash: "hash_ds_retry",
+        validation_plan_path: "build/validation-plan.md",
+        validation_plan_hash: "hash_vp_retry",
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+    // pre_apply_completed is still false (reset by backward transition, not re-set yet)
+    expect(state.pre_apply_completed).toBe(false);
+
+    // Record pre_apply.review_completed with verdict: pass
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.pre_apply_completed).toBe(true);
+
+    // apply.started → allowed
+    const applyResult = appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "hash_bs_retry" },
+    }, { apply_enabled: true });
+    expect(applyResult.success).toBe(true);
+  });
+
+  // ── Scenario 3: PRD failure with status: "failed" event ──
+
+  it("prd.rendered with status failed is accepted and does not block apply", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-011");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+
+    // Record pre_apply.review_completed
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
+
+    // Record prd.rendered with status: "failed"
+    const prdResult = appendScopeEvent(paths, {
+      type: "prd.rendered",
+      actor: "agent",
+      payload: {
+        prd_path: "build/prd.md",
+        prd_hash: "hash_prd_fail",
+        build_spec_hash: "hash_bs",
+        section_count: 0,
+        status: "failed",
+        failure_reason: "3회 재시도 후 실패",
+      },
+    });
+    expect(prdResult.success).toBe(true);
+
+    // Verify prd.rendered event is in event history
+    const allEvents = readEvents(paths.events);
+    const prdEvents = allEvents.filter((e) => e.type === "prd.rendered");
+    expect(prdEvents.length).toBe(1);
+    expect((prdEvents[0].payload as { status: string }).status).toBe("failed");
+
+    // apply.started → allowed (prd failure does not block apply)
+    const applyResult = appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "h" },
+    }, { apply_enabled: true });
+    expect(applyResult.success).toBe(true);
+  });
+
+  // ── Scenario 4: PRD success with status: "success" event ──
+
+  it("prd.rendered with status success is accepted and apply proceeds", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-012");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+
+    // Record pre_apply.review_completed
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
+
+    // Record prd.rendered with status: "success"
+    const prdResult = appendScopeEvent(paths, {
+      type: "prd.rendered",
+      actor: "agent",
+      payload: {
+        prd_path: "build/prd.md",
+        prd_hash: "hash_prd_ok",
+        build_spec_hash: "hash_bs",
+        section_count: 7,
+        status: "success",
+      },
+    });
+    expect(prdResult.success).toBe(true);
+
+    // apply.started → allowed
+    const applyResult = appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "h" },
+    }, { apply_enabled: true });
+    expect(applyResult.success).toBe(true);
+  });
+
+  // ── Scenario 5: pre_apply_completed reset on compile.constraint_gap_found ──
+
+  it("pre_apply_completed resets to false on compile.constraint_gap_found", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-013");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+    expect(state.pre_apply_completed).toBe(false);
+
+    // Record pre_apply.review_completed (pass)
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.pre_apply_completed).toBe(true);
+
+    // constraint.discovered + compile.constraint_gap_found
+    appendScopeEvent(paths, {
+      type: "constraint.discovered",
+      actor: "system",
+      payload: {
+        constraint_id: "CST-RESET-001",
+        perspective: "code",
+        summary: "컴파일 갭 발견",
+        severity: "required",
+        discovery_stage: "compile",
+        decision_owner: "product_owner",
+        impact_if_ignored: "빌드 실패",
+        source_refs: [{ source: "compile", detail: "gap" }],
+      },
+    });
+
+    appendScopeEvent(paths, {
+      type: "compile.constraint_gap_found",
+      actor: "system",
+      payload: {
+        new_constraint_id: "CST-RESET-001",
+        perspective: "code",
+        summary: "컴파일 갭 발견",
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.pre_apply_completed).toBe(false);
+    expect(state.current_state).toBe("constraints_resolved");
+  });
+
+  // ── Scenario 6: pre_apply_completed reset on redirect.to_align ──
+
+  it("pre_apply_completed resets to false on redirect.to_align from constraints_resolved", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-014");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+
+    // Record pre_apply.review_completed (pass)
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.pre_apply_completed).toBe(true);
+
+    // Go backward to constraints_resolved via compile.constraint_gap_found
+    appendScopeEvent(paths, {
+      type: "constraint.discovered",
+      actor: "system",
+      payload: {
+        constraint_id: "CST-REDIR-001",
+        perspective: "code",
+        summary: "redirect test constraint",
+        severity: "required",
+        discovery_stage: "compile",
+        decision_owner: "product_owner",
+        impact_if_ignored: "빌드 실패",
+        source_refs: [{ source: "compile", detail: "test" }],
+      },
+    });
+
+    appendScopeEvent(paths, {
+      type: "compile.constraint_gap_found",
+      actor: "system",
+      payload: {
+        new_constraint_id: "CST-REDIR-001",
+        perspective: "code",
+        summary: "redirect test constraint",
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("constraints_resolved");
+    // Already reset by compile.constraint_gap_found
+    expect(state.pre_apply_completed).toBe(false);
+
+    // redirect.to_align from constraints_resolved → align_proposed
+    const redirectResult = appendScopeEvent(paths, {
+      type: "redirect.to_align",
+      actor: "user",
+      payload: { from_state: "constraints_resolved", reason: "방향 재조정 필요" },
+    });
+    expect(redirectResult.success).toBe(true);
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("align_proposed");
+    // Confirm pre_apply_completed remains false after redirect.to_align
+    expect(state.pre_apply_completed).toBe(false);
+  });
+
+  // ── Scenario 7: Full cycle with pre_apply gap_found → re-cycle to close ──
+
+  it("full cycle: pre_apply gap_found → re-cycle through compile to close", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-015");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+
+    // pre_apply.review_completed with gap_found
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "gap_found",
+        findings: [{ perspective: "brownfield", status: "warning", summary: "invariant uncovered" }],
+        constraint_gap_id: "CST-CYCLE-001",
+      },
+    });
+
+    // constraint.discovered + compile.constraint_gap_found → constraints_resolved
+    appendScopeEvent(paths, {
+      type: "constraint.discovered",
+      actor: "system",
+      payload: {
+        constraint_id: "CST-CYCLE-001",
+        perspective: "code",
+        summary: "invariant 미처리",
+        severity: "required",
+        discovery_stage: "compile",
+        decision_owner: "product_owner",
+        impact_if_ignored: "런타임 오류 가능",
+        source_refs: [{ source: "pre-apply-review", detail: "gap" }],
+      },
+    });
+
+    appendScopeEvent(paths, {
+      type: "compile.constraint_gap_found",
+      actor: "system",
+      payload: {
+        new_constraint_id: "CST-CYCLE-001",
+        perspective: "code",
+        summary: "invariant 미처리",
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("constraints_resolved");
+
+    // Decide constraint
+    appendScopeEvent(paths, {
+      type: "constraint.decision_recorded",
+      actor: "user",
+      payload: {
+        constraint_id: "CST-CYCLE-001",
+        decision: "inject",
+        selected_option: "invariant 처리 추가",
+        decision_owner: "product_owner",
+        rationale: "런타임 안정성",
+      },
+    });
+
+    // target.locked
+    appendScopeEvent(paths, {
+      type: "target.locked",
+      actor: "system",
+      payload: {
+        surface_hash: "hash_sf_004",
+        constraint_decisions: [
+          { constraint_id: "CST-001", decision: "inject" },
+          { constraint_id: "CST-002", decision: "inject" },
+          { constraint_id: "CST-003", decision: "inject" },
+          { constraint_id: "CST-004", decision: "defer" },
+          { constraint_id: "CST-005", decision: "inject" },
+          { constraint_id: "CST-006", decision: "inject" },
+          { constraint_id: "CST-007", decision: "inject" },
+          { constraint_id: "CST-008", decision: "inject" },
+          { constraint_id: "CST-CYCLE-001", decision: "inject" },
+        ],
+      },
+    });
+
+    // Re-compile
+    appendScopeEvent(paths, {
+      type: "compile.started",
+      actor: "system",
+      payload: { snapshot_revision: 3, surface_hash: "hash_sf_004" },
+    });
+
+    appendScopeEvent(paths, {
+      type: "compile.completed",
+      actor: "system",
+      payload: {
+        build_spec_path: "build/build-spec.md",
+        build_spec_hash: "hash_bs_cycle",
+        brownfield_detail_path: "build/brownfield-detail.md",
+        brownfield_detail_hash: "hash_bd_cycle",
+        delta_set_path: "build/delta-set.json",
+        delta_set_hash: "hash_ds_cycle",
+        validation_plan_path: "build/validation-plan.md",
+        validation_plan_hash: "hash_vp_cycle",
+      },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+
+    // pre_apply.review_completed (pass this time)
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.pre_apply_completed).toBe(true);
+
+    // prd.rendered (success)
+    appendScopeEvent(paths, {
+      type: "prd.rendered",
+      actor: "agent",
+      payload: {
+        prd_path: "build/prd.md",
+        prd_hash: "hash_prd_cycle",
+        build_spec_hash: "hash_bs_cycle",
+        section_count: 7,
+        status: "success",
+      },
+    });
+
+    // apply.started → apply.completed → applied
+    appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "hash_bs_cycle" },
+    }, { apply_enabled: true });
+
+    appendScopeEvent(paths, {
+      type: "apply.completed",
+      actor: "agent",
+      payload: { result: "success" },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("applied");
+
+    // validation.started → validation.completed (pass) → validated
+    appendScopeEvent(paths, {
+      type: "validation.started",
+      actor: "agent",
+      payload: { validation_plan_hash: "hash_vp_cycle" },
+    });
+
+    appendScopeEvent(paths, {
+      type: "validation.completed",
+      actor: "agent",
+      payload: { result: "pass", pass_count: 9, fail_count: 0, items: [] },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("validated");
+
+    // scope.closed → closed
+    const closeResult = appendScopeEvent(paths, {
+      type: "scope.closed",
+      actor: "user",
+      payload: {},
+    });
+    expect(closeResult.success).toBe(true);
+
+    state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("closed");
+
+    // Verify complete event sequence contains expected types
+    const allEvents = readEvents(paths.events);
+    const eventTypes = allEvents.map((e) => e.type);
+    expect(eventTypes).toContain("pre_apply.review_completed");
+    expect(eventTypes).toContain("compile.constraint_gap_found");
+    expect(eventTypes).toContain("prd.rendered");
+    expect(eventTypes).toContain("scope.closed");
+  });
+
+  // ── Scenario 8: Pre-Apply Review with warning findings ──
+
+  it("pre-apply review with warning findings does not block apply", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-016");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+
+    // pre_apply.review_completed with verdict: pass but findings include warning
+    const preApplyResult = appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: {
+        verdict: "pass",
+        findings: [
+          { perspective: "policy", status: "pass", summary: "정책 검증 통과" },
+          { perspective: "brownfield", status: "warning", summary: "기존 코드에 미약한 영향 가능성" },
+          { perspective: "logic", status: "pass", summary: "논리적 정합성 확인" },
+        ],
+      },
+    });
+    expect(preApplyResult.success).toBe(true);
+
+    state = reduce(readEvents(paths.events));
+    expect(state.pre_apply_completed).toBe(true);
+
+    // apply.started → allowed (warnings do not block)
+    const applyResult = appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "h" },
+    }, { apply_enabled: true });
+    expect(applyResult.success).toBe(true);
+  });
+
+  // ── Scenario 9: apply.started still requires apply_enabled even with pre_apply_completed ──
+
+  it("apply.started requires apply_enabled even when pre_apply_completed is true", () => {
+    const paths = createScope(tmpDir, "SC-EDGE-017");
+    const goldenEvents = readGoldenEvents();
+
+    // Replay full golden → compiled
+    for (const evt of goldenEvents) {
+      appendScopeEvent(paths, { type: evt.type, actor: evt.actor, payload: evt.payload });
+    }
+
+    let state = reduce(readEvents(paths.events));
+    expect(state.current_state).toBe("compiled");
+
+    // Record pre_apply.review_completed (pass)
+    appendScopeEvent(paths, {
+      type: "pre_apply.review_completed",
+      actor: "agent",
+      payload: { verdict: "pass", findings: [] },
+    });
+
+    state = reduce(readEvents(paths.events));
+    expect(state.pre_apply_completed).toBe(true);
+
+    // Attempt apply.started WITHOUT apply_enabled option → rejected with apply_enabled message
+    const rejectedResult = appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "h" },
+    });
+    expect(rejectedResult.success).toBe(false);
+    if (!rejectedResult.success) {
+      // apply_enabled check comes BEFORE pre_apply check in gate-guard
+      expect(rejectedResult.reason).toContain("apply_enabled");
+    }
+
+    // Now with apply_enabled: true → allowed
+    const allowedResult = appendScopeEvent(paths, {
+      type: "apply.started",
+      actor: "agent",
+      payload: { build_spec_hash: "h" },
+    }, { apply_enabled: true });
+    expect(allowedResult.success).toBe(true);
   });
 });
