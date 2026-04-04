@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { executeClose, executeDefer } from "./close.js";
@@ -80,6 +80,77 @@ describe("executeClose", () => {
     expect(handoff.brownfield_repos).toBeInstanceOf(Array);
     expect(handoff.interview_id).toBeTruthy();
     expect(handoff.created_at).toBeTruthy();
+  });
+
+  it("extracts goal and user stories from PRD markdown when prd.md exists", () => {
+    const paths = setupValidated();
+
+    // prd.rendered 이벤트 기���
+    appendScopeEvent(paths, {
+      type: "prd.rendered",
+      actor: "agent",
+      payload: { prd_path: "build/prd.md", prd_hash: "h1", build_spec_hash: "bs1", section_count: 14 },
+    });
+
+    // build/prd.md 작성
+    if (!existsSync(paths.build)) mkdirSync(paths.build, { recursive: true });
+    writeFileSync(join(paths.build, "prd.md"), [
+      "# PRD — Test",
+      "",
+      "## Executive Summary",
+      "",
+      "일본어 풀부킹 완화를 위해 주 5회 예약 변경 제한을 도입한다.",
+      "",
+      "### Goal Metrics",
+      "| Metric | Target |",
+      "",
+      "## Success Criteria",
+      "",
+      "- 일 풀부킹 알림 400회 이하",
+      "- 저빈도 유저 취소율 5% 이하",
+      "",
+      "## User Journeys",
+      "",
+      "### Journey 1: 정상 변경",
+      "",
+      "**Persona:** 유미 (28세, 직장인)",
+      "",
+      "1. 예약 목록 → 변경 클릭",
+      "",
+      "### Journey 2: 변경 소진",
+      "",
+      "**Persona:** 다이치 (32세, 프리랜서)",
+      "",
+      "1. 변경 횟수 소진 → 안내 팝업",
+      "",
+      "## Brownfield Sources",
+      "",
+      "- BookingService.java: 예약 변경 핵심 로직",
+      "- booking_change_history: 변경 이력 테이블",
+      "",
+    ].join("\n"), "utf-8");
+
+    const result = executeClose(paths);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const handoff = JSON.parse(readFileSync(join(paths.build, "handoff_prd.json"), "utf-8"));
+
+    // goal은 Executive Summary 첫 문단에서 추출
+    expect(handoff.goal).toContain("일본어 풀부킹 완화");
+
+    // user_stories는 User Journeys에서 persona 추출
+    expect(handoff.user_stories.length).toBe(2);
+    expect(handoff.user_stories[0].persona).toBe("유미");
+    expect(handoff.user_stories[0].action).toContain("정상 변경");
+    expect(handoff.user_stories[1].persona).toBe("다이치");
+
+    // success_criteria는 PRD Success Criteria 섹션에서 추출
+    expect(handoff.success_criteria).toContain("일 풀부킹 알림 400회 이하");
+    expect(handoff.success_criteria).toContain("저빈도 유저 취소율 5% 이하");
+
+    // brownfield_repos는 PRD Brownfield Sources에서 추출
+    expect(handoff.brownfield_repos.some((r: { name: string }) => r.name === "BookingService.java")).toBe(true);
   });
 
   it("fails when not in validated state (draft)", () => {

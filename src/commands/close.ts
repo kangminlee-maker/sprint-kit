@@ -70,8 +70,9 @@ export function executeClose(paths: ScopePaths): CloseOutput {
     const hp = join(paths.build, "handoff_prd.json");
     writeFileSync(hp, JSON.stringify(handoff, null, 2), "utf-8");
     handoff_path = "build/handoff_prd.json";
-  } catch {
+  } catch (err) {
     // handoff generation is observational — failure does not block close
+    console.warn("[handoff] generation failed:", err instanceof Error ? err.message : err);
   }
 
   return {
