@@ -115,7 +115,7 @@ function parsePrdSections(md: string): Record<string, string> {
 }
 
 function normalizeKey(heading: string): string {
-  return heading.toLowerCase().replace(/[^a-z가-힣\s]/g, "").trim();
+  return heading.toLowerCase().replace(/[^a-z0-9가-힣\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 // ─── Extractors ───
@@ -141,7 +141,12 @@ function extractUserJourneys(
     // Split on one level below the section heading (e.g., ### if section is ##)
     const subLevel = detectMinHeadingLevel(journeySection.split("\n"));
     const subPattern = new RegExp(`^#{${subLevel}}\\s+`, "m");
-    const journeyBlocks = journeySection.split(subPattern).filter(Boolean);
+    const parts = journeySection.split(subPattern);
+    // Skip preamble text before the first sub-heading
+    if (!journeySection.trim().startsWith("#".repeat(subLevel))) {
+      parts.shift();
+    }
+    const journeyBlocks = parts.filter(Boolean);
     for (const block of journeyBlocks) {
       const titleLine = block.split("\n")[0] ?? "";
       const personaMatch = block.match(/\*\*Persona:?\*\*[:\s]*(.+?)(?:\n|$)/);
@@ -231,7 +236,9 @@ function extractBrownfieldSources(
         const text = line.replace(/^[-*]\s+/, "").trim();
         if (!seen.has(text)) {
           seen.add(text);
-          sources.push({ name: text.split(/[:/]/)[0]?.trim() ?? text, path: text, desc: "From PRD Brownfield Sources" });
+          const colonIdx = text.indexOf(": ");
+          const name = colonIdx > 0 ? text.substring(0, colonIdx).trim() : extractName(text);
+          sources.push({ name, path: text, desc: "From PRD Brownfield Sources" });
         }
       }
     }
