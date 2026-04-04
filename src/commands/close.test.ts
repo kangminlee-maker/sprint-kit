@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { executeClose, executeDefer } from "./close.js";
@@ -48,6 +48,38 @@ describe("executeClose", () => {
 
     const updatedState = reduce(readEvents(paths.events));
     expect(updatedState.current_state).toBe("closed");
+  });
+
+  it("generates handoff_prd.json on close", () => {
+    const paths = setupValidated();
+    const result = executeClose(paths);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.handoff_path).toBe("build/handoff_prd.json");
+
+    const filePath = join(paths.build, "handoff_prd.json");
+    expect(existsSync(filePath)).toBe(true);
+
+    const handoff = JSON.parse(readFileSync(filePath, "utf-8"));
+    expect(handoff.pm_id).toBe("SC-CLOSE-001");
+    expect(handoff.product_name).toBe("Test");
+    expect(handoff.goal).toBeTruthy();
+    expect(handoff.user_stories).toBeInstanceOf(Array);
+    expect(handoff.user_stories.length).toBeGreaterThan(0);
+    expect(handoff.user_stories[0]).toHaveProperty("persona");
+    expect(handoff.user_stories[0]).toHaveProperty("action");
+    expect(handoff.user_stories[0]).toHaveProperty("benefit");
+    expect(handoff.constraints).toBeInstanceOf(Array);
+    expect(handoff.constraints.length).toBeGreaterThan(0);
+    expect(handoff.success_criteria).toBeInstanceOf(Array);
+    expect(handoff.success_criteria.length).toBeGreaterThan(0);
+    expect(handoff.assumptions).toBeInstanceOf(Array);
+    expect(handoff.assumptions.length).toBeGreaterThan(0);
+    expect(handoff.decide_later_items).toBeInstanceOf(Array);
+    expect(handoff.decide_later_items.length).toBeGreaterThan(0);
+    expect(handoff.brownfield_repos).toBeInstanceOf(Array);
+    expect(handoff.interview_id).toBeTruthy();
+    expect(handoff.created_at).toBeTruthy();
   });
 
   it("fails when not in validated state (draft)", () => {
