@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { executeClose, executeDefer } from "./close.js";
@@ -48,6 +48,124 @@ describe("executeClose", () => {
 
     const updatedState = reduce(readEvents(paths.events));
     expect(updatedState.current_state).toBe("closed");
+  });
+
+  it("generates handoff_prd.json on close", () => {
+    const paths = setupValidated();
+    const result = executeClose(paths);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.handoff_path).toBe("build/handoff_prd.json");
+
+    const filePath = join(paths.build, "handoff_prd.json");
+    expect(existsSync(filePath)).toBe(true);
+
+    const handoff = JSON.parse(readFileSync(filePath, "utf-8"));
+    expect(handoff.scope_id).toBe("SC-CLOSE-001");
+    expect(handoff.scope_title).toBe("Test");
+    expect(handoff.goal).toBeTruthy();
+    // user_journeys (renamed from user_stories, benefit removed)
+    expect(handoff.user_journeys).toBeInstanceOf(Array);
+    expect(handoff.user_journeys.length).toBeGreaterThan(0);
+    expect(handoff.user_journeys[0]).toHaveProperty("persona");
+    expect(handoff.user_journeys[0]).toHaveProperty("action");
+    expect(handoff.user_journeys[0]).not.toHaveProperty("benefit");
+    // applied_constraints (renamed from constraints, enriched with metadata)
+    expect(handoff.applied_constraints).toBeInstanceOf(Array);
+    expect(handoff.applied_constraints.length).toBeGreaterThan(0);
+    expect(handoff.applied_constraints[0]).toHaveProperty("constraint_id");
+    expect(handoff.applied_constraints[0]).toHaveProperty("perspective");
+    expect(handoff.applied_constraints[0]).toHaveProperty("severity");
+    expect(handoff.applied_constraints[0]).toHaveProperty("impact_if_ignored");
+    // success_criteria
+    expect(handoff.success_criteria).toBeInstanceOf(Array);
+    expect(handoff.success_criteria.length).toBeGreaterThan(0);
+    // overrides_and_exceptions (renamed from assumptions)
+    expect(handoff.overrides_and_exceptions).toBeInstanceOf(Array);
+    expect(handoff.decide_later_items).toBeInstanceOf(Array);
+    // brownfield_sources (renamed from brownfield_repos)
+    expect(handoff.brownfield_sources).toBeInstanceOf(Array);
+    // out_of_scope (new)
+    expect(handoff.out_of_scope).toBeInstanceOf(Array);
+    expect(handoff.out_of_scope).toContain("b");
+    // unclassified_constraints (exhaustiveness guard)
+    expect(handoff.unclassified_constraints).toBeInstanceOf(Array);
+    expect(handoff.unclassified_constraints.length).toBe(0);
+    // interview_id removed, pm_id replaced by scope_id
+    expect(handoff).not.toHaveProperty("interview_id");
+    expect(handoff).not.toHaveProperty("pm_id");
+    expect(handoff.created_at).toBeTruthy();
+  });
+
+  it("extracts goal and user journeys from PRD markdown when prd.md exists", () => {
+    const paths = setupValidated();
+
+    // prd.rendered 이벤트 기록
+    appendScopeEvent(paths, {
+      type: "prd.rendered",
+      actor: "agent",
+      payload: { prd_path: "build/prd.md", prd_hash: "h1", build_spec_hash: "bs1", section_count: 14 },
+    });
+
+    // build/prd.md 작성
+    if (!existsSync(paths.build)) mkdirSync(paths.build, { recursive: true });
+    writeFileSync(join(paths.build, "prd.md"), [
+      "# PRD — Test",
+      "",
+      "## Executive Summary",
+      "",
+      "일본어 풀부킹 완화를 위해 주 5회 예약 변경 제한을 도입한다.",
+      "",
+      "### Goal Metrics",
+      "| Metric | Target |",
+      "",
+      "## Success Criteria",
+      "",
+      "- 일 풀부킹 알림 400회 이하",
+      "- 저빈도 유저 취소율 5% 이하",
+      "",
+      "## User Journeys",
+      "",
+      "### Journey 1: 정상 변경",
+      "",
+      "**Persona:** 유미 (28세, 직장인)",
+      "",
+      "1. 예약 목록 → 변경 클릭",
+      "",
+      "### Journey 2: 변경 소진",
+      "",
+      "**Persona:** 다이치 (32세, 프리랜서)",
+      "",
+      "1. 변경 횟수 소진 → 안내 팝업",
+      "",
+      "## Brownfield Sources",
+      "",
+      "- BookingService.java: 예약 변경 핵심 로직",
+      "- booking_change_history: 변경 이력 테이블",
+      "",
+    ].join("\n"), "utf-8");
+
+    const result = executeClose(paths);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const handoff = JSON.parse(readFileSync(join(paths.build, "handoff_prd.json"), "utf-8"));
+
+    // goal은 Executive Summary 첫 문단에서 추출
+    expect(handoff.goal).toContain("일본어 풀부킹 완화");
+
+    // user_journeys는 User Journeys에서 persona 추출
+    expect(handoff.user_journeys.length).toBe(2);
+    expect(handoff.user_journeys[0].persona).toBe("유미");
+    expect(handoff.user_journeys[0].action).toContain("정상 변경");
+    expect(handoff.user_journeys[1].persona).toBe("다이치");
+
+    // success_criteria는 PRD Success Criteria 섹션에서 추출
+    expect(handoff.success_criteria).toContain("일 풀부킹 알림 400회 이하");
+    expect(handoff.success_criteria).toContain("저빈도 유저 취소율 5% 이하");
+
+    // brownfield_sources는 PRD Brownfield Sources에서 추출
+    expect(handoff.brownfield_sources.some((r: { name: string }) => r.name === "BookingService.java")).toBe(true);
   });
 
   it("fails when not in validated state (draft)", () => {
