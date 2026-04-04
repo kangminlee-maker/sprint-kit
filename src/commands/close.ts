@@ -16,7 +16,7 @@ import { renderScopeMd } from "../renderers/scope-md.js";
 import { wrapGateError } from "./error-messages.js";
 import { buildHandoffPrd } from "./handoff.js";
 import type { ScopePaths } from "../kernel/scope-manager.js";
-import type { ScopeState } from "../kernel/types.js";
+import type { ScopeState, PrdRenderedPayload } from "../kernel/types.js";
 
 // ─── Output ───
 
@@ -61,11 +61,12 @@ export function executeClose(paths: ScopePaths): CloseOutput {
   try {
     // prd.rendered 이벤트에서 실제 PRD 파일 경로를 읽음
     const prdEvent = [...events].reverse().find((e) => e.type === "prd.rendered");
-    const prdRelPath = prdEvent?.payload && "prd_path" in prdEvent.payload
-      ? (prdEvent.payload as { prd_path: string }).prd_path
-      : "build/prd.md";
-    const prdPath = join(paths.base, prdRelPath);
-    const handoff = buildHandoffPrd(prdPath, state);
+    let prdRelPath: string | undefined;
+    if (prdEvent && prdEvent.type === "prd.rendered") {
+      prdRelPath = (prdEvent.payload as PrdRenderedPayload).prd_path;
+    }
+    const prdPath = prdRelPath ? join(paths.base, prdRelPath) : undefined;
+    const handoff = buildHandoffPrd(prdPath ?? null, state);
     if (!existsSync(paths.build)) mkdirSync(paths.build, { recursive: true });
     const hp = join(paths.build, "handoff_prd.json");
     writeFileSync(hp, JSON.stringify(handoff, null, 2), "utf-8");

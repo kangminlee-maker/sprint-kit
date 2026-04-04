@@ -61,28 +61,45 @@ describe("executeClose", () => {
     expect(existsSync(filePath)).toBe(true);
 
     const handoff = JSON.parse(readFileSync(filePath, "utf-8"));
-    expect(handoff.pm_id).toBe("SC-CLOSE-001");
-    expect(handoff.product_name).toBe("Test");
+    expect(handoff.scope_id).toBe("SC-CLOSE-001");
+    expect(handoff.scope_title).toBe("Test");
     expect(handoff.goal).toBeTruthy();
-    expect(handoff.user_stories).toBeInstanceOf(Array);
-    expect(handoff.user_stories.length).toBeGreaterThan(0);
-    expect(handoff.user_stories[0]).toHaveProperty("persona");
-    expect(handoff.user_stories[0]).toHaveProperty("action");
-    expect(handoff.user_stories[0]).toHaveProperty("benefit");
-    expect(handoff.constraints).toBeInstanceOf(Array);
-    expect(handoff.constraints.length).toBeGreaterThan(0);
+    // user_journeys (renamed from user_stories, benefit removed)
+    expect(handoff.user_journeys).toBeInstanceOf(Array);
+    expect(handoff.user_journeys.length).toBeGreaterThan(0);
+    expect(handoff.user_journeys[0]).toHaveProperty("persona");
+    expect(handoff.user_journeys[0]).toHaveProperty("action");
+    expect(handoff.user_journeys[0]).not.toHaveProperty("benefit");
+    // applied_constraints (renamed from constraints, enriched with metadata)
+    expect(handoff.applied_constraints).toBeInstanceOf(Array);
+    expect(handoff.applied_constraints.length).toBeGreaterThan(0);
+    expect(handoff.applied_constraints[0]).toHaveProperty("constraint_id");
+    expect(handoff.applied_constraints[0]).toHaveProperty("perspective");
+    expect(handoff.applied_constraints[0]).toHaveProperty("severity");
+    expect(handoff.applied_constraints[0]).toHaveProperty("impact_if_ignored");
+    // success_criteria
     expect(handoff.success_criteria).toBeInstanceOf(Array);
     expect(handoff.success_criteria.length).toBeGreaterThan(0);
-    expect(handoff.assumptions).toBeInstanceOf(Array);
-    expect(handoff.assumptions.length).toBeGreaterThan(0);
+    // overrides_and_exceptions (renamed from assumptions)
+    expect(handoff.overrides_and_exceptions).toBeInstanceOf(Array);
+    expect(handoff.overrides_and_exceptions.length).toBeGreaterThan(0);
     expect(handoff.decide_later_items).toBeInstanceOf(Array);
     expect(handoff.decide_later_items.length).toBeGreaterThan(0);
-    expect(handoff.brownfield_repos).toBeInstanceOf(Array);
-    expect(handoff.interview_id).toBeTruthy();
+    // brownfield_sources (renamed from brownfield_repos)
+    expect(handoff.brownfield_sources).toBeInstanceOf(Array);
+    // out_of_scope (new)
+    expect(handoff.out_of_scope).toBeInstanceOf(Array);
+    expect(handoff.out_of_scope).toContain("b");
+    // unclassified_constraints (exhaustiveness guard)
+    expect(handoff.unclassified_constraints).toBeInstanceOf(Array);
+    expect(handoff.unclassified_constraints.length).toBe(0);
+    // interview_id removed, pm_id replaced by scope_id
+    expect(handoff).not.toHaveProperty("interview_id");
+    expect(handoff).not.toHaveProperty("pm_id");
     expect(handoff.created_at).toBeTruthy();
   });
 
-  it("extracts goal and user stories from PRD markdown when prd.md exists", () => {
+  it("extracts goal and user journeys from PRD markdown when prd.md exists", () => {
     const paths = setupValidated();
 
     // prd.rendered 이벤트 기���
@@ -139,18 +156,18 @@ describe("executeClose", () => {
     // goal은 Executive Summary 첫 문단에서 추출
     expect(handoff.goal).toContain("일본어 풀부킹 완화");
 
-    // user_stories는 User Journeys에서 persona 추출
-    expect(handoff.user_stories.length).toBe(2);
-    expect(handoff.user_stories[0].persona).toBe("유미");
-    expect(handoff.user_stories[0].action).toContain("정상 변경");
-    expect(handoff.user_stories[1].persona).toBe("다이치");
+    // user_journeys는 User Journeys에서 persona 추출
+    expect(handoff.user_journeys.length).toBe(2);
+    expect(handoff.user_journeys[0].persona).toBe("유미");
+    expect(handoff.user_journeys[0].action).toContain("정상 변경");
+    expect(handoff.user_journeys[1].persona).toBe("다이치");
 
     // success_criteria는 PRD Success Criteria 섹션에서 추출
     expect(handoff.success_criteria).toContain("일 풀부킹 알림 400회 이하");
     expect(handoff.success_criteria).toContain("저빈도 유저 취소율 5% 이하");
 
-    // brownfield_repos는 PRD Brownfield Sources에서 추출
-    expect(handoff.brownfield_repos.some((r: { name: string }) => r.name === "BookingService.java")).toBe(true);
+    // brownfield_sources는 PRD Brownfield Sources에서 추출
+    expect(handoff.brownfield_sources.some((r: { name: string }) => r.name === "BookingService.java")).toBe(true);
   });
 
   it("fails when not in validated state (draft)", () => {

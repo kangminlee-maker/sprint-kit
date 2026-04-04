@@ -1,5 +1,8 @@
 /**
  * Build a developer handoff PRD JSON from a PRD markdown file + scope state.
+ *
+ * Precondition: This function assumes a validated ScopeState where all
+ * constraints have final decisions (no pending clarify/modify-direction).
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -7,51 +10,79 @@ import type { ScopeState, ConstraintEntry } from "../kernel/types.js";
 
 // ─── Output Schema ───
 
-export interface HandoffUserStory {
+export interface HandoffUserJourney {
   persona: string;
   action: string;
-  benefit: string;
 }
 
-export interface HandoffBrownfieldRepo {
+export interface HandoffConstraint {
+  constraint_id: string;
+  perspective: string;
+  summary: string;
+  severity: string;
+  selected_option?: string;
+  impact_if_ignored: string;
+}
+
+export interface HandoffBrownfieldSource {
   name: string;
   path: string;
   desc: string;
 }
 
 export interface HandoffPrd {
-  pm_id: string;
-  product_name: string;
+  scope_id: string;
+  scope_title: string;
   goal: string;
-  user_stories: HandoffUserStory[];
-  constraints: string[];
+  user_journeys: HandoffUserJourney[];
+  applied_constraints: HandoffConstraint[];
   success_criteria: string[];
   decide_later_items: string[];
-  assumptions: string[];
-  interview_id: string;
-  brownfield_repos: HandoffBrownfieldRepo[];
+  overrides_and_exceptions: string[];
+  out_of_scope: string[];
+  brownfield_sources: HandoffBrownfieldSource[];
+  unclassified_constraints: string[];
   created_at: string;
 }
 
 // ─── Builder ───
 
-export function buildHandoffPrd(prdPath: string, state: ScopeState): HandoffPrd {
-  const sections = existsSync(prdPath)
+export function buildHandoffPrd(prdPath: string | null, state: ScopeState): HandoffPrd {
+  const sections = prdPath && existsSync(prdPath)
     ? parsePrdSections(readFileSync(prdPath, "utf-8"))
     : {};
-  const constraints = state.constraint_pool.constraints;
+
+  // Filter invalidated constraints once at entry
+  const active = state.constraint_pool.constraints.filter(
+    (c) => c.status !== "invalidated",
+  );
+
+  const appliedConstraints = extractAppliedConstraints(active);
+  const decideLaterItems = extractDecideLaterItems(active);
+  const overridesAndExceptions = extractOverridesAndExceptions(active);
+
+  // Exhaustiveness guard: find constraints not covered by any section
+  const coveredIds = new Set<string>();
+  for (const c of appliedConstraints) coveredIds.add(c.constraint_id);
+  for (const c of active.filter((x) => x.decision === "defer" && x.decision_owner === "builder")) coveredIds.add(c.constraint_id);
+  for (const c of active.filter((x) => x.decision === "override")) coveredIds.add(c.constraint_id);
+
+  const unclassified = active
+    .filter((c) => !coveredIds.has(c.constraint_id))
+    .map((c) => `[${c.constraint_id}] ${c.summary} (decision: ${c.decision ?? "none"})`);
 
   return {
-    pm_id: state.scope_id,
-    product_name: state.title,
+    scope_id: state.scope_id,
+    scope_title: state.title,
     goal: extractGoal(state, sections),
-    user_stories: extractUserStories(state, sections),
-    constraints: extractConstraints(constraints),
+    user_journeys: extractUserJourneys(state, sections),
+    applied_constraints: appliedConstraints,
     success_criteria: extractSuccessCriteria(state, sections),
-    decide_later_items: extractDecideLaterItems(constraints),
-    assumptions: extractAssumptions(constraints),
-    interview_id: state.scope_id,
-    brownfield_repos: extractBrownfieldRepos(state, constraints, sections),
+    decide_later_items: decideLaterItems,
+    overrides_and_exceptions: overridesAndExceptions,
+    out_of_scope: state.scope_boundaries?.out ?? [],
+    brownfield_sources: extractBrownfieldSources(state, active, sections),
+    unclassified_constraints: unclassified,
     created_at: new Date().toISOString(),
   };
 }
@@ -64,11 +95,15 @@ function parsePrdSections(md: string): Record<string, string> {
   let currentKey = "";
   let currentLines: string[] = [];
 
+  // Detect minimum heading level for resilience to PRD template changes
+  const minLevel = detectMinHeadingLevel(lines);
+  const sectionPattern = new RegExp(`^#{${minLevel}}\\s+(?:\\d+\\.\\s*)?(.+)$`);
+
   for (const line of lines) {
-    const h2Match = line.match(/^##\s+(?:\d+\.\s*)?(.+)$/);
-    if (h2Match) {
+    const match = line.match(sectionPattern);
+    if (match) {
       if (currentKey) sections[currentKey] = currentLines.join("\n").trim();
-      currentKey = normalizeKey(h2Match[1]);
+      currentKey = normalizeKey(match[1]);
       currentLines = [];
     } else {
       currentLines.push(line);
@@ -95,40 +130,46 @@ function extractGoal(state: ScopeState, sections: Record<string, string>): strin
   return state.description ?? state.title;
 }
 
-function extractUserStories(
+function extractUserJourneys(
   state: ScopeState,
   sections: Record<string, string>,
-): HandoffUserStory[] {
-  const stories: HandoffUserStory[] = [];
+): HandoffUserJourney[] {
+  const journeys: HandoffUserJourney[] = [];
 
-  const journeys = findSection(sections, ["user journeys"]);
-  if (journeys) {
-    const journeyBlocks = journeys.split(/^###\s+/m).filter(Boolean);
+  const journeySection = findSection(sections, ["user journeys"]);
+  if (journeySection) {
+    const journeyBlocks = journeySection.split(/^###\s+/m).filter(Boolean);
     for (const block of journeyBlocks) {
       const titleLine = block.split("\n")[0] ?? "";
-      const personaMatch = block.match(/\*\*Persona:\*\*\s*(.+?)(?:\n|$)/);
+      const personaMatch = block.match(/\*\*Persona:?\*\*[:\s]*(.+?)(?:\n|$)/);
       const persona = personaMatch
-        ? personaMatch[1].replace(/\(.+?\)/, "").trim()
+        ? personaMatch[1].replace(/\s*\(.+?\)\s*/g, "").trim() || "user"
         : "user";
       const action = titleLine.replace(/\(.*?\)/g, "").trim();
-      const benefit = state.direction ?? state.title;
-      if (action) stories.push({ persona, action, benefit });
+      if (action) journeys.push({ persona, action });
     }
   }
 
-  if (stories.length === 0 && state.scope_boundaries?.in) {
+  if (journeys.length === 0 && state.scope_boundaries?.in) {
     for (const item of state.scope_boundaries.in) {
-      stories.push({ persona: "user", action: item, benefit: state.direction ?? state.title });
+      journeys.push({ persona: "user", action: item });
     }
   }
 
-  return stories;
+  return journeys;
 }
 
-function extractConstraints(pool: ConstraintEntry[]): string[] {
+function extractAppliedConstraints(pool: ConstraintEntry[]): HandoffConstraint[] {
   return pool
-    .filter((c) => c.decision === "inject" && c.status !== "invalidated")
-    .map((c) => `[${c.constraint_id}] ${c.summary} (${c.selected_option ?? c.decision})`);
+    .filter((c) => c.decision === "inject")
+    .map((c) => ({
+      constraint_id: c.constraint_id,
+      perspective: c.perspective,
+      summary: c.summary,
+      severity: c.severity,
+      selected_option: c.selected_option,
+      impact_if_ignored: c.impact_if_ignored,
+    }));
 }
 
 function extractSuccessCriteria(
@@ -149,9 +190,7 @@ function extractSuccessCriteria(
     );
   }
 
-  return state.constraint_pool.constraints
-    .filter((c) => c.decision === "inject")
-    .map((c) => `${c.constraint_id}: ${c.summary}`);
+  return [];
 }
 
 function extractDecideLaterItems(pool: ConstraintEntry[]): string[] {
@@ -162,29 +201,25 @@ function extractDecideLaterItems(pool: ConstraintEntry[]): string[] {
   return items.length > 0 ? items : ["No deferred developer decisions"];
 }
 
-function extractAssumptions(pool: ConstraintEntry[]): string[] {
-  const assumptions: string[] = [];
+function extractOverridesAndExceptions(pool: ConstraintEntry[]): string[] {
+  const items: string[] = [];
 
   for (const c of pool.filter((c) => c.decision === "override")) {
-    assumptions.push(`[${c.constraint_id}] ${c.summary} — overridden: ${c.rationale ?? "no rationale"}`);
+    items.push(`[${c.constraint_id}] ${c.summary} — overridden: ${c.rationale ?? "no rationale"}`);
   }
 
-  for (const c of pool.filter((c) => c.requires_policy_change && c.evidence_status === "verified")) {
-    assumptions.push(`[${c.constraint_id}] Policy verified: ${c.evidence_note ?? c.summary}`);
-  }
-
-  return assumptions.length > 0 ? assumptions : ["No explicit assumptions recorded"];
+  return items.length > 0 ? items : ["No explicit overrides recorded"];
 }
 
-function extractBrownfieldRepos(
+function extractBrownfieldSources(
   state: ScopeState,
   pool: ConstraintEntry[],
   sections: Record<string, string>,
-): HandoffBrownfieldRepo[] {
-  const repos: HandoffBrownfieldRepo[] = [];
+): HandoffBrownfieldSource[] {
+  const sources: HandoffBrownfieldSource[] = [];
   const seen = new Set<string>();
 
-  // PRD Brownfield Sources 섹션
+  // PRD Brownfield Sources section
   const bf = findSection(sections, ["brownfield sources"]);
   if (bf) {
     const items = bf.match(/^[-*]\s+.+$/gm);
@@ -193,7 +228,7 @@ function extractBrownfieldRepos(
         const text = line.replace(/^[-*]\s+/, "").trim();
         if (!seen.has(text)) {
           seen.add(text);
-          repos.push({ name: text.split(/[:/]/)[0]?.trim() ?? text, path: text, desc: "From PRD Brownfield Sources" });
+          sources.push({ name: text.split(/[:/]/)[0]?.trim() ?? text, path: text, desc: "From PRD Brownfield Sources" });
         }
       }
     }
@@ -204,7 +239,7 @@ function extractBrownfieldRepos(
     for (const src of state.grounding_sources) {
       if (seen.has(src.path_or_url)) continue;
       seen.add(src.path_or_url);
-      repos.push({ name: extractName(src.path_or_url), path: src.path_or_url, desc: `Scanned source (${src.type})` });
+      sources.push({ name: extractName(src.path_or_url), path: src.path_or_url, desc: `Scanned source (${src.type})` });
     }
   }
 
@@ -213,11 +248,11 @@ function extractBrownfieldRepos(
     for (const ref of c.source_refs) {
       if (seen.has(ref.source)) continue;
       seen.add(ref.source);
-      repos.push({ name: extractName(ref.source), path: ref.source, desc: `${c.constraint_id}: ${ref.detail}` });
+      sources.push({ name: extractName(ref.source), path: ref.source, desc: `${c.constraint_id}: ${ref.detail}` });
     }
   }
 
-  return repos;
+  return sources;
 }
 
 // ─── Helpers ───
@@ -231,7 +266,17 @@ function findSection(sections: Record<string, string>, candidates: string[]): st
   return undefined;
 }
 
+function detectMinHeadingLevel(lines: string[]): number {
+  let min = 6;
+  for (const line of lines) {
+    const m = line.match(/^(#{2,6})\s/);
+    if (m && m[1].length < min) min = m[1].length;
+  }
+  return min <= 6 ? min : 2;
+}
+
 function extractName(pathOrUrl: string): string {
+  if (!pathOrUrl) return "unknown";
   const segments = pathOrUrl.split("/").filter(Boolean);
-  return segments[segments.length - 1] ?? pathOrUrl;
+  return segments[segments.length - 1] ?? "unknown";
 }
