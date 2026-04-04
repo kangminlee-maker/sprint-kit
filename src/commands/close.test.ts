@@ -82,9 +82,7 @@ describe("executeClose", () => {
     expect(handoff.success_criteria.length).toBeGreaterThan(0);
     // overrides_and_exceptions (renamed from assumptions)
     expect(handoff.overrides_and_exceptions).toBeInstanceOf(Array);
-    expect(handoff.overrides_and_exceptions.length).toBeGreaterThan(0);
     expect(handoff.decide_later_items).toBeInstanceOf(Array);
-    expect(handoff.decide_later_items.length).toBeGreaterThan(0);
     // brownfield_sources (renamed from brownfield_repos)
     expect(handoff.brownfield_sources).toBeInstanceOf(Array);
     // out_of_scope (new)
@@ -102,7 +100,7 @@ describe("executeClose", () => {
   it("extracts goal and user journeys from PRD markdown when prd.md exists", () => {
     const paths = setupValidated();
 
-    // prd.rendered 이벤트 기���
+    // prd.rendered 이벤트 기록
     appendScopeEvent(paths, {
       type: "prd.rendered",
       actor: "agent",

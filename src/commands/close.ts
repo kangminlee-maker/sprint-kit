@@ -61,10 +61,9 @@ export function executeClose(paths: ScopePaths): CloseOutput {
   try {
     // prd.rendered 이벤트에서 실제 PRD 파일 경로를 읽음
     const prdEvent = [...events].reverse().find((e) => e.type === "prd.rendered");
-    let prdRelPath: string | undefined;
-    if (prdEvent && prdEvent.type === "prd.rendered") {
-      prdRelPath = (prdEvent.payload as PrdRenderedPayload).prd_path;
-    }
+    const prdRelPath = prdEvent
+      ? (prdEvent.payload as PrdRenderedPayload).prd_path
+      : undefined;
     const prdPath = prdRelPath ? join(paths.base, prdRelPath) : undefined;
     const handoff = buildHandoffPrd(prdPath ?? null, state);
     if (!existsSync(paths.build)) mkdirSync(paths.build, { recursive: true });

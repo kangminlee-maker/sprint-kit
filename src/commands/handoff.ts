@@ -138,7 +138,10 @@ function extractUserJourneys(
 
   const journeySection = findSection(sections, ["user journeys"]);
   if (journeySection) {
-    const journeyBlocks = journeySection.split(/^###\s+/m).filter(Boolean);
+    // Split on one level below the section heading (e.g., ### if section is ##)
+    const subLevel = detectMinHeadingLevel(journeySection.split("\n"));
+    const subPattern = new RegExp(`^#{${subLevel}}\\s+`, "m");
+    const journeyBlocks = journeySection.split(subPattern).filter(Boolean);
     for (const block of journeyBlocks) {
       const titleLine = block.split("\n")[0] ?? "";
       const personaMatch = block.match(/\*\*Persona:?\*\*[:\s]*(.+?)(?:\n|$)/);
@@ -198,7 +201,7 @@ function extractDecideLaterItems(pool: ConstraintEntry[]): string[] {
     .filter((c) => c.decision === "defer" && c.decision_owner === "builder")
     .map((c) => `[${c.constraint_id}] ${c.summary} — ${c.rationale ?? "deferred"}`);
 
-  return items.length > 0 ? items : ["No deferred developer decisions"];
+  return items;
 }
 
 function extractOverridesAndExceptions(pool: ConstraintEntry[]): string[] {
@@ -208,7 +211,7 @@ function extractOverridesAndExceptions(pool: ConstraintEntry[]): string[] {
     items.push(`[${c.constraint_id}] ${c.summary} — overridden: ${c.rationale ?? "no rationale"}`);
   }
 
-  return items.length > 0 ? items : ["No explicit overrides recorded"];
+  return items;
 }
 
 function extractBrownfieldSources(
