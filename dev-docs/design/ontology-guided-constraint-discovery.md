@@ -2,6 +2,7 @@
 
 > 6-7차 Panel Review (2026-03-22) 결과를 반영한 구현 설계.
 > 선행 문서: `deep-analysis-research-log.md`
+> 후속 경계 설계: `ontology-selection-runtime-boundary.md`
 
 ## 1. 목적
 

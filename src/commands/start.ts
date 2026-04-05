@@ -41,11 +41,10 @@ import { scanTarball, resolveGitHubToken } from "../scanners/scan-tarball.js";
 import { sourceKey, toGroundingSource, isScanError, isScanSkipped, type SourceEntry, type ScanResult, type ScanError, type ScanSkipped } from "../scanners/types.js";
 import { buildBrownfield } from "../scanners/brownfield-builder.js";
 import { parseBrief } from "../parsers/brief-parser.js";
-import { TERMINAL_STATES } from "../kernel/types.js";
+import { TERMINAL_STATES, type ContentRole } from "../kernel/types.js";
+import { getLogger } from "../logger.js";
 import { buildOntologyIndex } from "../scanners/ontology-index.js";
-import { queryOntology } from "../scanners/ontology-query.js";
-import { resolveCodeLocations } from "../scanners/ontology-resolve.js";
-import { collectRelevantChunks } from "../scanners/code-chunk-collector.js";
+import { selectOntologyBundle, type OntologyBundleSelection, type ResolvedOntologyFiles } from "../scanners/ontology-bundle.js";
 
 // ─── Input ───
 
@@ -433,12 +432,9 @@ async function executeGrounding(
     const outcome = settled[i];
 
     if (outcome.status === "rejected") {
-      scanErrors.push({
-        source: src,
-        error_type: "io",
-        message: String(outcome.reason),
-      });
-      progress(`${label} 스캔 실패: ${outcome.reason}`);
+      const scanError = toRejectedScanError(src, outcome.reason);
+      scanErrors.push(scanError);
+      progress(`${label} 스캔 실패: ${scanError.message}`);
     } else {
       const result = outcome.value;
       if (isScanError(result)) {
@@ -559,83 +555,28 @@ async function executeGrounding(
 
   progress(`소스 스캔 완료 (파일 ${totalFiles}개)`);
 
-  // ── Ontology-Guided Code Selection (optional) ──
-  // 온톨로지 소스가 스캔되었으면, 6관점 코드 청크를 사전 생성한다.
-  // 이 단계는 grounding의 선택적 보강이며, 실패해도 grounding은 성공한다.
-  // add-dir: 로컬 파일 직접 읽기. tarball: GitHub API로 YAML 파일 fetch.
+  // ── Ontology bundle preparation (optional) ──
   try {
-    const ontologySource = scanResults.find(
-      (r) => r.source.type === "add-dir" && (r.source as { path: string }).path?.includes("ontology"),
-    ) ?? scanResults.find(
-      (r) => r.source.type === "github-tarball" && (r.source as { url: string }).url?.includes("ontology"),
-    );
+    const ontologyBundle = await prepareOntologyBundle(scanResults);
+    if (ontologyBundle) {
+      writeFileSync(
+        join(paths.build, "ontology-manifest.json"),
+        JSON.stringify(ontologyBundle.manifest, null, 2) + "\n",
+        "utf-8",
+      );
 
-    // YAML 파일 읽기 — add-dir은 로컬, tarball은 GitHub API
-    const yamlNames = ["code-mapping.yaml", "behavior.yaml", "model.yaml"];
-    let yamlContents: string[] = ["", "", ""];
-
-    if (ontologySource?.source.type === "add-dir") {
-      const ontoDir = (ontologySource.source as { path: string }).path;
-      yamlContents = yamlNames.map((name) => {
-        const candidates = ontologySource.files.filter((f) => f.path.endsWith(name));
-        if (candidates.length === 0) return "";
-        try { return readFileSync(join(ontoDir, candidates[0].path), "utf-8"); } catch { return ""; }
-      });
-    } else if (ontologySource?.source.type === "github-tarball") {
-      const url = (ontologySource.source as { url: string }).url;
-      const repoMatch = url.match(/github\.com\/([^/]+\/[^/]+)/);
-      if (repoMatch) {
-        const repo = repoMatch[1].replace(/\.git$/, "");
-        const token = resolveGitHubToken();
-        const headers: Record<string, string> = { Accept: "application/vnd.github.raw", "User-Agent": "sprint-kit" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
-        yamlContents = await Promise.all(yamlNames.map(async (name) => {
-          try {
-            const resp = await fetch(`https://api.github.com/repos/${repo}/contents/${name}`, { headers });
-            return resp.ok ? await resp.text() : "";
-          } catch { return ""; }
-        }));
+      for (const warning of ontologyBundle.manifest.warnings) {
+        getLogger().warn(warning);
       }
-    }
 
-    const [glossaryYaml, actionsYaml, transitionsYaml] = yamlContents;
-    if (ontologySource && (glossaryYaml || actionsYaml || transitionsYaml)) {
-      const index = buildOntologyIndex(glossaryYaml, actionsYaml, transitionsYaml);
-      const mergedFiles = scanResults.flatMap((r) => r.files);
-      const mergedDeps = scanResults.flatMap((r) => r.dependency_graph);
-      const mergedApis = scanResults.flatMap((r) => r.api_patterns);
-      const mergedSchemas = scanResults.flatMap((r) => r.schema_patterns);
-      const mergedConfigs = scanResults.flatMap((r) => r.config_patterns);
-
-      const keywords = [...index.glossary.values()].flatMap((g) => [
-        g.canonical, g.meaning, ...g.legacy_aliases,
-      ]).filter(Boolean);
-
-      const queryResult = queryOntology(index, keywords);
-      if (queryResult.matched_entities.length > 0) {
-        const resolved = resolveCodeLocations(queryResult.code_locations, mergedFiles);
-        const chunks = collectRelevantChunks(resolved, queryResult, {
-          source: ontologySource.source,
-          scanned_at: ontologySource.scanned_at,
-          files: mergedFiles,
-          content_hashes: {},
-          dependency_graph: mergedDeps,
-          api_patterns: mergedApis,
-          schema_patterns: mergedSchemas,
-          config_patterns: mergedConfigs,
-          doc_structure: [],
-        }, keywords);
-
-        const chunksPath = join(paths.build, "relevant-chunks.json");
-        writeFileSync(chunksPath, JSON.stringify(chunks, null, 2) + "\n", "utf-8");
-        progress(`온톨로지 6관점 코드 선별 완료 (${chunks.total_chunks}건, ${queryResult.matched_entities.length}개 엔티티 매칭)`);
+      if (!ontologyBundle.index) {
+        progress("온톨로지 bundle 준비 실패 — 에이전트 직접 탐색으로 진행");
       } else {
-        progress("온톨로지 매칭 0건 — 에이전트 직접 탐색으로 진행");
+        progress(`온톨로지 bundle 준비 완료 (glossary ${ontologyBundle.index.glossary.size}, actions ${ontologyBundle.index.actions.size})`);
       }
     }
   } catch {
-    // 온톨로지 코드 선별 실패는 무시 — graceful degradation
+    // Ontology bundle preparation failure is optional — grounding still succeeds
   }
 
   return {
@@ -681,6 +622,177 @@ function writeEtagCache(projectRoot: string, cache: EtagCacheData): void {
 
 // ─── Helpers ───
 
+function toRejectedScanError(source: SourceEntry, reason: unknown): ScanError {
+  if (reason instanceof Error) {
+    const nodeError = reason as NodeJS.ErrnoException;
+    return {
+      source,
+      error_type: nodeError.code === "ENOENT" ? "not_found" : "io",
+      message: reason.message,
+    };
+  }
+
+  return {
+    source,
+    error_type: "io",
+    message: String(reason),
+  };
+}
+
+interface OntologyManifest {
+  version: 1;
+  generated_at: string;
+  selection_mode: OntologyBundleSelection["mode"];
+  source: {
+    key: string;
+    type: SourceEntry["type"];
+    content_role?: ContentRole;
+    path?: string;
+    url?: string;
+    ref?: string;
+  };
+  files?: Partial<ResolvedOntologyFiles>;
+  status: "ready" | "missing_files" | "invalid";
+  index_summary?: {
+    glossary_entries: number;
+    actions: number;
+    transitions: number;
+  };
+  warnings: string[];
+}
+
+interface PreparedOntologyBundle {
+  selection: OntologyBundleSelection;
+  manifest: OntologyManifest;
+  index?: ReturnType<typeof buildOntologyIndex>;
+}
+
+async function prepareOntologyBundle(
+  scanResults: ScanResult[],
+): Promise<PreparedOntologyBundle | null> {
+  const selection = selectOntologyBundle(scanResults);
+  if (!selection) {
+    return null;
+  }
+
+  const manifest: OntologyManifest = {
+    version: 1,
+    generated_at: new Date().toISOString(),
+    selection_mode: selection.mode,
+    source: toOntologyManifestSource(selection.scanResult.source),
+    ...(selection.files ? { files: selection.files } : {}),
+    status: selection.status,
+    warnings: [...selection.warnings],
+  };
+
+  if (selection.status !== "ready" || !selection.files) {
+    return { selection, manifest };
+  }
+
+  try {
+    const yaml = await readOntologyYaml(selection.scanResult.source, selection.files);
+    const index = buildOntologyIndex(yaml.code_mapping, yaml.behavior, yaml.model);
+    manifest.index_summary = {
+      glossary_entries: index.glossary.size,
+      actions: index.actions.size,
+      transitions: Array.from(index.transitions.values()).reduce((count, entries) => count + entries.length, 0),
+    };
+    return { selection, manifest, index };
+  } catch (error) {
+    return {
+      selection,
+      manifest: {
+        ...manifest,
+        status: "invalid",
+        warnings: [
+          ...manifest.warnings,
+          `[ontology] ontology bundle 준비 실패: ${error instanceof Error ? error.message : String(error)}`,
+        ],
+      },
+    };
+  }
+}
+
+function toOntologyManifestSource(source: SourceEntry): OntologyManifest["source"] {
+  switch (source.type) {
+    case "add-dir":
+      return {
+        key: sourceKey(source),
+        type: source.type,
+        content_role: source.content_role,
+        path: source.path,
+      };
+    case "github-tarball":
+      return {
+        key: sourceKey(source),
+        type: source.type,
+        content_role: source.content_role,
+        url: source.url,
+        ref: source.ref ?? "HEAD",
+      };
+    default:
+      return {
+        key: sourceKey(source),
+        type: source.type,
+      };
+  }
+}
+
+async function readOntologyYaml(
+  source: SourceEntry,
+  files: ResolvedOntologyFiles,
+): Promise<ResolvedOntologyFiles> {
+  switch (source.type) {
+    case "add-dir":
+      return {
+        code_mapping: readFileSync(join(source.path, files.code_mapping), "utf-8"),
+        behavior: readFileSync(join(source.path, files.behavior), "utf-8"),
+        model: readFileSync(join(source.path, files.model), "utf-8"),
+      };
+    case "github-tarball": {
+      const repoPath = extractGitHubRepoPath(source.url);
+      return {
+        code_mapping: await fetchGitHubText(repoPath, files.code_mapping, source.ref),
+        behavior: await fetchGitHubText(repoPath, files.behavior, source.ref),
+        model: await fetchGitHubText(repoPath, files.model, source.ref),
+      };
+    }
+    default:
+      throw new Error(`Source type ${source.type} does not support ontology YAML loading`);
+  }
+}
+
+function extractGitHubRepoPath(url: string): string {
+  const match = url.match(/github\.com\/([^/]+\/[^/]+)/);
+  if (!match) {
+    throw new Error(`Invalid GitHub URL: ${url}`);
+  }
+  return match[1].replace(/\.git$/, "");
+}
+
+async function fetchGitHubText(repoPath: string, filePath: string, ref?: string): Promise<string> {
+  const token = resolveGitHubToken();
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.raw",
+    "User-Agent": "sprint-kit",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const url = new URL(`https://api.github.com/repos/${repoPath}/contents/${filePath}`);
+  if (ref) {
+    url.searchParams.set("ref", ref);
+  }
+
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
+    throw new Error(`GitHub contents fetch failed for ${filePath}: HTTP ${response.status}`);
+  }
+
+  return await response.text();
+}
+
 /**
  * Extract project name from scopeId (e.g. "free-trial-20260316-001" → "free-trial").
  */
@@ -696,7 +808,11 @@ function toBriefSourceEntry(entry: SourceEntry): BriefSourceEntry {
     case "add-dir":
       return { type: "add-dir", identifier: entry.path, description: entry.description };
     case "github-tarball":
-      return { type: "github-tarball", identifier: entry.url, description: entry.description };
+      return {
+        type: "github-tarball",
+        identifier: entry.ref ? `${entry.url}#${entry.ref}` : entry.url,
+        description: entry.description,
+      };
     case "figma-mcp":
       return { type: "figma-mcp", identifier: entry.file_key, description: entry.description };
     case "obsidian-vault":

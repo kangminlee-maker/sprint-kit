@@ -79,7 +79,7 @@ export function toGroundingSource(entry: SourceEntry): { type: SourceType; path_
     case "add-dir":
       return { type: "add-dir", path_or_url: entry.path };
     case "github-tarball":
-      return { type: "github-tarball", path_or_url: entry.url };
+      return { type: "github-tarball", path_or_url: entry.ref ? `${entry.url}#${entry.ref}` : entry.url };
     case "figma-mcp":
       return { type: "figma-mcp", path_or_url: entry.file_key };
     case "obsidian-vault":

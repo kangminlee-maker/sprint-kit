@@ -91,9 +91,11 @@ function extractRefs(protocolDir: string): ProtocolRef[] {
     const lines = content.split("\n");
 
     let inCodeBlock = false;
+    let inAppendScopeEventCall = false;
     let currentEventType: string | null = null;
     let inPayloadBlock = false;
     let braceDepth = 0;
+    let parenDepth = 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -103,9 +105,11 @@ function extractRefs(protocolDir: string): ProtocolRef[] {
       if (line.trimStart().startsWith("```")) {
         if (inCodeBlock) {
           inCodeBlock = false;
+          inAppendScopeEventCall = false;
           currentEventType = null;
           inPayloadBlock = false;
           braceDepth = 0;
+          parenDepth = 0;
         } else {
           inCodeBlock = line.includes("typescript") || line.includes("ts");
         }
@@ -113,6 +117,17 @@ function extractRefs(protocolDir: string): ProtocolRef[] {
       }
 
       if (inCodeBlock) {
+        if (!inAppendScopeEventCall && line.includes("appendScopeEvent(")) {
+          inAppendScopeEventCall = true;
+          parenDepth = countChar(line, "(") - countChar(line, ")");
+        } else if (inAppendScopeEventCall) {
+          parenDepth += countChar(line, "(") - countChar(line, ")");
+        }
+
+        if (!inAppendScopeEventCall) {
+          continue;
+        }
+
         // Rule A: Extract event type from `type: "xxx"` pattern
         const eventMatch = line.match(/type:\s*"([^"]+)"/);
         if (eventMatch) {
@@ -151,6 +166,14 @@ function extractRefs(protocolDir: string): ProtocolRef[] {
             inPayloadBlock = false;
           }
         }
+
+        if (parenDepth <= 0) {
+          inAppendScopeEventCall = false;
+          currentEventType = null;
+          inPayloadBlock = false;
+          braceDepth = 0;
+          parenDepth = 0;
+        }
       } else {
         // Rule C: Extract inline code references (backtick)
         const inlineMatches = line.matchAll(/`([A-Z]\w+)`/g);
@@ -167,6 +190,10 @@ function extractRefs(protocolDir: string): ProtocolRef[] {
   }
 
   return refs;
+}
+
+function countChar(line: string, char: string): number {
+  return (line.match(new RegExp(`\\${char}`, "g")) || []).length;
 }
 
 // ─── Validate ───

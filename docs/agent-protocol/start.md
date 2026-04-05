@@ -322,6 +322,23 @@ Grounding 단계는 **방향 수준**입니다. "이 방향으로 가면 어떤 
 
 온톨로지 소스(glossary/actions/transitions YAML)가 `default_sources`에 포함된 경우, grounding 완료 후 **6관점 코드 선별**을 수행하여 brief와 관련된 코드를 사전 분류합니다.
 
+권장 선언 방식:
+
+```yaml
+default_sources:
+  - type: add-dir
+    path: ./domain-assets
+    content_role: ontology_bundle
+    ontology_files:
+      code_mapping: ontology/code-mapping.yaml
+      behavior: ontology/behavior.yaml
+      model: ontology/model.yaml
+```
+
+- `content_role: ontology_bundle`가 명시된 source를 우선 사용합니다.
+- `ontology_files`를 생략하면 source 내부에서 exact filename을 탐색합니다.
+- explicit declaration이 없으면 ontology-guided selection 준비를 건너뛰고 기존 탐색으로 진행합니다.
+
 #### 3.1. 작동 조건
 
 - 온톨로지 소스가 스캔되었고 `OntologyIndex`가 구축된 경우에만 실행

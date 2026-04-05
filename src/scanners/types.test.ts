@@ -9,6 +9,10 @@ describe("sourceKey", () => {
     expect(sourceKey({ type: "github-tarball", url: "https://github.com/org/repo" }))
       .toBe("github-tarball:https://github.com/org/repo");
   });
+  it("github-tarball with ref", () => {
+    expect(sourceKey({ type: "github-tarball", url: "https://github.com/org/repo", ref: "main" }))
+      .toBe("github-tarball:https://github.com/org/repo#main");
+  });
   it("figma-mcp", () => {
     expect(sourceKey({ type: "figma-mcp", file_key: "abc" })).toBe("figma-mcp:abc");
   });
@@ -30,6 +34,10 @@ describe("toGroundingSource", () => {
   it("normalizes github-tarball", () => {
     expect(toGroundingSource({ type: "github-tarball", url: "https://github.com/org/repo" }))
       .toEqual({ type: "github-tarball", path_or_url: "https://github.com/org/repo" });
+  });
+  it("normalizes github-tarball with ref", () => {
+    expect(toGroundingSource({ type: "github-tarball", url: "https://github.com/org/repo", ref: "main" }))
+      .toEqual({ type: "github-tarball", path_or_url: "https://github.com/org/repo#main" });
   });
   it("normalizes figma-mcp", () => {
     expect(toGroundingSource({ type: "figma-mcp", file_key: "abc" }))

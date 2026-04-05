@@ -7,6 +7,7 @@ import { readEvents } from "../kernel/event-store.js";
 import { reduce } from "../kernel/reducer.js";
 import { createScope } from "../kernel/scope-manager.js";
 import { appendScopeEvent } from "../kernel/event-pipeline.js";
+import { setLogger, silentLogger } from "../logger.js";
 
 let projectDir: string;
 let scopesDir: string;
@@ -15,6 +16,7 @@ beforeEach(() => {
   projectDir = mkdtempSync(join(tmpdir(), "sprint-start-"));
   scopesDir = join(projectDir, "scopes");
   mkdirSync(scopesDir, { recursive: true });
+  setLogger(silentLogger);
 });
 
 afterEach(() => {
@@ -132,8 +134,20 @@ describe("executeStart", () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
 
-    // One success, one empty (nonexistent path returns empty, not error)
-    expect(result.scanResults).toHaveLength(2);
+    expect(result.scanResults).toHaveLength(1);
+    expect(result.scanErrors).toHaveLength(1);
+    expect(result.scanErrors[0].error_type).toBe("not_found");
+    expect(result.scanErrors[0].message).toContain("/nonexistent/path");
+
+    const events = readEvents(result.paths.events);
+    const groundingCompleted = events.find((event) => event.type === "grounding.completed");
+    expect(groundingCompleted).toBeDefined();
+    const failedSources = (groundingCompleted?.payload as {
+      failed_sources?: Array<{ source_key: string }>;
+    }).failed_sources;
+    expect(failedSources).toEqual([
+      expect.objectContaining({ source_key: "add-dir:/nonexistent/path" }),
+    ]);
   });
 
   it("calls onProgress callback", async () => {
@@ -466,5 +480,90 @@ describe("ScanSkipped integration (ETag cache hit)", () => {
       .toBe("cached-hash-abc");
 
     scanTarballSpy.mockRestore();
+  });
+});
+
+describe("executeStart — ontology bundle preparation", () => {
+  it("writes ontology-manifest.json for explicitly declared ontology bundle sources", async () => {
+    const appDir = join(projectDir, "app");
+    mkdirSync(appDir, { recursive: true });
+    writeFileSync(join(appDir, "LessonService.ts"), "export class LessonService {}");
+
+    const bundleDir = join(projectDir, "domain-bundle");
+    mkdirSync(join(bundleDir, "config", "domain"), { recursive: true });
+    writeFileSync(
+      join(bundleDir, "config", "domain", "code-mapping.yaml"),
+      `version: "1.0"\nglossary:\n  - canonical: Lesson\n    meaning: "수업"\n    legacy_aliases: [Lecture]\n    code_entity: LessonService\n`,
+    );
+    writeFileSync(
+      join(bundleDir, "config", "domain", "behavior.yaml"),
+      `version: "1.0"\nactions:\n  - id: LES-1\n    name: CreateLesson\n    display_name: "수업 생성"\n    domain: lesson\n    target_entities: [Lesson]\n    source_code: "LessonService.create()"\n`,
+    );
+    writeFileSync(
+      join(bundleDir, "config", "domain", "model.yaml"),
+      `version: "1.0"\nentities:\n  - name: Lesson\n    state_fields:\n      - field_name: status\n        transitions:\n          - id: LES-T1\n            from: null\n            to: CREATED\n            trigger: "수업 생성"\n            source_code: "LessonService.create()"\n`,
+    );
+
+    writeFileSync(
+      join(projectDir, ".sprint-kit.yaml"),
+      `default_sources:\n` +
+      `  - type: add-dir\n    path: ${appDir}\n` +
+      `  - type: add-dir\n    path: ${bundleDir}\n    content_role: ontology_bundle\n    ontology_files:\n      code_mapping: config/domain/code-mapping.yaml\n      behavior: config/domain/behavior.yaml\n      model: config/domain/model.yaml\n`,
+    );
+
+    const result = await executeStart(makeInput({ rawInput: "수업 생성 규칙 정리" }));
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const manifest = JSON.parse(readFileSync(join(result.paths.build, "ontology-manifest.json"), "utf-8"));
+    expect(manifest.selection_mode).toBe("explicit");
+    expect(manifest.status).toBe("ready");
+    expect(manifest.source.content_role).toBe("ontology_bundle");
+    expect(manifest.files).toEqual({
+      code_mapping: "config/domain/code-mapping.yaml",
+      behavior: "config/domain/behavior.yaml",
+      model: "config/domain/model.yaml",
+    });
+    expect(existsSync(join(result.paths.build, "relevant-chunks.json"))).toBe(false);
+  });
+
+  it("skips ontology bundle preparation when no explicit ontology source is declared", async () => {
+    const warnings: string[] = [];
+    setLogger({
+      debug: () => {},
+      info: () => {},
+      warn: (message) => { warnings.push(message); },
+      error: () => {},
+    });
+
+    const appDir = join(projectDir, "app");
+    mkdirSync(appDir, { recursive: true });
+    writeFileSync(join(appDir, "LessonService.ts"), "export class LessonService {}");
+
+    const legacyOntologyDir = join(projectDir, "legacy-ontology-source");
+    mkdirSync(legacyOntologyDir, { recursive: true });
+    writeFileSync(
+      join(legacyOntologyDir, "code-mapping.yaml"),
+      `version: "1.0"\nglossary:\n  - canonical: Lesson\n    meaning: "수업"\n`,
+    );
+    writeFileSync(join(legacyOntologyDir, "behavior.yaml"), `version: "1.0"\nactions: []\n`);
+    writeFileSync(join(legacyOntologyDir, "model.yaml"), `version: "1.0"\nentities: []\n`);
+
+    writeFileSync(
+      join(projectDir, ".sprint-kit.yaml"),
+      `default_sources:\n` +
+      `  - type: add-dir\n    path: ${appDir}\n` +
+      `  - type: add-dir\n    path: ${legacyOntologyDir}\n`,
+    );
+
+    const result = await executeStart(makeInput({ rawInput: "수업 생성 규칙 정리" }));
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(warnings).toEqual([]);
+    expect(existsSync(join(result.paths.build, "ontology-manifest.json"))).toBe(false);
+    expect(existsSync(join(result.paths.build, "relevant-chunks.json"))).toBe(false);
   });
 });

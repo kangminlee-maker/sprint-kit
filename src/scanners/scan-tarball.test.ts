@@ -27,8 +27,8 @@ import type { ScanResult, ScanError, ScanSkipped, SourceEntry } from "./types.js
 
 const mockedExecSync = vi.mocked(execSync);
 
-function makeSource(url: string): SourceEntry & { type: "github-tarball" } {
-  return { type: "github-tarball", url };
+function makeSource(url: string, overrides: Partial<SourceEntry & { type: "github-tarball" }> = {}): SourceEntry & { type: "github-tarball" } {
+  return { type: "github-tarball", url, ...overrides };
 }
 
 // Helper: create a mock Response
@@ -225,6 +225,22 @@ describe("scanTarball", () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "https://api.github.com/repos/acme/repo/tarball/HEAD",
+      expect.any(Object),
+    );
+  });
+
+  it("uses explicit ref when provided", async () => {
+    const source = makeSource("https://github.com/acme/repo", { ref: "release/2026-04" });
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mockResponse(200, new ArrayBuffer(8)),
+    );
+
+    const result = await scanTarball(source);
+    expect(isScanError(result)).toBe(false);
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://api.github.com/repos/acme/repo/tarball/release%2F2026-04",
       expect.any(Object),
     );
   });

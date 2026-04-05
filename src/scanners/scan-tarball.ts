@@ -61,6 +61,7 @@ export async function scanTarball(
       Accept: "application/vnd.github+json",
       "User-Agent": "sprint-kit",
     };
+    const tarballRef = source.ref ?? "HEAD";
     const token = resolveGitHubToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -73,7 +74,7 @@ export async function scanTarball(
     let response: Response;
     try {
       response = await fetch(
-        `https://api.github.com/repos/${repoPath}/tarball/HEAD`,
+        `https://api.github.com/repos/${repoPath}/tarball/${encodeURIComponent(tarballRef)}`,
         {
           headers,
           signal: AbortSignal.timeout(120_000),

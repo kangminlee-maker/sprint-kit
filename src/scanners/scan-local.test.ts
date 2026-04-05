@@ -31,10 +31,9 @@ describe("scanLocal", () => {
     expect(result.dependency_graph).toHaveLength(1);
   });
 
-  it("returns empty for non-existent path", () => {
-    const result = scanLocal({ type: "add-dir", path: join(TMP, "nope") });
-    expect(result.files).toEqual([]);
-    expect(result.dependency_graph).toEqual([]);
+  it("throws for non-existent path", () => {
+    expect(() => scanLocal({ type: "add-dir", path: join(TMP, "nope") }))
+      .toThrow("Local source not found");
   });
 
   it("excludes .git and node_modules", () => {
