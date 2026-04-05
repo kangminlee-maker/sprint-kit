@@ -64,7 +64,7 @@ export function buildHandoffPrd(prdPath: string | null, state: ScopeState): Hand
   // Exhaustiveness guard: find constraints not covered by any section
   const coveredIds = new Set<string>();
   for (const c of appliedConstraints) coveredIds.add(c.constraint_id);
-  for (const c of active.filter((x) => x.decision === "defer" && x.decision_owner === "builder")) coveredIds.add(c.constraint_id);
+  for (const c of active.filter(isDeferredConstraint)) coveredIds.add(c.constraint_id);
   for (const c of active.filter((x) => x.decision === "override")) coveredIds.add(c.constraint_id);
 
   const unclassified = active
@@ -203,7 +203,7 @@ function extractSuccessCriteria(
 
 function extractDecideLaterItems(pool: ConstraintEntry[]): string[] {
   const items = pool
-    .filter((c) => c.decision === "defer" && c.decision_owner === "builder")
+    .filter(isDeferredConstraint)
     .map((c) => `[${c.constraint_id}] ${c.summary} — ${c.rationale ?? "deferred"}`);
 
   return items;
@@ -289,4 +289,8 @@ function extractName(pathOrUrl: string): string {
   if (!pathOrUrl) return "unknown";
   const segments = pathOrUrl.split("/").filter(Boolean);
   return segments[segments.length - 1] ?? "unknown";
+}
+
+function isDeferredConstraint(constraint: ConstraintEntry): boolean {
+  return constraint.decision === "defer";
 }
