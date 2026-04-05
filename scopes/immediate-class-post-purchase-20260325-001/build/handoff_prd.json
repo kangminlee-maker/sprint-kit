@@ -1,0 +1,175 @@
+{
+  "scope_id": "immediate-class-post-purchase-20260325-001",
+  "scope_title": "수강권 구매 직후 수업 예약을 유도하여 환불률을 낮춘다. 현재 전체 구매자의 8%가 수업을 한 번도 듣지 않고 환불하고 있다. 수업을 1회라도 수강한 사용자는 환불 가능성이 크게 낮아진다는 가설에 기반하여, 구매 완료 시점에 즉시 수업 예약을 강하게 권유하는 경험을 만든다.",
+  "goal": "Maximize first-class booking rate at purchase completion. Reduce 0-class refund rate from 8% to 2-3% via completion screen with celebration, simplified booking, and one-time incentive.",
+  "user_journeys": [
+    {
+      "persona": "Ji-yeon, 28, marketing professional. Purchased a 10-class count-based ticket on a weekday evening. First-time PODO Speaking user with no booking history. Motivated to start quickly but uncertain which level to pick.",
+      "action": "Journey 1 — Happy Path: Count-Based Plan User"
+    },
+    {
+      "persona": "Min-jun, 35, returning user. Renewed his unlimited subscription after a 3-month break. Has booking history and a known level from previous sessions.",
+      "action": "Journey 2 — Happy Path: Unlimited Plan User"
+    },
+    {
+      "persona": "Soo-hyun, 31, busy professional. Purchased a class pack during lunch break on a mobile device. Does not have time to book right now and intends to do it later.",
+      "action": "Journey 3 — Dismiss Path: User Declines Booking"
+    }
+  ],
+  "applied_constraints": [
+    {
+      "constraint_id": "CST-001",
+      "perspective": "code",
+      "summary": "2-hour minimum advance booking requirement prevents immediate class start",
+      "severity": "required",
+      "selected_option": "Show earliest available slots, auto-select tomorrow if today empty",
+      "impact_if_ignored": "System will reject bookings less than 2 hours in advance. Users booking late at night may see no available slots."
+    },
+    {
+      "constraint_id": "CST-002",
+      "perspective": "code",
+      "summary": "Course must match ticket curriculumType (XG1 guard)",
+      "severity": "required",
+      "selected_option": "Filter levels by ticket curriculumType before display",
+      "impact_if_ignored": "Mismatched course-ticket combination rejected by LEC-1 precondition. User sees error."
+    },
+    {
+      "constraint_id": "CST-003",
+      "perspective": "code",
+      "summary": "Unlimited ticket allows only 1 concurrent booking",
+      "severity": "required",
+      "selected_option": "Check existing bookings, show alternative message if one exists",
+      "impact_if_ignored": "Returning unlimited users with existing booking cannot book again from completion screen."
+    },
+    {
+      "constraint_id": "CST-004",
+      "perspective": "experience",
+      "summary": "No purchase completion screen exists — users go directly to Home",
+      "severity": "required",
+      "selected_option": "Build new purchase completion screen as confirmed in surface",
+      "impact_if_ignored": "No surface for booking CTA or incentive. Must build new screen."
+    },
+    {
+      "constraint_id": "CST-006",
+      "perspective": "code",
+      "summary": "BONUS acquisitionType from duplicate-ticket-purchase scope may not be in production",
+      "severity": "recommended",
+      "selected_option": "Check acquisitionType availability, fallback to TKT-3",
+      "impact_if_ignored": "Bonus ticket cannot be tagged as BONUS type. Fallback: TKT-3 admin API."
+    },
+    {
+      "constraint_id": "CST-007",
+      "perspective": "code",
+      "summary": "Each level must map to exactly one auto-assigned first lesson (LectureCourse)",
+      "severity": "required",
+      "selected_option": "Level-to-first-lesson mapping table using first active LectureCourse",
+      "impact_if_ignored": "System cannot auto-create a class without a specific LectureCourse. Must define mapping from level to first lesson."
+    },
+    {
+      "constraint_id": "CST-008",
+      "perspective": "code",
+      "summary": "One-time incentive requires server-side tracking to prevent double-claim on app restart",
+      "severity": "required",
+      "selected_option": "Server-side incentive eligibility flag on payment record",
+      "impact_if_ignored": "User could force-quit and reopen app to claim incentive multiple times. Must track claim status server-side."
+    },
+    {
+      "constraint_id": "CST-008-dup-check",
+      "perspective": "code",
+      "summary": "duplicate check",
+      "severity": "recommended",
+      "selected_option": "duplicate check - handled by CST-008",
+      "impact_if_ignored": "none"
+    }
+  ],
+  "success_criteria": [
+    "[VAL-001] VAL-001 verified successfully (pass)",
+    "[VAL-002] VAL-002 verified successfully (pass)",
+    "[VAL-003] VAL-003 verified successfully (pass)",
+    "[VAL-004] VAL-004 verified successfully (pass)",
+    "[VAL-005] VAL-005 verified successfully (pass)",
+    "[VAL-006] VAL-006 verified successfully (pass)",
+    "[VAL-007] VAL-007 verified successfully (pass)",
+    "[VAL-008] VAL-008 verified successfully (pass)",
+    "[VAL-009] VAL-009 verified successfully (pass)"
+  ],
+  "decide_later_items": [
+    "[CST-005] Taking 1 class forfeits 7-day cooling-off refund right — PO decided during Align: no refund disclosure needed, standard ToS applies."
+  ],
+  "overrides_and_exceptions": [],
+  "out_of_scope": [
+    "No-show / cancellation prevention after booking (separate scope)",
+    "External channel notifications — KakaoTalk, SMS, email (deferred)",
+    "Post-purchase reminders on Home screen",
+    "Level test / placement assessment (not building)"
+  ],
+  "brownfield_sources": [
+    {
+      "name": "podo-backend",
+      "path": "https://github.com/re-speak/podo-backend",
+      "desc": "Scanned source (github-tarball)"
+    },
+    {
+      "name": "podo-app",
+      "path": "https://github.com/re-speak/podo-app",
+      "desc": "Scanned source (github-tarball)"
+    },
+    {
+      "name": "podo-ontology",
+      "path": "https://github.com/re-speak/podo-ontology",
+      "desc": "Scanned source (github-tarball)"
+    },
+    {
+      "name": "prevent-purchase-duplication",
+      "path": "https://github.com/re-speak/vibe-design/tree/feat/prevent-purchase-duplication",
+      "desc": "Scanned source (github-tarball)"
+    },
+    {
+      "name": "sources",
+      "path": "./sources",
+      "desc": "Scanned source (add-dir)"
+    },
+    {
+      "name": "clickhouse",
+      "path": "clickhouse",
+      "desc": "Scanned source (mcp)"
+    },
+    {
+      "name": "SCH-6",
+      "path": "ontology actions SCH-5/SCH-6",
+      "desc": "CST-001: BOOKING_ADVANCE_HOURS = 2"
+    },
+    {
+      "name": "LectureCommandServiceImpl",
+      "path": "LectureCommandServiceImpl",
+      "desc": "CST-002: XG1: BUSINESS→BUSINESS, SMART_TALK→SMART_TALK only"
+    },
+    {
+      "name": "Terms of Service Section 13",
+      "path": "Terms of Service Section 13",
+      "desc": "CST-003: Unlimited: 1 lesson at a time"
+    },
+    {
+      "name": "podo-app payment flow",
+      "path": "podo-app payment flow",
+      "desc": "CST-004: PortOne success → Home redirect"
+    },
+    {
+      "name": "duplicate-ticket-purchase PRD",
+      "path": "duplicate-ticket-purchase PRD",
+      "desc": "CST-006: acquisitionType enum introduced in that scope"
+    },
+    {
+      "name": "LEC-1 precondition",
+      "path": "LEC-1 precondition",
+      "desc": "CST-007: createNewPodoLecture requires a specific LectureCourse selection"
+    },
+    {
+      "name": "preview",
+      "path": "surface/preview",
+      "desc": "CST-008: Incentive awarded on booking confirmation, disappears on exit"
+    }
+  ],
+  "unclassified_constraints": [],
+  "created_at": "2026-04-05T09:21:33.374Z"
+}
