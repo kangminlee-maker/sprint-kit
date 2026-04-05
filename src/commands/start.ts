@@ -575,8 +575,9 @@ async function executeGrounding(
         progress(`온톨로지 bundle 준비 완료 (glossary ${ontologyBundle.index.glossary.size}, actions ${ontologyBundle.index.actions.size})`);
       }
     }
-  } catch {
+  } catch (err) {
     // Ontology bundle preparation failure is optional — grounding still succeeds
+    getLogger().warn(`[ontology] bundle preparation failed: ${err instanceof Error ? err.stack : String(err)}`);
   }
 
   return {
