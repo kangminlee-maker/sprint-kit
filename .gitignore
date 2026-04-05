@@ -5,3 +5,4 @@ dist/
 .npmrc
 docs/deprecated/
 .sprint-kit/cache/
+.onto/

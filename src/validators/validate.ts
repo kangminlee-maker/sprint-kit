@@ -83,6 +83,16 @@ function validateInput(input: ValidateInput): string | null {
     return `validation_plan_hash mismatch: expected "${state.validation_plan_hash}", got "${actualPlanHash}". validation-plan.md may have been modified after compile.`;
   }
 
+  const duplicatePlanValId = findDuplicateValId(plan.map((item) => item.val_id));
+  if (duplicatePlanValId) {
+    return `validation plan contains duplicate ${duplicatePlanValId}`;
+  }
+
+  const duplicateResultValId = findDuplicateValId(results.map((item) => item.val_id));
+  if (duplicateResultValId) {
+    return `results contain duplicate ${duplicateResultValId}`;
+  }
+
   // All plan items must have a result
   const resultValIds = new Set(results.map((r) => r.val_id));
   for (const item of plan) {
@@ -92,11 +102,26 @@ function validateInput(input: ValidateInput): string | null {
   }
 
   // All results must reference a valid plan item
-  const planValIds = new Set(plan.map((p) => p.val_id));
+  const planByValId = new Map(plan.map((item) => [item.val_id, item]));
   for (const r of results) {
-    if (!planValIds.has(r.val_id)) {
+    const planItem = planByValId.get(r.val_id);
+    if (!planItem) {
       return `result references ${r.val_id} which does not exist in the validation plan`;
     }
+    if (planItem.related_cst !== r.related_cst) {
+      return `result ${r.val_id} references ${r.related_cst} but validation plan expects ${planItem.related_cst}`;
+    }
+  }
+
+  return null;
+}
+
+function findDuplicateValId(valIds: string[]): string | null {
+  const seen = new Set<string>();
+
+  for (const valId of valIds) {
+    if (seen.has(valId)) return valId;
+    seen.add(valId);
   }
 
   return null;

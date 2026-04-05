@@ -4,7 +4,7 @@ import { contentHash } from "../kernel/hash.js";
 import { getLogger } from "../logger.js";
 import { walkDirectory, computeDirectoryHashFromMap, normalizePath } from "./file-utils.js";
 import { detectPatterns } from "./patterns/index.js";
-import { sourceKey, emptyScanResult } from "./types.js";
+import { sourceKey } from "./types.js";
 import type { ScanResult, SourceEntry, DepEdge, ApiPattern, SchemaPattern, ConfigPattern, DocStructure } from "./types.js";
 
 /**
@@ -13,14 +13,24 @@ import type { ScanResult, SourceEntry, DepEdge, ApiPattern, SchemaPattern, Confi
  * Pure I/O function: reads file system, no network calls.
  * For single files, wraps the file as a 1-item scan.
  * For directories, walks the tree respecting .gitignore and exclusion rules.
+ *
+ * Throws when the root path itself does not exist or cannot be accessed.
  */
 export function scanLocal(source: SourceEntry & { type: "add-dir" }): ScanResult {
   const fullPath = normalizePath(source.path);
   let stat;
   try {
     stat = statSync(fullPath);
-  } catch {
-    return emptyScanResult(source);
+  } catch (error) {
+    if (error instanceof Error) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === "ENOENT") {
+        error.message = `Local source not found: ${fullPath}`;
+      } else {
+        error.message = `Failed to access local source "${fullPath}": ${error.message}`;
+      }
+    }
+    throw error;
   }
 
   if (stat.isFile()) {
@@ -80,8 +90,11 @@ function scanSingleFile(source: SourceEntry, filePath: string): ScanResult {
   let content: string;
   try {
     content = readFileSync(filePath, "utf-8");
-  } catch {
-    return emptyScanResult(source);
+  } catch (error) {
+    if (error instanceof Error) {
+      error.message = `Failed to read local source file "${filePath}": ${error.message}`;
+    }
+    throw error;
   }
 
   const hash = contentHash(content);
@@ -113,4 +126,3 @@ function scanSingleFile(source: SourceEntry, filePath: string): ScanResult {
     doc_structure: patterns.docs,
   };
 }
-

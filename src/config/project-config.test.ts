@@ -43,6 +43,34 @@ describe("loadProjectConfig", () => {
     writeFileSync(join(TMP, ".sprint-kit.yaml"), "");
     expect(loadProjectConfig(TMP).default_sources).toEqual([]);
   });
+
+  it("loads ontology bundle metadata for supported source types", () => {
+    writeFileSync(
+      join(TMP, ".sprint-kit.yaml"),
+      `default_sources:\n` +
+      `  - type: github-tarball\n` +
+      `    url: https://github.com/org/repo\n` +
+      `    ref: release-2026-04\n` +
+      `    content_role: ontology_bundle\n` +
+      `    ontology_files:\n` +
+      `      code_mapping: ontology/code-mapping.yaml\n` +
+      `      behavior: ontology/behavior.yaml\n` +
+      `      model: ontology/model.yaml\n`,
+    );
+
+    const config = loadProjectConfig(TMP);
+    expect(config.default_sources[0]).toEqual({
+      type: "github-tarball",
+      url: "https://github.com/org/repo",
+      ref: "release-2026-04",
+      content_role: "ontology_bundle",
+      ontology_files: {
+        code_mapping: "ontology/code-mapping.yaml",
+        behavior: "ontology/behavior.yaml",
+        model: "ontology/model.yaml",
+      },
+    });
+  });
 });
 
 // ─── resolveSources ───
@@ -210,8 +238,8 @@ describe("loadProjectConfig — Zod validation", () => {
   it("accepts valid config with all source types", () => {
     writeFileSync(join(TMP, ".sprint-kit.yaml"),
       `default_sources:\n` +
-      `  - type: add-dir\n    path: ./src\n    description: code\n` +
-      `  - type: github-tarball\n    url: https://github.com/org/repo\n` +
+      `  - type: add-dir\n    path: ./src\n    description: code\n    content_role: ontology_bundle\n` +
+      `  - type: github-tarball\n    url: https://github.com/org/repo\n    ref: main\n` +
       `  - type: figma-mcp\n    file_key: abc\n` +
       `  - type: obsidian-vault\n    path: /vault\n`);
     const config = loadProjectConfig(TMP);

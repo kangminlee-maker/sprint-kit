@@ -165,14 +165,34 @@ export type SurfaceType = "experience" | "interface";
 
 // ─── Source Type ───
 
+export type UsageHint = "grounding_only" | "context" | "full";
+
+export type ContentRole = "reference" | "ontology_bundle";
+
+export interface OntologyFiles {
+  code_mapping?: string;
+  behavior?: string;
+  model?: string;
+}
+
+interface BaseSourceEntry {
+  description?: string;
+  usage_hint?: UsageHint;
+}
+
+interface OntologyCapableSourceEntry extends BaseSourceEntry {
+  content_role?: ContentRole;
+  ontology_files?: OntologyFiles;
+}
+
 // ─── Source Entry (config 수준) ───
 
 export type SourceEntry =
-  | { type: "add-dir"; path: string; description?: string }
-  | { type: "github-tarball"; url: string; description?: string }
-  | { type: "figma-mcp"; file_key: string; description?: string }
-  | { type: "obsidian-vault"; path: string; description?: string }
-  | { type: "mcp"; provider: string; description?: string; tools?: string[]; query_policy?: Record<string, unknown> };
+  | ({ type: "add-dir"; path: string } & OntologyCapableSourceEntry)
+  | ({ type: "github-tarball"; url: string; ref?: string } & OntologyCapableSourceEntry)
+  | ({ type: "figma-mcp"; file_key: string } & BaseSourceEntry)
+  | ({ type: "obsidian-vault"; path: string } & BaseSourceEntry)
+  | ({ type: "mcp"; provider: string; tools?: string[]; query_policy?: Record<string, unknown> } & BaseSourceEntry);
 
 // SourceType is derived from SourceEntry to enforce sync
 export type SourceType = SourceEntry["type"];
@@ -184,7 +204,7 @@ export function sourceKey(entry: SourceEntry): string {
     case "add-dir":
       return `add-dir:${entry.path}`;
     case "github-tarball":
-      return `github-tarball:${entry.url}`;
+      return `github-tarball:${entry.url}${entry.ref ? `#${entry.ref}` : ""}`;
     case "figma-mcp":
       return `figma-mcp:${entry.file_key}`;
     case "obsidian-vault":

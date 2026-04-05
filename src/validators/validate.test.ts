@@ -103,6 +103,32 @@ describe("validate — input validation", () => {
     expect(result.success).toBe(false);
     if (!result.success) expect(result.reason).toContain("VAL-999");
   });
+
+  it("fails when results contain duplicate val_id", () => {
+    const input = makeInput({
+      results: makeResults(
+        { val_id: "VAL-001", cst: "CST-001", result: "pass" },
+        { val_id: "VAL-001", cst: "CST-001", result: "fail" },
+      ),
+    });
+
+    const result = validate(input);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.reason).toContain("duplicate VAL-001");
+  });
+
+  it("fails when result related_cst mismatches the validation plan", () => {
+    const input = makeInput({
+      results: makeResults(
+        { val_id: "VAL-001", cst: "CST-999", result: "pass" },
+        { val_id: "VAL-002", cst: "CST-002", result: "pass" },
+      ),
+    });
+
+    const result = validate(input);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.reason).toContain("CST-999");
+  });
 });
 
 // ─── Aggregation ───

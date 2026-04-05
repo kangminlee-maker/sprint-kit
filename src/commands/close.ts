@@ -59,10 +59,14 @@ export function executeClose(paths: ScopePaths): CloseOutput {
   // Generate handoff_prd.json for developer handoff
   let handoff_path: string | undefined;
   try {
-    // prd.rendered 이벤트에서 실제 PRD 파일 경로를 읽음
-    const prdEvent = [...events].reverse().find((e) => e.type === "prd.rendered");
-    const prdRelPath = prdEvent
-      ? (prdEvent.payload as PrdRenderedPayload).prd_path
+    // prd.rendered 이벤트에서 실제 PRD 파일 경로를 읽음 (failed 제외)
+    let prdEvent: (typeof events)[number] | undefined;
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (events[i].type === "prd.rendered") { prdEvent = events[i]; break; }
+    }
+    const prdPayload = prdEvent?.payload as PrdRenderedPayload | undefined;
+    const prdRelPath = prdPayload && prdPayload.status !== "failed"
+      ? prdPayload.prd_path
       : undefined;
     const prdPath = prdRelPath ? join(paths.base, prdRelPath) : undefined;
     const handoff = buildHandoffPrd(prdPath ?? null, state);
@@ -72,7 +76,7 @@ export function executeClose(paths: ScopePaths): CloseOutput {
     handoff_path = "build/handoff_prd.json";
   } catch (err) {
     // handoff generation is observational — failure does not block close
-    console.warn("[handoff] generation failed:", err instanceof Error ? err.message : err);
+    console.warn(`[handoff] generation failed: ${err instanceof Error ? err.stack : err}`);
   }
 
   return {

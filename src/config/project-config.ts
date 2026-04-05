@@ -15,10 +15,31 @@ import { sourceKey } from "../scanners/types.js";
  * - full: always available (grounding + surface + compile + apply)
  */
 const usageHintSchema = z.enum(["grounding_only", "context", "full"]).optional();
+const contentRoleSchema = z.enum(["reference", "ontology_bundle"]).optional();
+const ontologyFilesSchema = z.object({
+  code_mapping: z.string().optional(),
+  behavior: z.string().optional(),
+  model: z.string().optional(),
+}).optional();
 
 const sourceEntrySchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("add-dir"), path: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
-  z.object({ type: z.literal("github-tarball"), url: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
+  z.object({
+    type: z.literal("add-dir"),
+    path: z.string(),
+    description: z.string().optional(),
+    usage_hint: usageHintSchema,
+    content_role: contentRoleSchema,
+    ontology_files: ontologyFilesSchema,
+  }),
+  z.object({
+    type: z.literal("github-tarball"),
+    url: z.string(),
+    ref: z.string().optional(),
+    description: z.string().optional(),
+    usage_hint: usageHintSchema,
+    content_role: contentRoleSchema,
+    ontology_files: ontologyFilesSchema,
+  }),
   z.object({ type: z.literal("figma-mcp"), file_key: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
   z.object({ type: z.literal("obsidian-vault"), path: z.string(), description: z.string().optional(), usage_hint: usageHintSchema }),
   z.object({ type: z.literal("mcp"), provider: z.string(), description: z.string().optional(), usage_hint: usageHintSchema, tools: z.array(z.string()).optional(), query_policy: z.record(z.string(), z.unknown()).optional() }),

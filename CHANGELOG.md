@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 1.1.1 (2026-04-05)
+
+### Developer Handoff PRD
+
+`/close` 시 생성되는 `handoff_prd.json`의 안정성을 보강했습니다. PRD 마크다운 파싱과 defer 분류 로직을 다듬어, 개발자 handoff 산출물이 scope 종료 시점의 최종 결정을 더 정확하게 반영합니다.
+
+- **Developer handoff auto-generation**: scope close 시 `build/handoff_prd.json` 생성
+- **PRD section parsing hardening**: adaptive sub-heading split, empty array consistency, handoff failure warning 보강
+- **defer classification fix**: `product_owner`가 defer한 constraint도 `decide_later_items`에 포함되도록 수정
+- **테스트 보강**: PRD markdown parsing 및 handoff defer 분류 회귀 테스트 추가
+
 ### PRD Multi-Perspective Review System
 
 PRD(Product Requirements Document)의 무결성을 3축(적합성/품질/판단적합성)으로 검증하는 다관점 리뷰 시스템 도입. 기존 Pre-Apply Review(적합성 축)에 추가하여, 8개 독립 관점 + Philosopher 종합으로 품질 + 판단적합성 축을 검증합니다.
