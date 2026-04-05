@@ -277,7 +277,7 @@ function findSection(sections: Record<string, string>, candidates: string[]): st
 }
 
 function detectMinHeadingLevel(lines: string[]): number {
-  let min = 6;
+  let min = 7; // sentinel above max heading level
   for (const line of lines) {
     const m = line.match(/^(#{2,6})\s/);
     if (m && m[1].length < min) min = m[1].length;

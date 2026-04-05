@@ -22,6 +22,12 @@ const REQUIRED_ONTOLOGY_FILES: Array<keyof ResolvedOntologyFiles> = [
   "model",
 ];
 
+function isFullyResolved(
+  resolved: Partial<ResolvedOntologyFiles>,
+): resolved is ResolvedOntologyFiles {
+  return REQUIRED_ONTOLOGY_FILES.every((key) => resolved[key] !== undefined);
+}
+
 const ONTOLOGY_BASENAMES: Record<keyof ResolvedOntologyFiles, string> = {
   code_mapping: "code-mapping.yaml",
   behavior: "behavior.yaml",
@@ -116,8 +122,8 @@ function resolveOntologyFiles(
     warnings.push(`[ontology] ${ONTOLOGY_BASENAMES[key]} 후보가 ${matches.length}개입니다. ontology_files로 경로를 명시하세요.`);
   }
 
-  if (REQUIRED_ONTOLOGY_FILES.every((key) => resolved[key])) {
-    return { status: "ready", files: resolved as ResolvedOntologyFiles, warnings };
+  if (isFullyResolved(resolved)) {
+    return { status: "ready", files: resolved, warnings };
   }
 
   return {
